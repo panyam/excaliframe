@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: confluence-postgres
+    environment:
+      POSTGRES_DB: confluence
+      POSTGRES_USER: confluence
+      POSTGRES_PASSWORD: confluence
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U confluence"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  confluence:
+    image: atlassian/confluence-server:latest
+    container_name: confluence-server
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8090:8090"
+      - "8091:8091"
+    environment:
+      - ATL_TOMCAT_MGMTPORT=8091
+      - ATL_TOMCAT_PORT=8090
+      - SETENV_JVM_MINIMUM_MEMORY=1024m
+      - SETENV_JVM_MAXIMUM_MEMORY=2048m
+      # Enable development mode for easier local plugin testing
+      - ATL_DEV_MODE=true
+      # Database configuration
+      - ATL_JDBC_URL=jdbc:postgresql://postgres:5432/confluence
+      - ATL_JDBC_USER=confluence
+      - ATL_JDBC_PASSWORD=confluence
+      - ATL_DB_TYPE=postgresql
+    volumes:
+      - ./data/confluence:/var/atlassian/application-data/confluence
+    restart: unless-stopped
+    # Add extra_hosts to allow Confluence to reach host machine
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8090/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
