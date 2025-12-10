@@ -2,18 +2,25 @@ version: '3.8'
 
 services:
   postgres:
-    image: postgres:17-alpine
+    image: postgres:15-alpine
     container_name: confluence-postgres
     environment:
       POSTGRES_DB: confluence
       POSTGRES_USER: confluence
       POSTGRES_PASSWORD: confluence
       PGDATA: /var/lib/postgresql/data/pgdata
+      # PostgreSQL memory settings
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     restart: unless-stopped
+    # Resource limits for PostgreSQL (requires Docker Desktop with sufficient resources)
+    # Note: These are soft limits - ensure Docker Desktop has at least 6GB total memory
+    mem_limit: 2g
+    mem_reservation: 1g
+    cpus: 2
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U confluence"]
       interval: 10s
@@ -32,8 +39,8 @@ services:
     environment:
       - ATL_TOMCAT_MGMTPORT=8091
       - ATL_TOMCAT_PORT=8090
-      - SETENV_JVM_MINIMUM_MEMORY=1024m
-      - SETENV_JVM_MAXIMUM_MEMORY=2048m
+      - SETENV_JVM_MINIMUM_MEMORY=2048m
+      - SETENV_JVM_MAXIMUM_MEMORY=4096m
       # Enable development mode for easier local plugin testing
       - ATL_DEV_MODE=true
       # Database configuration
@@ -47,6 +54,12 @@ services:
     # Add extra_hosts to allow Confluence to reach host machine
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    # Resource limits (requires Docker Desktop with sufficient resources)
+    # Note: These are soft limits - ensure Docker Desktop has at least 8GB total memory
+    # Check resources: make check-resources
+    mem_limit: 6g
+    mem_reservation: 4g
+    cpus: 4
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8090/status"]
       interval: 30s

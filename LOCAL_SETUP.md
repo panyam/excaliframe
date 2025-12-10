@@ -6,7 +6,14 @@ Complete guide for running Excalfluence with Confluence Server locally.
 
 1. **Docker Desktop** installed and running
    - macOS: `brew install --cask docker` or download from https://www.docker.com/products/docker-desktop
-   - Ensure Docker has at least 4GB RAM allocated (Settings → Resources → Memory)
+   - **Resource Requirements:**
+     - **Memory:** Minimum 6GB, Recommended 8GB+
+     - **CPUs:** Minimum 4 cores, Recommended 6+ cores
+   - **Check current resources:** `make check-resources`
+   - **Increase resources:** Docker Desktop → Settings → Resources → Advanced
+     - Increase Memory slider to at least 6GB
+     - Increase CPUs to at least 4
+     - Click "Apply & Restart"
 
 2. **Node.js** (v16 or higher) and npm
 

@@ -1,4 +1,4 @@
-.PHONY: help install build dev start stop restart status logs logs-db test test-connectivity quick-start clean reset confluence-start confluence-stop confluence-restart confluence-status setup-dirs check-status check-port kill-port
+.PHONY: help install build dev start stop restart status logs logs-db test test-connectivity quick-start clean reset confluence-start confluence-stop confluence-restart confluence-status setup-dirs check-status check-port kill-port reset-db check-db check-resources
 
 # Default target
 .DEFAULT_GOAL := help
@@ -137,6 +137,15 @@ confluence-reset: ## ⚠️ Remove all Confluence data and restart
 	else \
 		echo "$(YELLOW)Cancelled$(NC)"; \
 	fi
+
+reset-db: ## Reset Confluence database only (keeps containers)
+	@./scripts/reset-database.sh
+
+check-db: ## Check database status and table creation progress
+	@./scripts/check-db-status.sh
+
+check-resources: ## Check Docker Desktop resource allocation
+	@./scripts/check-docker-resources.sh
 
 ##@ Logs
 

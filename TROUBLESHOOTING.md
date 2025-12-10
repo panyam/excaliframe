@@ -28,6 +28,13 @@ ERROR: relation "spaces" does not exist
 
 **After setup completes:** These errors should stop appearing in logs.
 
+**Check if tables are being created:**
+```bash
+make check-db
+```
+
+This will show you which tables exist and if database initialization is progressing.
+
 ### Database Connection Issues
 
 **Symptom:** Confluence can't connect to PostgreSQL
@@ -83,11 +90,24 @@ docker stats confluence-server
 ```
 
 **Solutions:**
-1. **Increase Docker memory:**
-   - Docker Desktop → Settings → Resources → Memory
-   - Increase to at least 4GB (8GB recommended)
+1. **Check current resources:**
+   ```bash
+   make check-resources
+   ```
 
-2. **Check port availability:**
+2. **Increase Docker Desktop resources:**
+   - **macOS:** Docker Desktop → Settings → Resources → Advanced
+   - **Memory:** Increase to at least 6GB (8GB+ recommended)
+   - **CPUs:** Increase to at least 4 cores (6+ recommended)
+   - Click "Apply & Restart"
+   - After restart, restart containers: `make confluence-restart`
+
+3. **Verify resource limits in docker-compose.yml:**
+   - Confluence: 4GB memory, 4 CPUs (limits)
+   - PostgreSQL: 2GB memory, 2 CPUs (limits)
+   - Adjust these if your system has more resources available
+
+4. **Check port availability:**
    ```bash
    lsof -i :8090  # Confluence
    lsof -i :5432  # PostgreSQL
@@ -198,6 +218,29 @@ ls -ld data/postgres data/confluence
    - Disable unused plugins
    - Reduce indexing frequency
 
+## Database Reset Issues
+
+**Symptom:** "Erase db and start again" fails with system error
+
+**Cause:** Confluence's built-in reset may fail if there are active connections or incomplete state.
+
+**Solution - Proper Database Reset:**
+
+```bash
+# Option 1: Reset database only (recommended)
+make reset-db
+
+# Option 2: Full reset (removes everything)
+make reset
+make quick-start
+```
+
+**Manual reset steps:**
+1. Stop Confluence: `make confluence-stop`
+2. Reset database: `make reset-db`
+3. Start Confluence: `make confluence-start`
+4. Complete setup wizard with fresh database
+
 ## Common Commands for Debugging
 
 ```bash
@@ -209,6 +252,9 @@ make logs-all
 
 # Test connectivity
 make test-connectivity
+
+# Reset database only
+make reset-db
 
 # Reset everything
 make reset

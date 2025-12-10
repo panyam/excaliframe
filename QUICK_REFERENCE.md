@@ -3,6 +3,9 @@
 ## 🚀 Getting Started
 
 ```bash
+# Check Docker resources first (recommended)
+make check-resources
+
 # One command to rule them all
 make quick-start
 ```
