@@ -6,6 +6,7 @@ import type {
   BinaryFiles
 } from '@excalidraw/excalidraw/types/types';
 import { VERSION, BUILD_DATE } from '../version';
+import { getAP, isRunningInConfluence } from '../utils/mockAP';
 
 type ExcalidrawElement = any;
 
@@ -47,6 +48,7 @@ const ExcalidrawEditor: React.FC = () => {
 
   // Load macro body on mount
   useEffect(() => {
+    const AP = getAP();
     try {
       AP.resize('100%', '100%');
     } catch (e) {
@@ -56,6 +58,7 @@ const ExcalidrawEditor: React.FC = () => {
   }, []);
 
   const loadMacroBody = (): void => {
+    const AP = getAP();
     try {
       AP.confluence.getMacroBody((body: string) => {
         console.log('Macro body:', body ? body.substring(0, 100) : 'empty');
@@ -131,6 +134,7 @@ const ExcalidrawEditor: React.FC = () => {
       const macroBody = JSON.stringify(storageData);
       console.log('Saving macro body, length:', macroBody.length);
 
+      const AP = getAP();
       AP.confluence.saveMacro({}, macroBody);
       AP.confluence.closeMacroEditor();
     } catch (error) {
@@ -141,6 +145,7 @@ const ExcalidrawEditor: React.FC = () => {
   }, [isSaving]);
 
   const handleCancel = useCallback((): void => {
+    const AP = getAP();
     AP.confluence.closeMacroEditor();
   }, []);
 
@@ -174,6 +179,17 @@ const ExcalidrawEditor: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 500 }}>Excalidraw</h3>
           <span style={{ fontSize: '11px', color: '#6b778c' }}>v{VERSION}</span>
+          {!isRunningInConfluence() && (
+            <span style={{
+              fontSize: '10px',
+              color: '#fff',
+              backgroundColor: '#ff7452',
+              padding: '2px 6px',
+              borderRadius: '3px',
+            }}>
+              DEV MODE
+            </span>
+          )}
         </div>
         <div>
           <button
@@ -215,8 +231,20 @@ const ExcalidrawEditor: React.FC = () => {
           excalidrawAPI={(api: ExcalidrawImperativeAPI) => {
             excalidrawApiRef.current = api;
           }}
-          initialData={initialData || { elements: [], appState: { viewBackgroundColor: '#ffffff' } }}
+          initialData={initialData || {
+            elements: [],
+            appState: {
+              viewBackgroundColor: '#ffffff',
+              currentItemStrokeColor: '#000000',
+              currentItemBackgroundColor: 'transparent',
+            },
+          }}
           theme="light"
+          UIOptions={{
+            canvasActions: {
+              loadScene: false,
+            },
+          }}
         />
       </div>
     </div>

@@ -4,6 +4,7 @@ import fs from 'fs';
 
 const app = express();
 const PORT: number = parseInt(process.env.PORT || '3000', 10);
+const isDev = process.env.NODE_ENV === 'development';
 
 // In-memory store for installed tenants (in production, use a database)
 interface TenantInfo {
@@ -28,6 +29,43 @@ app.use(express.urlencoded({ extended: true }));
  * The server is minimal - just static file serving + lifecycle endpoints.
  * All Excalidraw logic runs client-side in the browser.
  */
+
+// Setup webpack dev middleware for development (hot reload)
+async function setupDevMiddleware(): Promise<void> {
+  if (!isDev) return;
+
+  console.log('Setting up webpack dev middleware for hot reload...');
+
+  // Dynamic imports for dev dependencies
+  const webpack = (await import('webpack')).default;
+  const webpackDevMiddleware = (await import('webpack-dev-middleware')).default;
+  const webpackHotMiddleware = (await import('webpack-hot-middleware')).default;
+  const webpackConfig = (await import('./webpack.config.js')).default;
+
+  // Get config for development mode - set mode explicitly
+  const config = typeof webpackConfig === 'function'
+    ? webpackConfig({}, { mode: 'development' })
+    : webpackConfig;
+
+  // Ensure mode is set for development
+  config.mode = 'development';
+
+  const compiler = webpack(config);
+
+  // Dev middleware - serves files from memory AND writes to disk
+  app.use(
+    webpackDevMiddleware(compiler, {
+      publicPath: config.output?.publicPath || '/',
+      stats: 'minimal',
+      writeToDisk: true, // Write files to dist/ so routes can serve them
+    })
+  );
+
+  // Hot middleware - enables HMR
+  app.use(webpackHotMiddleware(compiler));
+
+  console.log('Webpack dev middleware ready - changes will hot reload');
+}
 
 // Serve atlassian-connect.json from root (required by Confluence Connect)
 app.get('/atlassian-connect.json', (_req: Request, res: Response): void => {
@@ -81,10 +119,20 @@ app.post('/lifecycle/uninstalled', (req: Request, res: Response): void => {
   res.status(200).json({ status: 'ok' });
 });
 
+// Helper to find HTML files (dev writes to dist/, prod runs from dist/)
+function findHtmlFile(filename: string): string | null {
+  const distPath = path.join(process.cwd(), 'dist', filename);
+  const dirnamePath = path.join(__dirname, filename);
+
+  if (fs.existsSync(distPath)) return distPath;
+  if (fs.existsSync(dirnamePath)) return dirnamePath;
+  return null;
+}
+
 // Macro render endpoint - serves the renderer HTML
 app.get('/macro', (_req: Request, res: Response): void => {
-  const rendererPath = path.join(__dirname, 'renderer.html');
-  if (fs.existsSync(rendererPath)) {
+  const rendererPath = findHtmlFile('renderer.html');
+  if (rendererPath) {
     res.sendFile(rendererPath);
   } else {
     res.status(404).send('Renderer not found');
@@ -93,8 +141,8 @@ app.get('/macro', (_req: Request, res: Response): void => {
 
 // Editor endpoint - serves the editor HTML
 app.get('/editor', (_req: Request, res: Response): void => {
-  const editorPath = path.join(__dirname, 'editor.html');
-  if (fs.existsSync(editorPath)) {
+  const editorPath = findHtmlFile('editor.html');
+  if (editorPath) {
     res.sendFile(editorPath);
   } else {
     res.status(404).send('Editor not found');
@@ -103,25 +151,32 @@ app.get('/editor', (_req: Request, res: Response): void => {
 
 // Renderer endpoint - serves the renderer HTML
 app.get('/renderer', (_req: Request, res: Response): void => {
-  const rendererPath = path.join(__dirname, 'renderer.html');
-  if (fs.existsSync(rendererPath)) {
+  const rendererPath = findHtmlFile('renderer.html');
+  if (rendererPath) {
     res.sendFile(rendererPath);
   } else {
     res.status(404).send('Renderer not found');
   }
 });
 
-// Serve static files from dist (JS bundles, CSS, etc.)
-app.use(express.static(__dirname));
+// Serve static files from dist/ (both dev and prod)
+const distStaticPath = isDev ? path.join(process.cwd(), 'dist') : __dirname;
+app.use(express.static(distStaticPath));
 
 // Fallback for unmatched routes
 app.get('*', (_req: Request, res: Response): void => {
   res.status(404).send('Not found');
 });
 
-app.listen(PORT, '0.0.0.0', (): void => {
-  console.log(`Excalfluence server running on http://0.0.0.0:${PORT}`);
-  console.log(`Plugin descriptor: http://0.0.0.0:${PORT}/atlassian-connect.json`);
-  console.log(`Note: Server handles lifecycle + serves static files`);
-  console.log(`      All Excalidraw logic runs client-side in the browser`);
-});
+// Start server
+async function start(): Promise<void> {
+  await setupDevMiddleware();
+
+  app.listen(PORT, '0.0.0.0', (): void => {
+    console.log(`Excalfluence server running on http://0.0.0.0:${PORT}`);
+    console.log(`Mode: ${isDev ? 'DEVELOPMENT (hot reload enabled)' : 'PRODUCTION'}`);
+    console.log(`Plugin descriptor: http://0.0.0.0:${PORT}/atlassian-connect.json`);
+  });
+}
+
+start().catch(console.error);

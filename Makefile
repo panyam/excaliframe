@@ -65,15 +65,15 @@ type-check: ## Run TypeScript type checking
 
 ##@ Development
 
-dev: ## Start webpack in watch mode (local)
-	@echo "$(GREEN)👀 Starting webpack watch mode...$(NC)"
-	@echo "$(YELLOW)💡 This watches src/ and rebuilds automatically$(NC)"
+dev: ## Start dev server with hot reload (webpack dev middleware)
+	@echo "$(GREEN)🚀 Starting dev server with hot reload...$(NC)"
+	@echo "$(YELLOW)💡 Changes to src/ will hot reload instantly$(NC)"
 	npm run dev
 
-dev-server: ## Start development server with auto-reload (ts-node + nodemon)
-	@echo "$(GREEN)🚀 Starting development server with auto-reload...$(NC)"
-	@echo "$(YELLOW)💡 Server restarts automatically on file changes$(NC)"
-	npm run dev:server
+dev-tunnel: ## Start cloudflared tunnel (run in separate terminal alongside 'make dev')
+	@echo "$(GREEN)🌐 Starting cloudflared tunnel...$(NC)"
+	@echo "$(YELLOW)💡 Run 'make dev' in another terminal first$(NC)"
+	docker run --rm -it --network host cloudflare/cloudflared:latest tunnel --no-autoupdate --url http://localhost:3000
 
 start: ## Start plugin server locally (runs on host, accessible via host.docker.internal)
 	@if lsof -ti:3000 > /dev/null 2>&1; then \
@@ -247,13 +247,13 @@ kill-port: ## Kill process using port 3000 (usage: make kill-port PORT=3000)
 
 ##@ Confluence Cloud (Recommended)
 
-cloud-dev: ## Start dev mode with hot-reload + tunnel
+cloud-dev: ## Start dev mode with hot-reload + tunnel (all in Docker)
 	@echo "$(GREEN)☁️  Starting dev mode with hot-reload...$(NC)"
-	@echo "$(YELLOW)💡 Changes to src/ will auto-rebuild$(NC)"
+	@echo "$(YELLOW)💡 Changes to src/ will hot reload instantly$(NC)"
 	@if docker compose version > /dev/null 2>&1; then \
-		docker compose -f docker-compose.dev.yml up --build; \
+		docker compose -f docker-compose.dev.yml up; \
 	else \
-		docker-compose -f docker-compose.dev.yml up --build; \
+		docker-compose -f docker-compose.dev.yml up; \
 	fi
 
 cloud-dev-stop: ## Stop dev mode
