@@ -1,0 +1,39 @@
+# Docker Compose for Confluence Cloud development
+# This runs the plugin server + cloudflared tunnel
+# Use with a free Confluence Cloud developer instance
+
+services:
+  # Plugin server (Express + Excalidraw)
+  plugin:
+    build:
+      context: .
+      dockerfile: Dockerfile.plugin
+    container_name: excalfluence-plugin
+    volumes:
+      - .:/app
+      - /app/node_modules  # Don't override node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+    command: sh -c "npm run build && npm start"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/atlassian-connect.json"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # Cloudflared tunnel - provides a public HTTPS URL for free
+  # No account needed - uses "quick tunnels"
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: excalfluence-tunnel
+    depends_on:
+      plugin:
+        condition: service_healthy
+    command: tunnel --no-autoupdate --url http://plugin:3000
+    # The tunnel URL will be printed to the logs
+    # Run: docker compose -f docker-compose.cloud.yml logs tunnel
+    # Look for: "Your quick Tunnel has been created! Visit it at https://xxx.trycloudflare.com"

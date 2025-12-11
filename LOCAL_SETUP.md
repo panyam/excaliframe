@@ -20,11 +20,15 @@ Complete guide for running Excalfluence with Confluence Server locally.
 ## Architecture
 
 The local setup includes:
-- **PostgreSQL** - Database backend (port 5432)
-- **Confluence Server** - Main application (port 8090)
+- **PostgreSQL** - Database backend (port 5432) - Runs in Docker
+- **Confluence Server** - Main application (port 8090) - Runs in Docker
+- **Plugin Server** - Express server (port 3000) - Runs locally on host
 - **Persistent Storage** - Data survives container restarts
   - `./data/postgres` - PostgreSQL database files
   - `./data/confluence` - Confluence application data
+
+**Note:** Plugin server runs locally (not in Docker) for easier development with hot-reload.
+Confluence accesses it via `host.docker.internal:3000`.
 
 ## Quick Start (Automated) ⚡
 
@@ -124,7 +128,18 @@ npm run build
 npm start
 ```
 
-### 4. Install the Plugin in Confluence
+### 4. Start Plugin Server Locally
+
+```bash
+# Start plugin server (runs on your host machine)
+make start
+
+# Or for development with auto-reload:
+make dev-server  # Terminal 1 - server with auto-reload
+make dev         # Terminal 2 - webpack watch mode
+```
+
+### 5. Install the Plugin in Confluence
 
 1. **Open Confluence**:
    - Go to http://localhost:8090
@@ -133,14 +148,16 @@ npm start
 2. **Install the app**:
    - Go to Settings → Manage Apps
    - Click "Upload app" (or "Development" → "Upload app")
-   - Enter: `http://localhost:3000/atlassian-connect.json`
+   - **Use:** `http://host.docker.internal:3000/atlassian-connect.json`
    - Click "Upload"
 
 3. **Verify installation**:
    - You should see "Excalfluence" in your installed apps list
    - Status should be "Enabled"
 
-### 5. Test the Plugin
+**Why `host.docker.internal`?** Confluence runs in Docker and needs to reach your local plugin server. The browser will still access via `localhost:3000` (handled automatically by Confluence).
+
+### 6. Test the Plugin
 
 1. **Create a test page**:
    - Go to any space in Confluence
@@ -171,7 +188,7 @@ For active development with hot-reload:
 make dev
 ```
 
-**Terminal 2 - Development server:**
+**Terminal 2 - Development server (with auto-reload):**
 ```bash
 make dev-server
 ```
@@ -183,8 +200,9 @@ make logs  # View Confluence logs
 
 After making changes:
 1. Webpack rebuilds automatically (Terminal 1)
-2. Restart the dev server if needed (Terminal 2)
+2. Server restarts automatically (Terminal 2 - nodemon)
 3. Reload the Confluence page (hard refresh: Cmd+Shift+R)
+4. **No Docker restart needed!**
 
 ### Useful Commands
 
@@ -263,41 +281,31 @@ docker exec confluence-postgres pg_isready -U confluence
 
 **Quick test:**
 ```bash
-npm run test:connectivity
+make test-connectivity
 ```
 
 **Check plugin server is running:**
 ```bash
+# Should be running locally (not in Docker)
 curl http://localhost:3000/atlassian-connect.json
+make status
 ```
 
 **Check Confluence can reach plugin:**
-The docker-compose.yml is configured with `extra_hosts` to allow Confluence to reach your host machine. Try these URLs in order:
+The docker-compose.yml is configured with `extra_hosts` to allow Confluence to reach your host machine.
 
-1. **Recommended:** `http://host.docker.internal:3000/atlassian-connect.json`
-   - This should work with the current docker-compose.yml setup
-   
-2. **Fallback:** `http://172.17.0.1:3000/atlassian-connect.json`
-   - Docker bridge IP (may vary)
-   
-3. **Last resort:** `http://localhost:3000/atlassian-connect.json`
-   - Only works if Confluence allows localhost connections
+**Use this URL in Confluence:**
+- `http://host.docker.internal:3000/atlassian-connect.json`
 
 **Test from Confluence container:**
 ```bash
 docker exec confluence-server curl http://host.docker.internal:3000/atlassian-connect.json
 ```
 
-**If still failing - Use host network mode:**
-Update `docker-compose.yml`:
-```yaml
-services:
-  confluence:
-    # ... existing config ...
-    network_mode: "host"  # Add this line
-    # Remove ports section if using host mode
-```
-Note: Host network mode may have security implications.
+**If still failing:**
+1. Make sure plugin server is running: `make start`
+2. Check plugin server logs for errors
+3. Verify port 3000 is accessible: `curl http://localhost:3000/atlassian-connect.json`
 
 ### Plugin loads but editor/renderer don't work
 
@@ -336,22 +344,27 @@ docker stats confluence-server
 ```
 ┌─────────────────┐         ┌──────────────────┐
 │  Confluence     │────────▶│  Plugin Server   │
-│  Server         │  HTTP   │  (localhost:3000)│
-│  (localhost:8090)│         │                  │
+│  Server         │  HTTP   │  (host machine)   │
+│  (Docker)       │         │  localhost:3000  │
+│  localhost:8090 │         │                  │
 └─────────────────┘         └──────────────────┘
          │                           │
+         │                           │
+         │  Uses: host.docker.internal│
          │                           │
          ▼                           ▼
   ┌──────────┐              ┌──────────────┐
   │ Browser  │◀─────────────▶│  Editor.html │
   │          │               │ Renderer.html│
+  │(host)    │               │  (localhost)  │
   └──────────┘               └──────────────┘
          │
          │
          ▼
   ┌──────────────┐
   │  PostgreSQL  │
-  │  (port 5432) │
+  │  (Docker)     │
+  │  port 5432    │
   └──────────────┘
          │
          ▼
@@ -359,11 +372,16 @@ docker stats confluence-server
 ```
 
 **Components:**
-- **PostgreSQL** - Database backend (port 5432) with persistent storage in `./data/postgres`
-- **Confluence Server** - Main application (port 8090) with persistent storage in `./data/confluence`
-- **Plugin Server** - Runs on host machine (port 3000)
+- **PostgreSQL** - Database backend (port 5432) in Docker with persistent storage in `./data/postgres`
+- **Confluence Server** - Main application (port 8090) in Docker with persistent storage in `./data/confluence`
+- **Plugin Server** - Runs locally on host machine (port 3000) - NOT in Docker
 - **Browser** - Loads Confluence, which loads plugin iframes
 - **Data Persistence** - All data survives container restarts
+
+**Networking:**
+- Confluence (Docker) → Plugin Server (host): `http://host.docker.internal:3000`
+- Browser (host) → Plugin Server (host): `http://localhost:3000`
+- Browser (host) → Confluence (Docker): `http://localhost:8090`
 
 ## Next Steps
 

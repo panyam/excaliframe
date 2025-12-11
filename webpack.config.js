@@ -50,4 +50,9 @@ module.exports = {
     }),
   ],
   devtool: 'source-map',
+  watchOptions: {
+    poll: 1000, // Check for changes every second (needed for Docker volumes)
+    aggregateTimeout: 300, // Delay before rebuilding
+    ignored: /node_modules/,
+  },
 };

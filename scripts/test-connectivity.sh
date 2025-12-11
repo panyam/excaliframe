@@ -6,12 +6,12 @@ echo "🔍 Testing connectivity..."
 echo ""
 
 # Check if plugin server is running
-echo "1. Checking plugin server (localhost:3000)..."
+echo "1. Checking plugin server (local)..."
 if curl -s http://localhost:3000/atlassian-connect.json > /dev/null 2>&1; then
-    echo "   ✅ Plugin server is accessible"
+    echo "   ✅ Plugin server is accessible at http://localhost:3000"
 else
     echo "   ❌ Plugin server is NOT accessible"
-    echo "      Make sure to run: npm start"
+    echo "      Start with: make start"
     exit 1
 fi
 
@@ -32,13 +32,10 @@ echo "3. Testing connectivity from Confluence container to plugin server..."
 if docker exec confluence-server curl -s http://host.docker.internal:3000/atlassian-connect.json > /dev/null 2>&1; then
     echo "   ✅ Confluence can reach plugin server via host.docker.internal"
     echo "   💡 Use this URL in Confluence: http://host.docker.internal:3000/atlassian-connect.json"
-elif docker exec confluence-server curl -s http://172.17.0.1:3000/atlassian-connect.json > /dev/null 2>&1; then
-    echo "   ✅ Confluence can reach plugin server via Docker bridge IP"
-    echo "   💡 Use this URL in Confluence: http://172.17.0.1:3000/atlassian-connect.json"
 else
     echo "   ⚠️  Confluence container cannot reach plugin server"
-    echo "   💡 Try using: http://localhost:3000/atlassian-connect.json"
-    echo "      Or configure host network mode in docker-compose.yml"
+    echo "   💡 Make sure plugin server is running locally: make start"
+    echo "   💡 Then use: http://host.docker.internal:3000/atlassian-connect.json"
 fi
 
 # Test plugin endpoints

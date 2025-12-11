@@ -1,202 +1,222 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Excalidraw } from '@excalidraw/excalidraw';
-import type { ExcalidrawImperativeAPI, ExcalidrawInitialDataState } from '@excalidraw/excalidraw/dist/types/excalidraw/types';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { exportToCanvas } from '@excalidraw/excalidraw';
+import type {
+  ExcalidrawImperativeAPI,
+  AppState,
+  BinaryFiles
+} from '@excalidraw/excalidraw/types/types';
+import { VERSION, BUILD_DATE } from '../version';
+
+type ExcalidrawElement = any;
 
 interface DrawingData {
   type: string;
   version: number;
   source: string;
-  elements: readonly any[];
+  elements: any[];
   appState: {
     viewBackgroundColor?: string;
     gridSize?: number | null;
   };
+  files?: Record<string, any>;
 }
 
 interface StorageData {
-  value: string;
-  pngSnapshot: string;
+  drawing: string;
+  preview: string;
 }
 
 const ExcalidrawEditor: React.FC = () => {
-  const [excalidrawAPI, setExcalidrawAPI] = useState<ExcalidrawImperativeAPI | null>(null);
-  const [initialData, setInitialData] = useState<DrawingData | null>(null);
+  const [ExcalidrawComponent, setExcalidrawComponent] = useState<any>(null);
+  const excalidrawApiRef = useRef<ExcalidrawImperativeAPI | null>(null);
+  const [initialData, setInitialData] = useState<{
+    elements?: readonly ExcalidrawElement[];
+    appState?: Partial<AppState>;
+    files?: BinaryFiles;
+  } | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
 
+  // Dynamically load Excalidraw
   useEffect(() => {
-    // Initialize Confluence Connect API
-    AP.resize();
-
-    // Load existing content if editing
-    loadExistingContent();
+    console.log(`Excalfluence v${VERSION} (built ${BUILD_DATE})`);
+    import('@excalidraw/excalidraw').then((module) => {
+      setExcalidrawComponent(() => module.Excalidraw);
+    });
   }, []);
 
-  const loadExistingContent = async (): Promise<void> => {
+  // Load macro body on mount
+  useEffect(() => {
     try {
-      // Get content from Confluence custom content storage
-      const context = await AP.context.getContext();
-      
-      if (context.contentId) {
-        // Try to load existing drawing data
-        const content = await AP.request('/rest/api/content/' + context.contentId, {
-          type: 'GET',
-        });
-        
-        if (content && content.body) {
-          const parsedContent = JSON.parse(content.body) as { storage?: { value?: string } };
-          const drawingData = parsedContent.storage?.value;
-          
-          if (drawingData) {
-            try {
-              const parsed = JSON.parse(drawingData) as DrawingData;
-              setInitialData(parsed);
-            } catch (e) {
-              console.log('No existing drawing data found');
+      AP.resize('100%', '100%');
+    } catch (e) {
+      console.log('Could not resize:', e);
+    }
+    loadMacroBody();
+  }, []);
+
+  const loadMacroBody = (): void => {
+    try {
+      AP.confluence.getMacroBody((body: string) => {
+        console.log('Macro body:', body ? body.substring(0, 100) : 'empty');
+        if (body && body.trim()) {
+          try {
+            const storageData: StorageData = JSON.parse(body);
+            if (storageData.drawing) {
+              const drawingData: DrawingData = JSON.parse(storageData.drawing);
+              setInitialData({
+                elements: drawingData.elements || [],
+                appState: {
+                  viewBackgroundColor: drawingData.appState?.viewBackgroundColor || '#ffffff',
+                },
+                files: drawingData.files || {},
+              });
             }
+          } catch (e) {
+            console.log('Could not parse macro body:', e);
           }
         }
-      }
+        setIsLoading(false);
+      });
     } catch (error) {
-      console.log('Loading content:', error);
-    } finally {
+      console.log('Error loading macro body:', error);
       setIsLoading(false);
     }
   };
 
   const saveDrawing = useCallback(async (): Promise<void> => {
-    if (!excalidrawAPI) return;
+    if (!excalidrawApiRef.current || isSaving) return;
 
+    setIsSaving(true);
     try {
-      const elements = excalidrawAPI.getSceneElements();
-      const appState = excalidrawAPI.getAppState();
-      
+      const elements = excalidrawApiRef.current.getSceneElements();
+      const appState = excalidrawApiRef.current.getAppState();
+      const files = excalidrawApiRef.current.getFiles();
+
       const drawingData: DrawingData = {
         type: 'excalidraw',
         version: 2,
         source: 'excalfluence',
-        elements,
+        elements: [...elements],
         appState: {
           viewBackgroundColor: appState.viewBackgroundColor,
           gridSize: appState.gridSize,
         },
+        files: files,
       };
 
-      // Generate PNG snapshot
-      const canvas = await exportToCanvas({
-        elements,
-        appState: {
-          ...appState,
-          exportBackground: true,
-        },
-        files: excalidrawAPI.getFiles(),
-        getDimensions: (width: number, height: number) => ({ width, height, scale: 1 }),
-      });
-      const pngDataURL = canvas.toDataURL('image/png');
+      // Generate PNG preview
+      let pngDataURL = '';
+      if (elements.length > 0) {
+        try {
+          const canvas = await exportToCanvas({
+            elements,
+            appState: {
+              ...appState,
+              exportBackground: true,
+            },
+            files,
+          });
+          pngDataURL = canvas.toDataURL('image/png');
+        } catch (e) {
+          console.log('Could not generate preview:', e);
+        }
+      }
 
-      // Save to Confluence custom content storage
-      const context = await AP.context.getContext();
-      
       const storageData: StorageData = {
-        value: JSON.stringify(drawingData),
-        pngSnapshot: pngDataURL,
+        drawing: JSON.stringify(drawingData),
+        preview: pngDataURL,
       };
 
-      // Use Confluence Connect API to save content
-      await AP.request('/rest/api/content/' + context.contentId, {
-        type: 'PUT',
-        contentType: 'application/json',
-        data: JSON.stringify({
-          version: {
-            number: (context.version || 0) + 1,
-          },
-          storage: {
-            value: JSON.stringify(storageData),
-            representation: 'storage',
-          },
-        }),
-      });
+      const macroBody = JSON.stringify(storageData);
+      console.log('Saving macro body, length:', macroBody.length);
 
-      // Notify Confluence that content has been saved
-      AP.confluence.saveMacro({
-        storage: {
-          value: JSON.stringify(storageData),
-        },
-      });
-
-      // Close editor
+      AP.confluence.saveMacro({}, macroBody);
       AP.confluence.closeMacroEditor();
     } catch (error) {
       console.error('Error saving drawing:', error);
       alert('Failed to save drawing. Please try again.');
+      setIsSaving(false);
     }
-  }, [excalidrawAPI]);
+  }, [isSaving]);
 
   const handleCancel = useCallback((): void => {
     AP.confluence.closeMacroEditor();
   }, []);
 
-  if (isLoading) {
+  if (!ExcalidrawComponent || isLoading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        backgroundColor: '#fff'
+      }}>
         <div>Loading editor...</div>
       </div>
     );
   }
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ 
-        padding: '10px', 
-        backgroundColor: '#f4f5f7', 
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#fff' }}>
+      {/* Toolbar */}
+      <div style={{
+        padding: '8px 16px',
+        backgroundColor: '#f4f5f7',
         borderBottom: '1px solid #dfe1e6',
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center'
+        alignItems: 'center',
+        flexShrink: 0,
+        zIndex: 10
       }}>
-        <h3 style={{ margin: 0 }}>Excalidraw Editor</h3>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 500 }}>Excalidraw</h3>
+          <span style={{ fontSize: '11px', color: '#6b778c' }}>v{VERSION}</span>
+        </div>
         <div>
-          <button 
+          <button
             onClick={handleCancel}
-            style={{ 
-              marginRight: '10px', 
-              padding: '8px 16px',
+            disabled={isSaving}
+            style={{
+              marginRight: '8px',
+              padding: '6px 12px',
               backgroundColor: '#fff',
               border: '1px solid #dfe1e6',
               borderRadius: '3px',
-              cursor: 'pointer'
+              cursor: isSaving ? 'not-allowed' : 'pointer',
+              fontSize: '14px'
             }}
           >
             Cancel
           </button>
-          <button 
+          <button
             onClick={saveDrawing}
-            style={{ 
-              padding: '8px 16px',
-              backgroundColor: '#0052cc',
+            disabled={isSaving}
+            style={{
+              padding: '6px 12px',
+              backgroundColor: isSaving ? '#84bef7' : '#0052cc',
               color: 'white',
               border: 'none',
               borderRadius: '3px',
-              cursor: 'pointer'
+              cursor: isSaving ? 'not-allowed' : 'pointer',
+              fontSize: '14px'
             }}
           >
-            Save
+            {isSaving ? 'Saving...' : 'Insert'}
           </button>
         </div>
       </div>
-      <div style={{ flex: 1, position: 'relative' }}>
-        <Excalidraw
-          excalidrawAPI={(api: ExcalidrawImperativeAPI) => setExcalidrawAPI(api)}
-          initialData={initialData ? {
-            ...initialData,
-            appState: initialData.appState ? {
-              ...initialData.appState,
-              gridSize: initialData.appState.gridSize ?? undefined,
-            } : undefined,
-          } as ExcalidrawInitialDataState : undefined}
-          onChange={(elements, appState, files) => {
-            // Auto-save could be implemented here if needed
+
+      {/* Excalidraw Canvas */}
+      <div style={{ flex: 1, width: '100%', height: '100%' }} className="excalidraw-wrapper">
+        <ExcalidrawComponent
+          excalidrawAPI={(api: ExcalidrawImperativeAPI) => {
+            excalidrawApiRef.current = api;
           }}
+          initialData={initialData || { elements: [], appState: { viewBackgroundColor: '#ffffff' } }}
+          theme="light"
         />
       </div>
     </div>

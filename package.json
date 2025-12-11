@@ -4,11 +4,13 @@
   "description": "Confluence plugin for custom drawing types starting with Excalidraw",
   "main": "index.js",
   "scripts": {
-    "build": "npm run build:webpack && npm run build:server",
+    "build": "npm run update-version && npm run build:webpack && npm run build:server && npm run copy-assets",
+    "update-version": "node scripts/update-version.js",
+    "copy-assets": "mkdir -p dist/images && cp atlassian-connect.json dist/ && cp -r images/* dist/images/ 2>/dev/null || true",
     "build:webpack": "webpack --mode production",
     "build:server": "tsc -p tsconfig.server.json",
     "dev": "webpack --mode development --watch",
-    "dev:server": "ts-node --transpile-only server.ts",
+    "dev:server": "nodemon --watch server.ts --watch dist --exec \"ts-node --transpile-only server.ts\"",
     "start": "node dist/server.js",
     "type-check": "tsc --noEmit",
     "update-url": "node scripts/update-baseurl.js"
@@ -40,6 +42,7 @@
     "typescript": "^5.1.6",
     "webpack": "^5.88.2",
     "webpack-cli": "^5.1.4",
-    "html-webpack-plugin": "^5.5.3"
+    "html-webpack-plugin": "^5.5.3",
+    "nodemon": "^3.0.1"
   }
 }

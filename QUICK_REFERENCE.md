@@ -62,9 +62,14 @@ make reset             # ⚠️ Reset everything including data
 
 ## 📦 Install Plugin in Confluence
 
-1. Open http://localhost:8090
-2. Settings → Manage Apps → Upload app
-3. Use: `http://host.docker.internal:3000/atlassian-connect.json`
+1. **Start plugin server locally:**
+   ```bash
+   make start
+   ```
+
+2. Open http://localhost:8090
+3. Settings → Manage Apps → Upload app
+4. Use: `http://host.docker.internal:3000/atlassian-connect.json`
 
 ## 🐛 Troubleshooting
 

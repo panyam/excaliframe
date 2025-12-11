@@ -62,9 +62,9 @@ echo ""
 echo "🐳 Starting PostgreSQL and Confluence Server..."
 # Check if services are already running
 if docker ps | grep -q confluence-server && docker ps | grep -q confluence-postgres; then
-    echo "   Services are already running"
+    echo "   Confluence services are already running"
 else
-    npm run confluence:start
+    make confluence-start
     echo ""
     echo -e "${YELLOW}⏳ Waiting for PostgreSQL to be ready...${NC}"
     MAX_WAIT=60
@@ -103,7 +103,7 @@ else
 fi
 
 echo ""
-echo "🌐 Starting plugin server..."
+echo "🌐 Starting plugin server locally..."
 # Check if port 3000 is already in use
 if lsof -ti:3000 > /dev/null 2>&1; then
     echo -e "${YELLOW}⚠️  Port 3000 is already in use${NC}"
@@ -140,12 +140,14 @@ echo "      - Go to Settings → Manage Apps → Upload app"
 echo "      - Use: http://host.docker.internal:3000/atlassian-connect.json"
 echo ""
 echo "🛠️  Useful commands:"
-echo "   - View Confluence logs: npm run confluence:logs"
-echo "   - View plugin logs: tail -f /tmp/excalfluence-server.log"
-echo "   - Stop Confluence: npm run confluence:stop"
-echo "   - Stop plugin server: kill $SERVER_PID"
+echo "   - View Confluence logs: make logs"
+echo "   - View plugin logs: make logs-plugin"
+echo "   - View webpack logs: make logs-webpack"
+echo "   - View all logs: make logs-all"
+echo "   - Stop all services: make confluence-stop"
 echo ""
 echo "🎨 Start developing!"
-echo "   - Edit files in src/"
-echo "   - Run 'npm run dev' for watch mode"
-echo "   - Restart server after changes"
+echo "   - Edit files in src/ - changes are auto-detected!"
+echo "   - Webpack rebuilds automatically (watch mode in Docker)"
+echo "   - Plugin server restarts automatically on file changes"
+echo "   - No need to restart Docker containers!"

@@ -11,6 +11,20 @@ services:
       PGDATA: /var/lib/postgresql/data/pgdata
       # PostgreSQL memory settings
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    command: >
+      postgres
+      -c shared_buffers=256MB
+      -c effective_cache_size=1GB
+      -c maintenance_work_mem=128MB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c default_statistics_target=100
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+      -c work_mem=16MB
+      -c min_wal_size=1GB
+      -c max_wal_size=4GB
+      -c max_connections=100
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
     ports:
@@ -41,8 +55,14 @@ services:
       - ATL_TOMCAT_PORT=8090
       - SETENV_JVM_MINIMUM_MEMORY=2048m
       - SETENV_JVM_MAXIMUM_MEMORY=4096m
+      # JVM optimizations for faster startup
+      - SETENV_JAVA_OPTS=-XX:+UseG1GC -XX:+UseStringDeduplication -XX:MaxGCPauseMillis=200 -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap
       # Enable development mode for easier local plugin testing
       - ATL_DEV_MODE=true
+      # Disable clustering (not needed for local dev)
+      - ATL_CLUSTER_TYPE=none
+      # Skip backup check on startup (dev only)
+      - ATL_SKIP_BACKUP_CHECK=true
       # Database configuration
       - ATL_JDBC_URL=jdbc:postgresql://postgres:5432/confluence
       - ATL_JDBC_USER=confluence
@@ -51,9 +71,13 @@ services:
     volumes:
       - ./data/confluence:/var/atlassian/application-data/confluence
     restart: unless-stopped
-    # Add extra_hosts to allow Confluence to reach host machine
+    # Add extra_hosts to allow Confluence to reach host machine (for plugin server)
+    # This enables host.docker.internal to work
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    # Alternative: Use host network mode (uncomment if host.docker.internal doesn't work)
+    # network_mode: "host"
+    # If using host network mode, remove the ports section above
     # Resource limits (requires Docker Desktop with sufficient resources)
     # Note: These are soft limits - ensure Docker Desktop has at least 8GB total memory
     # Check resources: make check-resources

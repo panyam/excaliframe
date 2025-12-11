@@ -4,3 +4,10 @@ dist
 *.log
 .DS_Store
 .env
+data
+*.md
+!README.md
+.DS_Store
+*.swp
+*.swo
+*~

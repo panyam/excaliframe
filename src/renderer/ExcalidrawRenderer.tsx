@@ -1,174 +1,160 @@
 import React, { useState, useEffect } from 'react';
-import { Excalidraw } from '@excalidraw/excalidraw';
-import type { ExcalidrawInitialDataState } from '@excalidraw/excalidraw/dist/types/excalidraw/types';
 
 interface DrawingData {
   type?: string;
   version?: number;
   source?: string;
-  elements?: readonly any[];
+  elements?: any[];
   appState?: {
     viewBackgroundColor?: string;
     gridSize?: number | null;
   };
+  files?: Record<string, any>;
 }
 
 interface StorageData {
-  value?: string;
-  pngSnapshot?: string;
-}
-
-interface ConfluenceContent {
-  body?: {
-    storage?: {
-      value?: string;
-    };
-  };
+  drawing: string;
+  preview: string;
 }
 
 const ExcalidrawRenderer: React.FC = () => {
-  const [drawingData, setDrawingData] = useState<DrawingData | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasContent, setHasContent] = useState<boolean>(false);
 
   useEffect(() => {
-    loadDrawingData();
+    loadMacroBody();
+    // Resize iframe to fit content
+    setTimeout(() => {
+      AP.resize('100%', '400px');
+    }, 100);
   }, []);
 
-  const loadDrawingData = async (): Promise<void> => {
+  const loadMacroBody = (): void => {
     try {
-      // Get content from Confluence custom content storage
-      const context = await AP.context.getContext();
-      
-      if (!context.contentId) {
-        throw new Error('No content ID found');
-      }
+      AP.confluence.getMacroBody((body: string) => {
+        console.log('Renderer - Macro body:', body ? body.substring(0, 100) + '...' : 'empty');
 
-      // Load content from Confluence
-      const response = await AP.request('/rest/api/content/' + context.contentId + '?expand=body.storage', {
-        type: 'GET',
-      });
-
-      if (response && response.body) {
-        const content = JSON.parse(response.body) as ConfluenceContent;
-        const storageValue = content.body?.storage?.value;
-        
-        if (storageValue) {
+        if (body && body.trim()) {
           try {
-            const parsed = JSON.parse(storageValue) as StorageData | DrawingData;
-            // Check if it's wrapped in StorageData format
-            if ('value' in parsed && typeof parsed.value === 'string') {
-              const drawingJson = JSON.parse(parsed.value) as DrawingData;
-              setDrawingData(drawingJson);
-            } else {
-              // Direct DrawingData format
-              setDrawingData(parsed as DrawingData);
+            const storageData: StorageData = JSON.parse(body);
+
+            if (storageData.preview) {
+              setPreviewUrl(storageData.preview);
+              setHasContent(true);
+            } else if (storageData.drawing) {
+              // Has drawing but no preview - show placeholder
+              setHasContent(true);
             }
           } catch (e) {
-            // Try direct parsing if nested structure doesn't exist
-            const drawingJson = JSON.parse(storageValue) as DrawingData;
-            setDrawingData(drawingJson);
+            console.log('Could not parse macro body:', e);
+            setError('Invalid drawing data');
           }
         } else {
-          setError('No drawing data found');
+          // Empty macro - show placeholder
+          setHasContent(false);
         }
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      console.error('Error loading drawing:', err);
-      setError('Failed to load drawing: ' + errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleEdit = async (): Promise<void> => {
-    try {
-      const context = await AP.context.getContext();
-      AP.confluence.editMacro({
-        macroId: context.contentId || '',
+        setIsLoading(false);
       });
     } catch (err) {
-      console.error('Error opening editor:', err);
+      console.error('Error loading macro body:', err);
+      setError('Failed to load drawing');
+      setIsLoading(false);
     }
   };
 
   if (isLoading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        minHeight: '400px',
-        padding: '20px'
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '200px',
+        padding: '20px',
+        backgroundColor: '#fafbfc',
+        border: '1px solid #dfe1e6',
+        borderRadius: '3px'
       }}>
-        <div>Loading drawing...</div>
+        <div style={{ color: '#6b778c' }}>Loading drawing...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div style={{ 
-        padding: '20px', 
+      <div style={{
+        padding: '40px 20px',
         textAlign: 'center',
+        backgroundColor: '#ffebe6',
+        border: '1px solid #ff8f73',
+        borderRadius: '3px',
         color: '#de350b'
       }}>
-        <p>{error}</p>
+        <p style={{ margin: 0 }}>{error}</p>
       </div>
     );
   }
 
-  if (!drawingData) {
+  if (!hasContent) {
     return (
-      <div style={{ 
-        padding: '20px', 
+      <div style={{
+        padding: '60px 20px',
         textAlign: 'center',
-        color: '#6b778c'
+        backgroundColor: '#fafbfc',
+        border: '2px dashed #dfe1e6',
+        borderRadius: '3px'
       }}>
-        <p>No drawing data available</p>
+        <div style={{ fontSize: '48px', marginBottom: '16px' }}>🎨</div>
+        <p style={{ margin: 0, color: '#6b778c', fontSize: '14px' }}>
+          Empty Excalidraw drawing
+        </p>
+        <p style={{ margin: '8px 0 0 0', color: '#97a0af', fontSize: '12px' }}>
+          Edit this macro to add content
+        </p>
       </div>
     );
   }
 
-  return (
-    <div style={{ width: '100%', position: 'relative' }}>
+  if (previewUrl) {
+    return (
       <div style={{
-        position: 'absolute',
-        top: '10px',
-        right: '10px',
-        zIndex: 1000,
+        width: '100%',
+        backgroundColor: '#fff',
+        border: '1px solid #dfe1e6',
+        borderRadius: '3px',
+        overflow: 'hidden'
       }}>
-        <button
-          onClick={handleEdit}
+        <img
+          src={previewUrl}
+          alt="Excalidraw drawing"
           style={{
-            padding: '6px 12px',
-            backgroundColor: '#0052cc',
-            color: 'white',
-            border: 'none',
-            borderRadius: '3px',
-            cursor: 'pointer',
-            fontSize: '12px',
-            boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+            display: 'block',
+            maxWidth: '100%',
+            height: 'auto',
+            margin: '0 auto'
           }}
-        >
-          Edit
-        </button>
-      </div>
-      <div style={{ width: '100%', height: '600px' }}>
-        <Excalidraw
-          initialData={drawingData ? {
-            ...drawingData,
-            appState: drawingData.appState ? {
-              ...drawingData.appState,
-              gridSize: drawingData.appState.gridSize ?? undefined,
-            } : undefined,
-          } as ExcalidrawInitialDataState : undefined}
-          viewModeEnabled={true}
-          zenModeEnabled={false}
-          gridModeEnabled={false}
         />
       </div>
+    );
+  }
+
+  // Has content but no preview
+  return (
+    <div style={{
+      padding: '60px 20px',
+      textAlign: 'center',
+      backgroundColor: '#fafbfc',
+      border: '1px solid #dfe1e6',
+      borderRadius: '3px'
+    }}>
+      <div style={{ fontSize: '48px', marginBottom: '16px' }}>🎨</div>
+      <p style={{ margin: 0, color: '#172b4d', fontSize: '14px' }}>
+        Excalidraw Drawing
+      </p>
+      <p style={{ margin: '8px 0 0 0', color: '#97a0af', fontSize: '12px' }}>
+        Edit to view content
+      </p>
     </div>
   );
 };

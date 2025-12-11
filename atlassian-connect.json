@@ -1,52 +1,59 @@
 {
   "key": "com.excalfluence.plugin",
   "name": "Excalfluence",
-  "description": "Custom drawing types for Confluence, starting with Excalidraw",
-  "baseUrl": "http://localhost:3000",
+  "description": "Create and edit Excalidraw drawings directly in Confluence",
+  "baseUrl": "https://tomato-sir-house-eight.trycloudflare.com",
   "version": "1.0.0",
+  "vendor": {
+    "name": "Excalfluence",
+    "url": "https://github.com/excalfluence"
+  },
   "authentication": {
-    "type": "none"
+    "type": "jwt"
   },
   "lifecycle": {
     "installed": "/lifecycle/installed",
     "uninstalled": "/lifecycle/uninstalled"
   },
   "scopes": [
-    "read",
-    "write"
+    "READ",
+    "WRITE"
   ],
   "modules": {
-    "customContent": [
+    "dynamicContentMacros": [
       {
-        "key": "excalidraw-drawing",
+        "key": "excalidraw-macro",
         "name": {
-          "value": "Excalidraw Drawing"
+          "value": "Excalidraw"
         },
         "description": {
-          "value": "Create and edit Excalidraw drawings directly in Confluence"
+          "value": "Embed an Excalidraw drawing"
         },
+        "url": "/macro",
         "icon": {
           "url": "/images/excalidraw-icon.svg",
           "width": 24,
           "height": 24
         },
+        "categories": ["visuals"],
+        "outputType": "block",
         "editor": {
-          "url": "/editor.html"
-        },
-        "renderer": {
-          "url": "/renderer.html"
-        },
-        "actions": [
-          {
-            "key": "edit",
-            "label": {
-              "value": "Edit"
-            },
-            "action": "edit"
-          }
-        ]
+          "url": "/editor",
+          "editTitle": {
+            "value": "Edit Excalidraw Drawing"
+          },
+          "insertTitle": {
+            "value": "Insert Excalidraw Drawing"
+          },
+          "width": "1200px",
+          "height": "800px"
+        }
       }
     ]
   },
-  "apiVersion": 1
+  "apiMigrations": {
+    "gdpr": true,
+    "context-qsh": true,
+    "signed-install": true
+  }
 }

@@ -4,6 +4,16 @@
 interface APContext {
   contentId?: string;
   version?: number;
+  confluence?: {
+    macro?: {
+      id?: string;
+      outputType?: string;
+    };
+    content?: {
+      id?: string;
+      version?: number;
+    };
+  };
   [key: string]: any;
 }
 
@@ -19,33 +29,44 @@ interface APRequestResponse {
   [key: string]: any;
 }
 
-interface APConfluenceMacroStorage {
-  value: string;
+interface APMacroData {
+  [key: string]: string;
 }
 
 interface APConfluence {
-  saveMacro: (options: { storage: APConfluenceMacroStorage }) => void;
+  saveMacro: (macroData: APMacroData, macroBody?: string) => void;
   closeMacroEditor: () => void;
-  editMacro: (options: { macroId: string }) => void;
+  getMacroData: (callback: (data: APMacroData) => void) => void;
+  getMacroBody: (callback: (body: string) => void) => void;
+}
+
+interface APDialog {
+  close: (data?: any) => void;
+  getButton: (name: string) => APDialogButton;
+}
+
+interface APDialogButton {
+  enable: () => void;
+  disable: () => void;
+}
+
+interface APEvents {
+  on: (event: string, callback: (data: any) => void) => void;
+  off: (event: string, callback: (data: any) => void) => void;
+  emit: (event: string, data?: any) => void;
 }
 
 interface APContextAPI {
   getContext: () => Promise<APContext>;
 }
 
-interface APRequestAPI {
-  request: (url: string, options: APRequestOptions) => Promise<APRequestResponse>;
-}
-
-interface APResizeAPI {
-  resize: () => void;
-}
-
 interface AP {
   context: APContextAPI;
   request: (url: string, options: APRequestOptions) => Promise<APRequestResponse>;
-  resize: () => void;
+  resize: (width?: string, height?: string) => void;
   confluence: APConfluence;
+  dialog: APDialog;
+  events: APEvents;
 }
 
 // Declare AP as a global variable

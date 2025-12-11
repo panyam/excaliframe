@@ -1,0 +1,39 @@
+# Docker Compose for development with hot-reload
+# Changes to source files are automatically rebuilt
+
+services:
+  # Plugin server with hot-reload
+  plugin:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: excalfluence-plugin-dev
+    volumes:
+      - ./src:/app/src:ro          # Source files (read-only mount)
+      - ./atlassian-connect.json:/app/atlassian-connect.json:ro
+      - ./images:/app/images:ro
+      - ./webpack.config.js:/app/webpack.config.js:ro
+      - ./tsconfig.json:/app/tsconfig.json:ro
+      - ./tsconfig.server.json:/app/tsconfig.server.json:ro
+      - ./server.ts:/app/server.ts:ro
+      - ./scripts:/app/scripts:ro
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/atlassian-connect.json"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+  # Cloudflared tunnel
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: excalfluence-tunnel-dev
+    depends_on:
+      plugin:
+        condition: service_healthy
+    command: tunnel --no-autoupdate --url http://plugin:3000

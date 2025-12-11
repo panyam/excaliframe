@@ -57,15 +57,25 @@ echo ""
 echo "🔌 Plugin Server:"
 if lsof -ti:3000 > /dev/null 2>&1; then
     PID=$(lsof -ti:3000)
-    echo "   ✅ Running (PID: $PID)"
+    PROCESS=$(ps -p $PID -o comm= 2>/dev/null || echo "unknown")
+    echo "   ✅ Running locally (PID: $PID, $PROCESS)"
     if curl -s http://localhost:3000/atlassian-connect.json > /dev/null 2>&1; then
         echo "   ✅ Accessible at http://localhost:3000"
+        echo "   ✅ Accessible from Docker: http://host.docker.internal:3000"
     else
         echo "   ⚠️  Port in use but not responding"
     fi
 else
     echo "   ❌ Not running"
-    echo "   Start with: npm start"
+    echo "   Start with: make start"
+fi
+
+echo ""
+echo "📦 Webpack Watch:"
+if pgrep -f "webpack.*watch" > /dev/null 2>&1; then
+    echo "   ✅ Running locally - watching for changes"
+else
+    echo "   ⚠️  Not running (optional - run 'make dev' in another terminal)"
 fi
 
 echo ""
@@ -84,17 +94,20 @@ echo ""
 echo "🔗 Connectivity:"
 if docker ps | grep -q confluence-server && lsof -ti:3000 > /dev/null 2>&1; then
     if docker exec confluence-server curl -s http://host.docker.internal:3000/atlassian-connect.json > /dev/null 2>&1; then
-        echo "   ✅ Confluence can reach plugin server"
-        echo "   💡 Use: http://host.docker.internal:3000/atlassian-connect.json"
-    elif docker exec confluence-server curl -s http://localhost:3000/atlassian-connect.json > /dev/null 2>&1; then
-        echo "   ✅ Confluence can reach plugin server (localhost)"
-        echo "   💡 Use: http://localhost:3000/atlassian-connect.json"
+        echo "   ✅ Confluence can reach plugin server via host.docker.internal"
+        echo "   💡 Install plugin using: http://host.docker.internal:3000/atlassian-connect.json"
     else
         echo "   ⚠️  Confluence cannot reach plugin server"
-        echo "   💡 Try: http://host.docker.internal:3000/atlassian-connect.json"
+        echo "   💡 Make sure plugin server is running: make start"
+        echo "   💡 Then use: http://host.docker.internal:3000/atlassian-connect.json"
     fi
 else
-    echo "   ⚠️  Cannot test (services not running)"
+    if [ ! -z "$(docker ps | grep confluence-server)" ] && [ -z "$(lsof -ti:3000)" ]; then
+        echo "   ⚠️  Plugin server not running"
+        echo "   💡 Start it with: make start"
+    else
+        echo "   ⚠️  Cannot test (services not running)"
+    fi
 fi
 
 echo ""

@@ -70,9 +70,12 @@ excalfluence/
 ## How It Works
 
 1. **Custom Content Type**: The plugin registers a custom content type "Excalidraw Drawing" in Confluence
-2. **Editor**: When creating/editing, the editor component loads with Excalidraw
-3. **Storage**: Drawing data (JSON) and PNG snapshots are stored in Confluence's content storage
-4. **Renderer**: When viewing, the renderer component loads the stored data and displays it using Excalidraw's view mode
+2. **Editor**: When creating/editing, Confluence loads `editor.html` in an iframe (served from plugin server)
+3. **Client-Side Rendering**: Excalidraw runs entirely in the browser - no server-side rendering
+4. **Storage**: Drawing data (JSON) and PNG snapshots are stored in Confluence's content storage via Connect API
+5. **Renderer**: When viewing, Confluence loads `renderer.html` in an iframe, which displays the drawing
+
+**Why a server?** See [WHY_SERVER.md](./WHY_SERVER.md) - Confluence Connect architecture requires a server to register the app and serve HTML files, even though Excalidraw is 100% client-side.
 
 ## Storage Format
 
@@ -91,6 +94,15 @@ This plugin is designed to support multiple drawing types. To add a new type:
 2. Register a new custom content type in `atlassian-connect.json`
 3. Follow the same storage pattern
 
+## Performance
+
+Confluence Server startup takes 60-120 seconds. See [PERFORMANCE.md](PERFORMANCE.md) for optimization tips.
+
+**Quick tips:**
+- Keep Confluence running during development (use `make confluence-restart` instead of stop+start)
+- Ensure Docker Desktop has adequate resources (8GB+ RAM, 4+ CPUs)
+- Monitor startup: `make monitor-startup`
+
 ## Testing Locally
 
 ### Option 1: Confluence Server Locally (Production-like) ⭐ Recommended
@@ -105,8 +117,10 @@ make quick-start
 make help              # Show all available commands
 make status            # Check service status
 make logs              # View Confluence logs
-make confluence-start  # Start Confluence + PostgreSQL
-make start             # Start plugin server
+make confluence-start  # Start Confluence + PostgreSQL (Docker)
+make start             # Start plugin server (local, runs on host)
+make dev               # Webpack watch mode (local)
+make dev-server        # Server with auto-reload (local)
 ```
 
 **Manual setup:**
@@ -126,11 +140,27 @@ See [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) for common issues and solutions.
 - Port in use? Run `make stop` then `make start`
 - Plugin won't install? Run `make test-connectivity` to diagnose
 
+## Deployment
+
+For production deployment to a live Confluence instance:
+
+1. **Deploy your server** to a publicly accessible HTTPS URL (e.g., `https://excalfluence.com`)
+2. **Update `baseUrl`** in `atlassian-connect.json` to your production URL
+3. **Build and deploy:**
+   ```bash
+   npm run build
+   # Deploy dist/ folder to your server
+   ```
+4. **Install in Confluence** using your production URL
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed deployment options (Heroku, Railway, VPS, etc.)
+
 ## Notes
 
 - The plugin uses Atlassian Connect JS API (provided globally by Confluence at runtime) for Confluence integration
 - The `AP` object is automatically available when the plugin loads in Confluence
 - Excalidraw is bundled with the plugin, so no external CDN is required
 - All drawing data is stored locally on the Confluence page
+- **Why a server?** See [WHY_SERVER.md](./WHY_SERVER.md) - Confluence Connect requires a server for app registration
 - For local testing, use a tunneling service to expose your local server (see TESTING.md)
 - PostgreSQL "relation does not exist" errors during setup are normal - complete the setup wizard to create tables

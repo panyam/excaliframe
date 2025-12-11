@@ -126,33 +126,62 @@ docker stats confluence-server
 
 ## Plugin Won't Install
 
-**Symptom:** Can't install plugin in Confluence
+**Symptom:** "Could not install the file... Check that the file is valid"
 
-**Check connectivity:**
+**Quick validation:**
 ```bash
-make test-connectivity
+make validate-json    # Validate JSON schema
+make test-endpoint    # Test from Confluence perspective
 ```
 
-**Solutions:**
+**Step-by-step troubleshooting:**
 
-1. **Use correct URL:**
-   - Try: `http://host.docker.internal:3000/atlassian-connect.json`
-   - Or: `http://172.17.0.1:3000/atlassian-connect.json`
-   - Or: `http://localhost:3000/atlassian-connect.json`
-
-2. **Verify plugin server is running:**
+1. **Validate JSON schema:**
    ```bash
-   curl http://localhost:3000/atlassian-connect.json
+   make validate-json
+   ```
+   Fixes common schema issues automatically.
+
+2. **Test endpoint accessibility:**
+   ```bash
+   make test-endpoint
+   ```
+   Verifies Confluence can reach and parse the descriptor.
+
+3. **Verify all referenced files exist:**
+   ```bash
+   curl http://localhost:3000/editor.html
+   curl http://localhost:3000/renderer.html
+   curl http://localhost:3000/images/excalidraw-icon.svg
+   ```
+   All should return content (not 404).
+
+4. **Check Confluence can access files:**
+   ```bash
+   docker exec confluence-server curl http://host.docker.internal:3000/editor.html
+   docker exec confluence-server curl http://host.docker.internal:3000/renderer.html
+   docker exec confluence-server curl http://host.docker.internal:3000/images/excalidraw-icon.svg
    ```
 
-3. **Check Confluence can reach plugin:**
+5. **Rebuild and restart:**
    ```bash
-   docker exec confluence-server curl http://host.docker.internal:3000/atlassian-connect.json
+   make build
+   make stop
+   make start
    ```
 
-4. **Enable development mode** (if available):
-   - Settings → Manage Apps → Settings
-   - Enable "Development mode"
+6. **Check Confluence logs:**
+   ```bash
+   make logs | grep -i "connect\|app\|install"
+   ```
+
+**Common fixes:**
+- Ensure `apiVersion` is first field (already fixed)
+- Verify Content-Type is `application/json` (already configured)
+- Check all referenced URLs start with `/` (relative paths)
+- Ensure `baseUrl` is accessible from browser (`http://localhost:3000`)
+
+**See also:** [TROUBLESHOOTING_INSTALL.md](TROUBLESHOOTING_INSTALL.md) for detailed guide.
 
 ## Plugin Editor/Renderer Won't Load
 
