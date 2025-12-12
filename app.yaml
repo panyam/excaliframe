@@ -1,0 +1,18 @@
+# Google App Engine Standard - Node.js runtime
+# Deploy: gcloud app deploy
+#
+# Before deploying:
+# 1. Run: npm run build
+# 2. Update atlassian-connect.json baseUrl to your GAE URL
+# 3. Run: gcloud app deploy
+
+runtime: nodejs20
+
+instance_class: F1
+
+automatic_scaling:
+  min_instances: 0
+  max_instances: 2
+
+env_variables:
+  NODE_ENV: "production"
