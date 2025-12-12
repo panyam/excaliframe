@@ -1,4 +1,4 @@
-.PHONY: help install build dev start stop restart status logs logs-db test test-connectivity debug-connectivity fix-connectivity monitor-startup validate-json test-endpoint validate-all quick-start clean reset confluence-start confluence-stop confluence-restart confluence-status setup-dirs check-status check-port kill-port reset-db check-db check-resources deploy-info cloud-dev cloud-dev-stop cloud-start cloud-start-bg cloud-stop cloud-logs cloud-url cloud-update-url
+.PHONY: help install build dev start stop restart status logs logs-db test test-connectivity debug-connectivity fix-connectivity monitor-startup validate-json test-endpoint validate-all quick-start clean reset confluence-start confluence-stop confluence-restart confluence-status setup-dirs check-status check-port kill-port reset-db check-db check-resources deploy-info cloud-dev cloud-dev-stop cloud-start cloud-start-bg cloud-stop cloud-logs cloud-url cloud-update-url gae-deploy gae-logs gae-browse gae-describe
 
 # Default target
 .DEFAULT_GOAL := help
@@ -317,18 +317,56 @@ cloud-update-url: ## Update baseUrl with current tunnel URL and rebuild
 	@echo "$(YELLOW)Rebuilding...$(NC)"
 	@$(MAKE) cloud-start
 
-##@ Deployment
+##@ Deployment (Google App Engine)
+
+GAE_PROJECT := excaliframe
+GAE_URL := https://$(GAE_PROJECT).appspot.com
+
+gae-deploy: ## Build and deploy to Google App Engine
+	@echo "$(GREEN)🚀 Deploying to Google App Engine...$(NC)"
+	@echo "$(YELLOW)Project: $(GAE_PROJECT)$(NC)"
+	@echo ""
+	@echo "$(YELLOW)Step 1: Building...$(NC)"
+	@npm run build
+	@echo ""
+	@echo "$(YELLOW)Step 2: Updating baseUrl to $(GAE_URL)...$(NC)"
+	@if [[ "$$(uname)" == "Darwin" ]]; then \
+		sed -i '' 's|"baseUrl": "[^"]*"|"baseUrl": "$(GAE_URL)"|g' atlassian-connect.json; \
+	else \
+		sed -i 's|"baseUrl": "[^"]*"|"baseUrl": "$(GAE_URL)"|g' atlassian-connect.json; \
+	fi
+	@cp atlassian-connect.json dist/
+	@echo ""
+	@echo "$(YELLOW)Step 3: Deploying to GAE...$(NC)"
+	@gcloud app deploy --project=$(GAE_PROJECT) --quiet
+	@echo ""
+	@echo "$(GREEN)✅ Deployed to $(GAE_URL)$(NC)"
+	@echo ""
+	@echo "$(YELLOW)📝 Install in Confluence Cloud:$(NC)"
+	@echo "   $(GAE_URL)/atlassian-connect.json"
+
+gae-logs: ## View App Engine logs
+	@gcloud app logs tail -s default --project=$(GAE_PROJECT)
+
+gae-browse: ## Open App Engine app in browser
+	@gcloud app browse --project=$(GAE_PROJECT)
+
+gae-describe: ## Show App Engine deployment info
+	@gcloud app describe --project=$(GAE_PROJECT)
 
 deploy-info: ## Show deployment information
 	@echo "$(GREEN)Deployment Information$(NC)"
 	@echo ""
-	@echo "For production deployment:"
-	@echo "  1. Deploy server to public HTTPS URL (e.g., https://excalfluence.com)"
-	@echo "  2. Update baseUrl in atlassian-connect.json"
-	@echo "  3. Build: make build"
-	@echo "  4. Deploy dist/ folder to your server"
+	@echo "Google App Engine:"
+	@echo "  Project: $(GAE_PROJECT)"
+	@echo "  URL: $(GAE_URL)"
+	@echo "  Deploy: make gae-deploy"
+	@echo "  Logs: make gae-logs"
 	@echo ""
-	@echo "See DEPLOYMENT.md for detailed instructions"
+	@echo "For manual deployment:"
+	@echo "  1. Build: npm run build"
+	@echo "  2. Update baseUrl in atlassian-connect.json"
+	@echo "  3. Deploy: gcloud app deploy --project=$(GAE_PROJECT)"
 	@echo ""
 
 ##@ Info
