@@ -1,4 +1,4 @@
-.PHONY: help install build dev start stop restart status logs logs-db test test-connectivity debug-connectivity fix-connectivity monitor-startup validate-json test-endpoint validate-all quick-start clean reset confluence-start confluence-stop confluence-restart confluence-status setup-dirs check-status check-port kill-port reset-db check-db check-resources deploy-info cloud-dev cloud-dev-stop cloud-start cloud-start-bg cloud-stop cloud-logs cloud-url cloud-update-url gae-deploy gae-logs gae-browse gae-describe
+.PHONY: help install build dev start stop clean validate-json update-url dev-tunnel cloud-dev cloud-dev-stop cloud-start cloud-start-bg cloud-stop cloud-logs cloud-url gae-deploy gae-logs gae-browse gae-describe deploy-info
 
 # Default target
 .DEFAULT_GOAL := help
@@ -12,7 +12,7 @@ NC := \033[0m # No Color
 ##@ General
 
 help: ## Display this help message
-	@echo "$(GREEN)Excaliframe - Confluence Plugin for Excalidraw$(NC)"
+	@echo "$(GREEN)Excaliframe - Confluence Cloud Plugin for Excalidraw$(NC)"
 	@echo ""
 	@echo "Usage: make [target]"
 	@echo ""
@@ -22,234 +22,60 @@ help: ## Display this help message
 ##@ Setup
 
 install: ## Install npm dependencies
-	@echo "$(GREEN)📦 Installing dependencies...$(NC)"
+	@echo "$(GREEN)Installing dependencies...$(NC)"
 	npm install
-
-setup-dirs: ## Create data directories for persistent storage
-	@echo "$(GREEN)📁 Setting up data directories...$(NC)"
-	@./scripts/setup-data-dirs.sh
-
-quick-start: setup-dirs install build confluence-start ## Complete automated setup
-	@echo ""
-	@echo "$(GREEN)✅ Quick start complete!$(NC)"
-	@echo ""
-	@echo "📝 Next steps:"
-	@echo "   1. Start plugin server: $(GREEN)make start$(NC)"
-	@echo "   2. Open Confluence: http://localhost:8090"
-	@echo "   3. Complete setup wizard"
-	@echo "   4. Get license: https://my.atlassian.com/products/index?evaluation=true"
-	@echo "   5. Install plugin: Settings → Manage Apps → Upload app"
-	@echo "      Use: http://host.docker.internal:3000/atlassian-connect.json"
-	@echo ""
-	@echo "💡 Note: Plugin server is not started automatically."
-	@echo "   Run $(GREEN)make start$(NC) in a separate terminal to start it."
 
 ##@ Build
 
 build: ## Build plugin (webpack + server + copy assets)
-	@echo "$(GREEN)🏗️  Building plugin...$(NC)"
+	@echo "$(GREEN)Building plugin...$(NC)"
 	npm run build
-	@echo "$(GREEN)✅ Build complete$(NC)"
-
-build-webpack: ## Build webpack bundles only
-	@echo "$(GREEN)🏗️  Building webpack bundles...$(NC)"
-	npm run build:webpack
-
-build-server: ## Build server TypeScript only
-	@echo "$(GREEN)🏗️  Building server...$(NC)"
-	npm run build:server
+	@echo "$(GREEN)Build complete$(NC)"
 
 type-check: ## Run TypeScript type checking
-	@echo "$(GREEN)🔍 Type checking...$(NC)"
+	@echo "$(GREEN)Type checking...$(NC)"
 	npm run type-check
+
+clean: ## Remove build artifacts
+	@echo "$(YELLOW)Cleaning build artifacts...$(NC)"
+	rm -rf dist/
+	@echo "$(GREEN)Clean complete$(NC)"
 
 ##@ Development
 
-dev: ## Start dev server with hot reload (webpack dev middleware)
-	@echo "$(GREEN)🚀 Starting dev server with hot reload...$(NC)"
-	@echo "$(YELLOW)💡 Changes to src/ will hot reload instantly$(NC)"
+dev: ## Start dev server with hot reload
+	@echo "$(GREEN)Starting dev server with hot reload...$(NC)"
+	@echo "$(YELLOW)Changes to src/ will hot reload instantly$(NC)"
 	npm run dev
 
-dev-tunnel: ## Start cloudflared tunnel (run in separate terminal alongside 'make dev')
-	@echo "$(GREEN)🌐 Starting cloudflared tunnel...$(NC)"
-	@echo "$(YELLOW)💡 Run 'make dev' in another terminal first$(NC)"
+dev-tunnel: ## Start cloudflared tunnel (run alongside 'make dev')
+	@echo "$(GREEN)Starting cloudflared tunnel...$(NC)"
+	@echo "$(YELLOW)Run 'make dev' in another terminal first$(NC)"
 	docker run --rm -it --network host cloudflare/cloudflared:latest tunnel --no-autoupdate --url http://localhost:3000
 
-start: ## Start plugin server locally (runs on host, accessible via host.docker.internal)
+start: ## Start production server locally
 	@if lsof -ti:3000 > /dev/null 2>&1; then \
-		echo "$(YELLOW)⚠️  Port 3000 is already in use$(NC)"; \
-		echo "   Stopping existing process..."; \
+		echo "$(YELLOW)Port 3000 in use, stopping existing process...$(NC)"; \
 		lsof -ti:3000 | xargs kill -9 2>/dev/null || true; \
 		sleep 1; \
 	fi
-	@echo "$(GREEN)🚀 Starting plugin server (local)...$(NC)"
-	@echo "$(YELLOW)💡 Accessible from Docker containers via: http://host.docker.internal:3000$(NC)"
-	@npm start
+	@echo "$(GREEN)Starting plugin server...$(NC)"
+	npm start
 
-stop: ## Stop plugin server (local)
-	@echo "$(YELLOW)🛑 Stopping plugin server...$(NC)"
+stop: ## Stop plugin server
+	@echo "$(YELLOW)Stopping plugin server...$(NC)"
 	@if lsof -ti:3000 > /dev/null 2>&1; then \
 		lsof -ti:3000 | xargs kill -9 2>/dev/null || true; \
-		echo "$(GREEN)✅ Plugin server stopped$(NC)"; \
+		echo "$(GREEN)Plugin server stopped$(NC)"; \
 	else \
-		echo "$(YELLOW)ℹ️  No process running on port 3000$(NC)"; \
+		echo "$(YELLOW)No process running on port 3000$(NC)"; \
 	fi
 
-##@ Confluence
+##@ Confluence Cloud
 
-confluence-start: setup-dirs ## Start PostgreSQL and Confluence Server (plugin server runs locally)
-	@echo "$(GREEN)🐳 Starting PostgreSQL and Confluence Server...$(NC)"
-	@echo "$(YELLOW)💡 Note: Plugin server should run locally (make start)$(NC)"
-	@if docker compose version > /dev/null 2>&1; then \
-		docker compose pull postgres confluence 2>/dev/null || true; \
-		docker compose up -d postgres confluence; \
-	else \
-		docker-compose pull postgres confluence 2>/dev/null || true; \
-		docker-compose up -d postgres confluence; \
-	fi
-	@echo ""
-	@echo "$(YELLOW)⏳ Waiting for services to start...$(NC)"
-	@echo "   Check status: make status"
-	@echo "   View logs: make logs"
-	@echo ""
-	@echo "$(GREEN)📝 Next steps:$(NC)"
-	@echo "   1. Start plugin server locally: $(GREEN)make start$(NC)"
-	@echo "   2. Install plugin in Confluence using:"
-	@echo "      http://host.docker.internal:3000/atlassian-connect.json"
-
-confluence-stop: ## Stop PostgreSQL and Confluence Server
-	@echo "$(YELLOW)🛑 Stopping Confluence services...$(NC)"
-	@if docker compose version > /dev/null 2>&1; then \
-		docker compose stop postgres confluence; \
-	else \
-		docker-compose stop postgres confluence; \
-	fi
-	@echo "$(GREEN)✅ Confluence services stopped$(NC)"
-	@echo "$(YELLOW)💡 Note: Plugin server (if running locally) is not stopped$(NC)"
-	@echo "   Stop it with: make stop"
-
-confluence-restart: confluence-stop confluence-start ## Restart Confluence services
-
-confluence-status: ## Check status of Confluence services
-	@./scripts/check-status.sh
-
-confluence-reset: ## ⚠️ Remove all Confluence data and restart
-	@echo "$(RED)⚠️  WARNING: This will delete all Confluence data!$(NC)"
-	@read -p "Are you sure? [y/N] " -n 1 -r; \
-	echo; \
-	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
-		if docker compose version > /dev/null 2>&1; then \
-			docker compose down -v; \
-		else \
-			docker-compose down -v; \
-		fi; \
-		rm -rf data/; \
-		./scripts/setup-data-dirs.sh; \
-		echo "$(GREEN)✅ Data reset complete$(NC)"; \
-	else \
-		echo "$(YELLOW)Cancelled$(NC)"; \
-	fi
-
-reset-db: ## Reset Confluence database only (keeps containers)
-	@./scripts/reset-database.sh
-
-check-db: ## Check database status and table creation progress
-	@./scripts/check-db-status.sh
-
-check-resources: ## Check Docker Desktop resource allocation
-	@./scripts/check-docker-resources.sh
-
-##@ Logs
-
-logs: ## View Confluence logs
-	@echo "$(GREEN)📋 Confluence logs (Ctrl+C to exit)...$(NC)"
-	docker logs -f confluence-server
-
-logs-db: ## View PostgreSQL logs
-	@echo "$(GREEN)📋 PostgreSQL logs (Ctrl+C to exit)...$(NC)"
-	docker logs -f confluence-postgres
-
-logs-all: ## View all Confluence logs (PostgreSQL + Confluence)
-	@echo "$(GREEN)📋 All Confluence logs (Ctrl+C to exit)...$(NC)"
-	@if docker compose version > /dev/null 2>&1; then \
-		docker compose logs -f postgres confluence; \
-	else \
-		docker-compose logs -f postgres confluence; \
-	fi
-
-##@ Testing
-
-test: test-connectivity ## Run all tests
-
-test-connectivity: ## Test connectivity between services
-	@./scripts/test-connectivity.sh
-
-debug-connectivity: ## Debug connectivity issues (detailed)
-	@./scripts/debug-connectivity.sh
-
-fix-connectivity: ## Find working connection method and suggest URL
-	@./scripts/fix-connectivity.sh
-
-monitor-startup: ## Monitor Confluence startup progress in real-time
-	@./scripts/monitor-startup.sh
-
-validate-json: ## Validate atlassian-connect.json schema
-	@node scripts/validate-connect-json.js
-
-test-endpoint: ## Test atlassian-connect.json endpoint from Confluence perspective
-	@./scripts/test-connect-endpoint.sh
-
-validate-all: ## Comprehensive validation (schema, files, endpoints, connectivity)
-	@./scripts/validate-all.sh
-
-status: confluence-status ## Check status of all services (alias for confluence-status)
-
-check-status: confluence-status ## Check status of all services (alias for confluence-status)
-
-##@ Cleanup
-
-clean: ## Remove build artifacts
-	@echo "$(YELLOW)🧹 Cleaning build artifacts...$(NC)"
-	rm -rf dist/
-	@echo "$(GREEN)✅ Clean complete$(NC)"
-
-clean-all: clean stop confluence-stop ## Clean everything except data
-	@echo "$(YELLOW)🧹 Cleaning everything except data...$(NC)"
-	rm -rf node_modules/
-	@echo "$(GREEN)✅ Clean complete$(NC)"
-
-reset: confluence-reset ## ⚠️ Reset everything including data (alias for confluence-reset)
-
-##@ Utilities
-
-update-url: ## Update baseUrl in atlassian-connect.json (usage: make update-url URL=https://example.com)
-	@if [ -z "$(URL)" ]; then \
-		echo "$(RED)❌ Error: URL is required$(NC)"; \
-		echo "Usage: make update-url URL=https://example.com"; \
-		exit 1; \
-	fi
-	@node scripts/update-baseurl.js $(URL)
-
-tunnel-ngrok: ## Start ngrok tunnel
-	@echo "$(GREEN)🌐 Starting ngrok tunnel...$(NC)"
-	ngrok http 3000
-
-tunnel-lt: ## Start localtunnel
-	@echo "$(GREEN)🌐 Starting localtunnel...$(NC)"
-	npx localtunnel --port 3000
-
-check-port: ## Check if port 3000 is in use (usage: make check-port PORT=3000)
-	@./scripts/check-port.sh $(PORT) check
-
-kill-port: ## Kill process using port 3000 (usage: make kill-port PORT=3000)
-	@echo "$(YELLOW)🛑 Killing process on port $(PORT)...$(NC)"
-	@./scripts/check-port.sh $(PORT) kill || echo "$(YELLOW)No process found on port $(PORT)$(NC)"
-
-##@ Confluence Cloud (Recommended)
-
-cloud-dev: ## Start dev mode with hot-reload + tunnel (all in Docker)
-	@echo "$(GREEN)☁️  Starting dev mode with hot-reload...$(NC)"
-	@echo "$(YELLOW)💡 Changes to src/ will hot reload instantly$(NC)"
+cloud-dev: ## Start dev mode with hot-reload + tunnel (recommended)
+	@echo "$(GREEN)Starting dev mode with hot-reload + tunnel...$(NC)"
+	@echo "$(YELLOW)Changes to src/ will hot reload instantly$(NC)"
 	@if docker compose version > /dev/null 2>&1; then \
 		docker compose -f docker-compose.dev.yml up; \
 	else \
@@ -263,9 +89,8 @@ cloud-dev-stop: ## Stop dev mode
 		docker-compose -f docker-compose.dev.yml down; \
 	fi
 
-cloud-start: ## Start plugin server + tunnel for Confluence Cloud
-	@echo "$(GREEN)☁️  Starting plugin + tunnel for Confluence Cloud...$(NC)"
-	@echo "$(YELLOW)💡 This is the recommended setup - no Java required!$(NC)"
+cloud-start: ## Start plugin server + tunnel (production mode)
+	@echo "$(GREEN)Starting plugin + tunnel for Confluence Cloud...$(NC)"
 	@if docker compose version > /dev/null 2>&1; then \
 		docker compose -f docker-compose.cloud.yml up --build; \
 	else \
@@ -273,28 +98,28 @@ cloud-start: ## Start plugin server + tunnel for Confluence Cloud
 	fi
 
 cloud-start-bg: ## Start plugin server + tunnel in background
-	@echo "$(GREEN)☁️  Starting plugin + tunnel (background)...$(NC)"
+	@echo "$(GREEN)Starting plugin + tunnel (background)...$(NC)"
 	@if docker compose version > /dev/null 2>&1; then \
 		docker compose -f docker-compose.cloud.yml up -d --build; \
 	else \
 		docker-compose -f docker-compose.cloud.yml up -d --build; \
 	fi
 	@echo ""
-	@echo "$(YELLOW)⏳ Waiting for tunnel URL...$(NC)"
+	@echo "$(YELLOW)Waiting for tunnel URL...$(NC)"
 	@sleep 10
 	@$(MAKE) cloud-url
 
-cloud-stop: ## Stop Confluence Cloud services
-	@echo "$(YELLOW)🛑 Stopping Cloud services...$(NC)"
+cloud-stop: ## Stop cloud services
+	@echo "$(YELLOW)Stopping cloud services...$(NC)"
 	@if docker compose version > /dev/null 2>&1; then \
 		docker compose -f docker-compose.cloud.yml down; \
 	else \
 		docker-compose -f docker-compose.cloud.yml down; \
 	fi
-	@echo "$(GREEN)✅ Cloud services stopped$(NC)"
+	@echo "$(GREEN)Cloud services stopped$(NC)"
 
 cloud-logs: ## View tunnel logs to get URL
-	@echo "$(GREEN)📋 Tunnel logs (look for trycloudflare.com URL)...$(NC)"
+	@echo "$(GREEN)Tunnel logs (look for trycloudflare.com URL)...$(NC)"
 	@if docker compose version > /dev/null 2>&1; then \
 		docker compose -f docker-compose.cloud.yml logs tunnel; \
 	else \
@@ -302,20 +127,14 @@ cloud-logs: ## View tunnel logs to get URL
 	fi
 
 cloud-url: ## Show current tunnel URL
-	@echo "$(GREEN)🔗 Current tunnel URL:$(NC)"
+	@echo "$(GREEN)Current tunnel URL:$(NC)"
 	@if docker compose version > /dev/null 2>&1; then \
 		docker compose -f docker-compose.cloud.yml logs tunnel 2>/dev/null | grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' | tail -1 || echo "$(RED)Tunnel not running or URL not found$(NC)"; \
 	else \
 		docker-compose -f docker-compose.cloud.yml logs tunnel 2>/dev/null | grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' | tail -1 || echo "$(RED)Tunnel not running or URL not found$(NC)"; \
 	fi
 	@echo ""
-	@echo "$(YELLOW)💡 Install in Confluence Cloud using: <tunnel-url>/atlassian-connect.json$(NC)"
-
-cloud-update-url: ## Update baseUrl with current tunnel URL and rebuild
-	@echo "$(GREEN)🔄 Updating baseUrl with tunnel URL...$(NC)"
-	@./scripts/update-base-url.sh
-	@echo "$(YELLOW)Rebuilding...$(NC)"
-	@$(MAKE) cloud-start
+	@echo "$(YELLOW)Install in Confluence Cloud: <tunnel-url>/atlassian-connect.json$(NC)"
 
 ##@ Deployment (Google App Engine)
 
@@ -323,7 +142,7 @@ GAE_PROJECT := excaliframe
 GAE_URL := https://$(GAE_PROJECT).appspot.com
 
 gae-deploy: ## Build and deploy to Google App Engine
-	@echo "$(GREEN)🚀 Deploying to Google App Engine...$(NC)"
+	@echo "$(GREEN)Deploying to Google App Engine...$(NC)"
 	@echo "$(YELLOW)Project: $(GAE_PROJECT)$(NC)"
 	@echo ""
 	@echo "$(YELLOW)Step 1: Building...$(NC)"
@@ -340,9 +159,9 @@ gae-deploy: ## Build and deploy to Google App Engine
 	@echo "$(YELLOW)Step 3: Deploying to GAE...$(NC)"
 	@gcloud app deploy --project=$(GAE_PROJECT) --quiet
 	@echo ""
-	@echo "$(GREEN)✅ Deployed to $(GAE_URL)$(NC)"
+	@echo "$(GREEN)Deployed to $(GAE_URL)$(NC)"
 	@echo ""
-	@echo "$(YELLOW)📝 Install in Confluence Cloud:$(NC)"
+	@echo "$(YELLOW)Install in Confluence Cloud:$(NC)"
 	@echo "   $(GAE_URL)/atlassian-connect.json"
 
 gae-logs: ## View App Engine logs
@@ -354,61 +173,15 @@ gae-browse: ## Open App Engine app in browser
 gae-describe: ## Show App Engine deployment info
 	@gcloud app describe --project=$(GAE_PROJECT)
 
-deploy-info: ## Show deployment information
-	@echo "$(GREEN)Deployment Information$(NC)"
-	@echo ""
-	@echo "Google App Engine:"
-	@echo "  Project: $(GAE_PROJECT)"
-	@echo "  URL: $(GAE_URL)"
-	@echo "  Deploy: make gae-deploy"
-	@echo "  Logs: make gae-logs"
-	@echo ""
-	@echo "For manual deployment:"
-	@echo "  1. Build: npm run build"
-	@echo "  2. Update baseUrl in atlassian-connect.json"
-	@echo "  3. Deploy: gcloud app deploy --project=$(GAE_PROJECT)"
-	@echo ""
+##@ Utilities
 
-##@ Info
+validate-json: ## Validate atlassian-connect.json schema
+	@node scripts/validate-connect-json.js
 
-info: ## Show project information
-	@echo "$(GREEN)Excaliframe - Project Information$(NC)"
-	@echo ""
-	@echo "Confluence (Docker):"
-	@echo "  URL: http://localhost:8090"
-	@echo "  Status: $$(docker ps --filter name=confluence-server --format '{{.Status}}' 2>/dev/null || echo 'Not running')"
-	@echo ""
-	@echo "PostgreSQL (Docker):"
-	@echo "  Port: 5432"
-	@echo "  Status: $$(docker ps --filter name=confluence-postgres --format '{{.Status}}' 2>/dev/null || echo 'Not running')"
-	@echo ""
-	@echo "Plugin Server (Local - NOT in Docker):"
-	@echo "  URL: http://localhost:3000"
-	@echo "  Status: $$(lsof -ti:3000 > /dev/null 2>&1 && echo 'Running' || echo 'Not running')"
-	@echo "  Accessible from Docker: http://host.docker.internal:3000"
-	@echo ""
-	@echo "Data Directories:"
-	@echo "  PostgreSQL: ./data/postgres"
-	@echo "  Confluence: ./data/confluence"
-	@echo ""
-	@echo "Database Configuration (for Confluence setup wizard):"
-	@echo "  Type: PostgreSQL"
-	@echo "  Hostname: postgres"
-	@echo "  Port: 5432"
-	@echo "  Database: confluence"
-	@echo "  Username: confluence"
-	@echo "  Password: confluence"
-	@echo ""
-	@echo "Plugin Installation URL:"
-	@echo "  http://host.docker.internal:3000/atlassian-connect.json"
-	@echo ""
-	@echo "Useful Commands:"
-	@echo "  make help          - Show this help"
-	@echo "  make quick-start   - Complete automated setup"
-	@echo "  make status        - Check service status"
-	@echo "  make start         - Start plugin server (local)"
-	@echo "  make logs          - View Confluence logs"
-	@echo ""
-	@echo "$(YELLOW)Note:$(NC) PostgreSQL 'relation does not exist' errors are normal"
-	@echo "      during Confluence initialization. Complete the setup wizard"
-	@echo "      to create all required tables."
+update-url: ## Update baseUrl (usage: make update-url URL=https://example.com)
+	@if [ -z "$(URL)" ]; then \
+		echo "$(RED)Error: URL is required$(NC)"; \
+		echo "Usage: make update-url URL=https://example.com"; \
+		exit 1; \
+	fi
+	@node scripts/update-baseurl.js $(URL)

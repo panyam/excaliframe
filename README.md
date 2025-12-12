@@ -1,6 +1,6 @@
 # Excaliframe
 
-A Confluence Connect app that lets you create and edit [Excalidraw](https://excalidraw.com/) drawings directly in Confluence pages. All drawing data is stored within Confluence - no external services required.
+A Confluence Cloud app that lets you create and edit [Excalidraw](https://excalidraw.com/) drawings directly in Confluence pages. All drawing data is stored within Confluence - no external services required.
 
 ## Screenshots
 
@@ -23,13 +23,8 @@ A Confluence Connect app that lets you create and edit [Excalidraw](https://exca
 - **Local Storage** - All data (JSON + PNG snapshots) stored in Confluence's content storage
 - **No External Dependencies** - Excalidraw is bundled; works without external network access
 - **Hot Reload Development** - Webpack dev middleware for instant changes during development
-- **Multiple Deployment Options** - Local Docker setup, Confluence Cloud with tunneling, or Google App Engine
 
 ## Quick Start
-
-### Option 1: Confluence Cloud (Recommended)
-
-The fastest way to get started - no local Confluence installation needed.
 
 ```bash
 # Install dependencies
@@ -40,29 +35,12 @@ make cloud-dev
 ```
 
 Look for the tunnel URL in the output (e.g., `https://xxx.trycloudflare.com`), then:
+
 1. Go to your Confluence Cloud instance → Settings → Apps → Manage apps
 2. Enable development mode
 3. Upload app using: `<tunnel-url>/atlassian-connect.json`
 
-See [CLOUD_SETUP.md](./CLOUD_SETUP.md) for detailed instructions.
-
-### Option 2: Local Confluence Server
-
-Run Confluence locally in Docker for a production-like environment.
-
-```bash
-# Complete automated setup (PostgreSQL + Confluence + build)
-make quick-start
-
-# In a separate terminal, start the plugin server
-make start
-```
-
-Then:
-1. Open http://localhost:8090 and complete the Confluence setup wizard
-2. Install the plugin using: `http://host.docker.internal:3000/atlassian-connect.json`
-
-See [LOCAL_SETUP.md](./LOCAL_SETUP.md) for detailed instructions.
+See [docs/CLOUD_SETUP.md](./docs/CLOUD_SETUP.md) for detailed instructions.
 
 ## Project Structure
 
@@ -70,28 +48,28 @@ See [LOCAL_SETUP.md](./LOCAL_SETUP.md) for detailed instructions.
 excaliframe/
 ├── src/
 │   ├── editor/                 # Excalidraw editor component
-│   │   ├── ExcalidrawEditor.tsx   # Main editor React component
-│   │   ├── index.tsx              # Editor entry point
-│   │   ├── index.html             # Editor HTML template
+│   │   ├── ExcalidrawEditor.tsx
+│   │   ├── index.tsx
+│   │   ├── index.html
 │   │   └── styles.css
 │   ├── renderer/               # Drawing viewer component
-│   │   ├── ExcalidrawRenderer.tsx # Displays PNG preview
-│   │   ├── index.tsx              # Renderer entry point
-│   │   ├── index.html             # Renderer HTML template
+│   │   ├── ExcalidrawRenderer.tsx
+│   │   ├── index.tsx
+│   │   ├── index.html
 │   │   └── styles.css
 │   ├── utils/
 │   │   └── mockAP.ts           # Mock Atlassian Connect API for dev
 │   ├── types/
-│   │   └── atlassian-connect.d.ts # TypeScript types for AP object
-│   └── version.ts              # Version info injected at build
-├── scripts/                    # Utility scripts for setup and testing
+│   │   └── atlassian-connect.d.ts
+│   └── version.ts
+├── docs/                       # Documentation
+├── scripts/                    # Utility scripts
 ├── images/
 │   └── excalidraw-icon.svg     # Macro icon
-├── server.ts                   # Express server (TypeScript)
-├── webpack.config.js           # Webpack build configuration
+├── server.ts                   # Express server
+├── webpack.config.js           # Webpack build config
 ├── atlassian-connect.json      # Confluence Connect app descriptor
-├── docker-compose.yml          # Local Confluence + PostgreSQL
-├── docker-compose.cloud.yml    # Plugin + tunnel for Cloud testing
+├── docker-compose.cloud.yml    # Plugin + tunnel for Cloud
 ├── docker-compose.dev.yml      # Dev mode with hot reload
 ├── app.yaml                    # Google App Engine config
 ├── Makefile                    # All common commands
@@ -104,12 +82,10 @@ excaliframe/
 
 | Command | Description |
 |---------|-------------|
-| `make dev` | Start dev server with hot reload |
-| `make start` | Start production server locally |
+| `make cloud-dev` | Start dev server with hot reload + tunnel |
+| `make dev` | Start dev server with hot reload (no tunnel) |
+| `make dev-tunnel` | Start tunnel separately (use with `make dev`) |
 | `make build` | Build for production |
-| `make cloud-dev` | Dev mode with tunnel for Confluence Cloud |
-| `make status` | Check status of all services |
-| `make logs` | View Confluence logs |
 | `make help` | Show all available commands |
 
 ### Hot Reload Development
@@ -117,20 +93,15 @@ excaliframe/
 For the fastest development experience:
 
 ```bash
-# Start with hot reload (changes reflect instantly)
-make dev
+# All-in-one: dev server + tunnel
+make cloud-dev
 
-# In another terminal, start a tunnel for Confluence Cloud
-make dev-tunnel
+# Or run separately in two terminals:
+make dev          # Terminal 1: dev server with hot reload
+make dev-tunnel   # Terminal 2: cloudflare tunnel
 ```
 
 Changes to files in `src/` will automatically rebuild and refresh.
-
-### Type Checking
-
-```bash
-npm run type-check
-```
 
 ## How It Works
 
@@ -143,9 +114,7 @@ npm run type-check
 │  │                   Excalidraw Macro                     │ │
 │  │  ┌──────────────────────────────────────────────────┐  │ │
 │  │  │              iframe (renderer.html)              │  │ │
-│  │  │                                                  │  │ │
 │  │  │           PNG Preview of Drawing                 │  │ │
-│  │  │                                                  │  │ │
 │  │  └──────────────────────────────────────────────────┘  │ │
 │  └────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
@@ -156,11 +125,7 @@ npm run type-check
 │                    Macro Editor Dialog                      │
 │  ┌────────────────────────────────────────────────────────┐ │
 │  │               iframe (editor.html)                     │ │
-│  │  ┌──────────────────────────────────────────────────┐  │ │
-│  │  │                                                  │  │ │
-│  │  │              Full Excalidraw Editor              │  │ │
-│  │  │                                                  │  │ │
-│  │  └──────────────────────────────────────────────────┘  │ │
+│  │              Full Excalidraw Editor                    │ │
 │  └────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -187,30 +152,18 @@ Drawings are stored as JSON in the macro body:
 
 ### Why a Server?
 
-Confluence Connect requires a server to:
-1. Serve the `atlassian-connect.json` descriptor
-2. Handle lifecycle events (`/lifecycle/installed`, `/lifecycle/uninstalled`)
-3. Serve HTML files for the editor and renderer
-
-The server is minimal - all Excalidraw logic runs client-side in the browser.
-
-See [WHY_SERVER.md](./WHY_SERVER.md) for detailed explanation.
+Confluence Connect requires a server to serve the app descriptor and HTML files, even though Excalidraw runs entirely client-side. See [docs/WHY_SERVER.md](./docs/WHY_SERVER.md) for details.
 
 ## Deployment
 
 ### Google App Engine (Production)
 
 ```bash
-# Build and deploy
 make gae-deploy
 ```
 
-This will:
-1. Build the production bundle
-2. Update `baseUrl` in `atlassian-connect.json`
-3. Deploy to Google App Engine
-
-Install in Confluence using: `https://excaliframe.appspot.com/atlassian-connect.json`
+This builds, updates `baseUrl`, and deploys. Install in Confluence using:
+`https://excaliframe.appspot.com/atlassian-connect.json`
 
 ### Other Platforms
 
@@ -221,33 +174,18 @@ The app can be deployed to any platform that runs Node.js:
 - **Fly.io** - `fly deploy`
 - **VPS** - Use PM2 + Nginx
 
-See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed instructions for each platform.
+See [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) for detailed instructions.
 
 ## Documentation
 
 | Document | Description |
 |----------|-------------|
-| [LOCAL_SETUP.md](./LOCAL_SETUP.md) | Complete local development setup guide |
-| [CLOUD_SETUP.md](./CLOUD_SETUP.md) | Confluence Cloud testing with tunnels |
-| [DEPLOYMENT.md](./DEPLOYMENT.md) | Production deployment options |
-| [TESTING.md](./TESTING.md) | Testing strategies and tools |
-| [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) | Common issues and solutions |
-| [PERFORMANCE.md](./PERFORMANCE.md) | Confluence startup optimization |
-| [WHY_SERVER.md](./WHY_SERVER.md) | Why Confluence Connect needs a server |
-| [QUICK_REFERENCE.md](./QUICK_REFERENCE.md) | Command cheat sheet |
+| [docs/CLOUD_SETUP.md](./docs/CLOUD_SETUP.md) | Confluence Cloud setup with tunnels |
+| [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) | Production deployment options |
+| [docs/TESTING.md](./docs/TESTING.md) | Testing strategies |
+| [docs/WHY_SERVER.md](./docs/WHY_SERVER.md) | Why Confluence Connect needs a server |
 
 ## Troubleshooting
-
-### Common Issues
-
-**Plugin won't install?**
-```bash
-make test-connectivity  # Diagnose connection issues
-```
-
-**PostgreSQL errors during setup?**
-- These are normal during Confluence initialization
-- Complete the setup wizard to create database tables
 
 **Port 3000 in use?**
 ```bash
@@ -256,10 +194,12 @@ make start   # Restart the server
 ```
 
 **Changes not reflecting?**
-- Use `make dev` for hot reload during development
+- Use `make cloud-dev` for hot reload during development
 - In production, rebuild with `make build`
 
-See [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) for more solutions.
+**Tunnel URL changed?**
+- Run `make cloud-url` to see the current URL
+- Re-install the app in Confluence with the new URL
 
 ## Tech Stack
 
