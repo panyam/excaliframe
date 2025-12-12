@@ -1,6 +1,6 @@
 # Excaliframe
 
-A Confluence Connect app that lets you create and edit [Excalidraw](https://excalidraw.com/) drawings directly in Confluence pages. All drawing data is stored within Confluence—no external services required.
+A Confluence Connect app that lets you create and edit [Excalidraw](https://excalidraw.com/) drawings directly in Confluence pages. All drawing data is stored within Confluence - no external services required.
 
 ## Screenshots
 
@@ -22,7 +22,7 @@ A Confluence Connect app that lets you create and edit [Excalidraw](https://exca
 
 ### Option 1: Confluence Cloud (Recommended)
 
-The fastest way to get started—no local Confluence installation needed.
+The fastest way to get started - no local Confluence installation needed.
 
 ```bash
 # Install dependencies
@@ -185,7 +185,7 @@ Confluence Connect requires a server to:
 2. Handle lifecycle events (`/lifecycle/installed`, `/lifecycle/uninstalled`)
 3. Serve HTML files for the editor and renderer
 
-The server is minimal—all Excalidraw logic runs client-side in the browser.
+The server is minimal - all Excalidraw logic runs client-side in the browser.
 
 See [WHY_SERVER.md](./WHY_SERVER.md) for detailed explanation.
 
