@@ -292,25 +292,23 @@ const ExcalidrawEditor: React.FC = () => {
             </span>
           )}
         </div>
-        {/* Show Cancel only in dev mode, Insert button always visible */}
+        {/* Action buttons - fullscreen mode has no Confluence chrome */}
         <div>
-          {!isRunningInConfluence() && (
-            <button
-              onClick={handleCancel}
-              disabled={isSaving}
-              style={{
-                marginRight: '8px',
-                padding: '6px 12px',
-                backgroundColor: '#fff',
-                border: '1px solid #dfe1e6',
-                borderRadius: '3px',
-                cursor: isSaving ? 'not-allowed' : 'pointer',
-                fontSize: '14px'
-              }}
-            >
-              Cancel
-            </button>
-          )}
+          <button
+            onClick={handleCancel}
+            disabled={isSaving}
+            style={{
+              marginRight: '8px',
+              padding: '6px 12px',
+              backgroundColor: '#fff',
+              border: '1px solid #dfe1e6',
+              borderRadius: '3px',
+              cursor: isSaving ? 'not-allowed' : 'pointer',
+              fontSize: '14px'
+            }}
+          >
+            Cancel
+          </button>
           <button
             onClick={saveDrawing}
             disabled={isSaving}
