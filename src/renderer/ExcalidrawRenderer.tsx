@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { getAP } from '../utils/mockAP';
 
 interface DrawingData {
@@ -23,15 +23,28 @@ const ExcalidrawRenderer: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [hasContent, setHasContent] = useState<boolean>(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const resizeToFit = useCallback((height?: number) => {
+    const AP = getAP();
+    if (height) {
+      // Add small padding for border
+      AP.resize('100%', `${height + 10}px`);
+    } else if (containerRef.current) {
+      const contentHeight = containerRef.current.offsetHeight;
+      AP.resize('100%', `${contentHeight + 10}px`);
+    }
+  }, []);
+
+  const handleImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    // Resize iframe to match actual image height
+    resizeToFit(img.offsetHeight);
+  }, [resizeToFit]);
 
   useEffect(() => {
     console.log('Renderer mounting...');
     loadMacroBody();
-    // Resize iframe to fit content
-    const AP = getAP();
-    setTimeout(() => {
-      AP.resize('100%', '400px');
-    }, 100);
   }, []);
 
   const loadMacroBody = (): void => {
@@ -78,13 +91,21 @@ const ExcalidrawRenderer: React.FC = () => {
     }
   };
 
+  // Resize for non-image states
+  useEffect(() => {
+    if (!isLoading && !previewUrl) {
+      // Small delay to let DOM render
+      setTimeout(() => resizeToFit(), 50);
+    }
+  }, [isLoading, previewUrl, hasContent, error, resizeToFit]);
+
   if (isLoading) {
     return (
       <div style={{
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        minHeight: '200px',
+        minHeight: '100px',
         padding: '20px',
         backgroundColor: '#fafbfc',
         border: '1px solid #dfe1e6',
@@ -97,14 +118,17 @@ const ExcalidrawRenderer: React.FC = () => {
 
   if (error) {
     return (
-      <div style={{
-        padding: '40px 20px',
-        textAlign: 'center',
-        backgroundColor: '#ffebe6',
-        border: '1px solid #ff8f73',
-        borderRadius: '3px',
-        color: '#de350b'
-      }}>
+      <div
+        ref={containerRef}
+        style={{
+          padding: '40px 20px',
+          textAlign: 'center',
+          backgroundColor: '#ffebe6',
+          border: '1px solid #ff8f73',
+          borderRadius: '3px',
+          color: '#de350b'
+        }}
+      >
         <p style={{ margin: 0 }}>{error}</p>
       </div>
     );
@@ -112,14 +136,17 @@ const ExcalidrawRenderer: React.FC = () => {
 
   if (!hasContent) {
     return (
-      <div style={{
-        padding: '60px 20px',
-        textAlign: 'center',
-        backgroundColor: '#fafbfc',
-        border: '2px dashed #dfe1e6',
-        borderRadius: '3px'
-      }}>
-        <div style={{ fontSize: '48px', marginBottom: '16px' }}>🎨</div>
+      <div
+        ref={containerRef}
+        style={{
+          padding: '40px 20px',
+          textAlign: 'center',
+          backgroundColor: '#fafbfc',
+          border: '2px dashed #dfe1e6',
+          borderRadius: '3px'
+        }}
+      >
+        <div style={{ fontSize: '36px', marginBottom: '12px' }}>🎨</div>
         <p style={{ margin: 0, color: '#6b778c', fontSize: '14px' }}>
           Empty Excalidraw drawing
         </p>
@@ -132,16 +159,20 @@ const ExcalidrawRenderer: React.FC = () => {
 
   if (previewUrl) {
     return (
-      <div style={{
-        width: '100%',
-        backgroundColor: '#fff',
-        border: '1px solid #dfe1e6',
-        borderRadius: '3px',
-        overflow: 'hidden'
-      }}>
+      <div
+        ref={containerRef}
+        style={{
+          width: '100%',
+          backgroundColor: '#fff',
+          border: '1px solid #dfe1e6',
+          borderRadius: '3px',
+          overflow: 'hidden'
+        }}
+      >
         <img
           src={previewUrl}
           alt="Excalidraw drawing"
+          onLoad={handleImageLoad}
           style={{
             display: 'block',
             maxWidth: '100%',
@@ -155,14 +186,17 @@ const ExcalidrawRenderer: React.FC = () => {
 
   // Has content but no preview
   return (
-    <div style={{
-      padding: '60px 20px',
-      textAlign: 'center',
-      backgroundColor: '#fafbfc',
-      border: '1px solid #dfe1e6',
-      borderRadius: '3px'
-    }}>
-      <div style={{ fontSize: '48px', marginBottom: '16px' }}>🎨</div>
+    <div
+      ref={containerRef}
+      style={{
+        padding: '40px 20px',
+        textAlign: 'center',
+        backgroundColor: '#fafbfc',
+        border: '1px solid #dfe1e6',
+        borderRadius: '3px'
+      }}
+    >
+      <div style={{ fontSize: '36px', marginBottom: '12px' }}>🎨</div>
       <p style={{ margin: 0, color: '#172b4d', fontSize: '14px' }}>
         Excalidraw Drawing
       </p>

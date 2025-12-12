@@ -29,6 +29,8 @@ interface StorageData {
 
 const ExcalidrawEditor: React.FC = () => {
   const [ExcalidrawComponent, setExcalidrawComponent] = useState<any>(null);
+  const [FooterComponent, setFooterComponent] = useState<any>(null);
+  const [MainMenuComponent, setMainMenuComponent] = useState<any>(null);
   const excalidrawApiRef = useRef<ExcalidrawImperativeAPI | null>(null);
   const [initialData, setInitialData] = useState<{
     elements?: readonly ExcalidrawElement[];
@@ -38,11 +40,13 @@ const ExcalidrawEditor: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
-  // Dynamically load Excalidraw
+  // Dynamically load Excalidraw and its UI components
   useEffect(() => {
     console.log(`Excaliframe v${VERSION} (built ${BUILD_DATE})`);
     import('@excalidraw/excalidraw').then((module) => {
       setExcalidrawComponent(() => module.Excalidraw);
+      setFooterComponent(() => module.Footer);
+      setMainMenuComponent(() => module.MainMenu);
     });
   }, []);
 
@@ -229,6 +233,64 @@ const ExcalidrawEditor: React.FC = () => {
     AP.confluence.closeMacroEditor();
   }, []);
 
+  const handleCopyJson = useCallback(async (): Promise<void> => {
+    if (!excalidrawApiRef.current) return;
+
+    const elements = excalidrawApiRef.current.getSceneElements();
+    const appState = excalidrawApiRef.current.getAppState();
+    const files = excalidrawApiRef.current.getFiles();
+
+    const exportData = {
+      type: 'excalidraw',
+      version: 2,
+      source: 'excaliframe',
+      elements: [...elements],
+      appState: {
+        viewBackgroundColor: appState.viewBackgroundColor,
+        gridSize: appState.gridSize,
+      },
+      files: files,
+    };
+
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(exportData, null, 2));
+      alert('Diagram JSON copied to clipboard!');
+    } catch (e) {
+      console.error('Failed to copy:', e);
+      alert('Failed to copy to clipboard');
+    }
+  }, []);
+
+  const handlePasteJson = useCallback(async (): Promise<void> => {
+    if (!excalidrawApiRef.current) return;
+
+    try {
+      const text = await navigator.clipboard.readText();
+      const data = JSON.parse(text);
+
+      // Validate it looks like Excalidraw data
+      if (!data.elements || !Array.isArray(data.elements)) {
+        alert('Invalid Excalidraw data - no elements array found');
+        return;
+      }
+
+      excalidrawApiRef.current.updateScene({
+        elements: data.elements,
+        appState: data.appState || {},
+      });
+
+      // Load files if present
+      if (data.files && Object.keys(data.files).length > 0) {
+        excalidrawApiRef.current.addFiles(Object.values(data.files));
+      }
+
+      console.log('Pasted diagram with', data.elements.length, 'elements');
+    } catch (e) {
+      console.error('Failed to paste:', e);
+      alert('Failed to paste - make sure clipboard contains valid Excalidraw JSON');
+    }
+  }, []);
+
   if (!ExcalidrawComponent || isLoading) {
     return (
       <div style={{
@@ -293,12 +355,43 @@ const ExcalidrawEditor: React.FC = () => {
           )}
         </div>
         {/* Action buttons - fullscreen mode has no Confluence chrome */}
-        <div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+        { false &&  <>
+          <button
+            onClick={handleCopyJson}
+            title="Copy diagram JSON to clipboard"
+            style={{
+              padding: '6px 12px',
+              backgroundColor: '#fff',
+              border: '1px solid #dfe1e6',
+              borderRadius: '3px',
+              cursor: 'pointer',
+              fontSize: '14px'
+            }}
+          >
+            📋 Copy
+          </button>
+          <button
+            onClick={handlePasteJson}
+            title="Paste diagram JSON from clipboard"
+            style={{
+              padding: '6px 12px',
+              backgroundColor: '#fff',
+              border: '1px solid #dfe1e6',
+              borderRadius: '3px',
+              cursor: 'pointer',
+              fontSize: '14px'
+            }}
+          >
+            📥 Paste
+          </button>
+          </>
+        }
+          <div style={{ width: '1px', backgroundColor: '#dfe1e6', margin: '0 4px' }} />
           <button
             onClick={handleCancel}
             disabled={isSaving}
             style={{
-              marginRight: '8px',
               padding: '6px 12px',
               backgroundColor: '#fff',
               border: '1px solid #dfe1e6',
@@ -347,7 +440,69 @@ const ExcalidrawEditor: React.FC = () => {
               loadScene: false,
             },
           }}
-        />
+        >
+          {/* Custom Menu with Copy/Paste */}
+          {MainMenuComponent && (
+            <MainMenuComponent>
+              <MainMenuComponent.DefaultItems.LoadScene />
+              <MainMenuComponent.DefaultItems.SaveToActiveFile />
+              <MainMenuComponent.DefaultItems.Export />
+              <MainMenuComponent.DefaultItems.SaveAsImage />
+              <MainMenuComponent.Separator />
+              <MainMenuComponent.Item onSelect={handleCopyJson}>
+                Copy diagram JSON
+              </MainMenuComponent.Item>
+              <MainMenuComponent.Item onSelect={handlePasteJson}>
+                Paste diagram JSON
+              </MainMenuComponent.Item>
+              <MainMenuComponent.Separator />
+              <MainMenuComponent.DefaultItems.ClearCanvas />
+              <MainMenuComponent.DefaultItems.ToggleTheme />
+              <MainMenuComponent.DefaultItems.ChangeCanvasBackground />
+            </MainMenuComponent>
+          )}
+          {/* Footer with Copy/Paste buttons */}
+          {false && FooterComponent && (
+            <FooterComponent>
+              <button
+                onClick={handleCopyJson}
+                title="Copy diagram JSON to clipboard"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '8px 12px',
+                  backgroundColor: 'var(--color-surface-low)',
+                  border: '1px solid var(--color-border-outline-variant)',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  color: 'var(--color-on-surface)',
+                }}
+              >
+                <span>📋</span> Copy JSON
+              </button>
+              <button
+                onClick={handlePasteJson}
+                title="Paste diagram JSON from clipboard"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '8px 12px',
+                  backgroundColor: 'var(--color-surface-low)',
+                  border: '1px solid var(--color-border-outline-variant)',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  color: 'var(--color-on-surface)',
+                }}
+              >
+                <span>📥</span> Paste JSON
+              </button>
+            </FooterComponent>
+          )}
+        </ExcalidrawComponent>
       </div>
     </div>
   );
