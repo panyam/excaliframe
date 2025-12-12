@@ -1,6 +1,6 @@
-# Testing Excalfluence Locally
+# Testing Excliframe Locally
 
-This guide explains how to test the Excalfluence plugin locally with Confluence Cloud or Server.
+This guide explains how to test the Excliframe plugin locally with Confluence Cloud or Server.
 
 ## Prerequisites
 

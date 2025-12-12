@@ -39,6 +39,8 @@ const ExcalidrawEditor: React.FC = () => {
   } | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [isDirty, setIsDirty] = useState<boolean>(false);
+  const initialElementsRef = useRef<string>('[]');
 
   // Dynamically load Excalidraw and its UI components
   useEffect(() => {
@@ -94,8 +96,10 @@ const ExcalidrawEditor: React.FC = () => {
             const storageData: StorageData = JSON.parse(body);
             if (storageData.drawing) {
               const drawingData: DrawingData = JSON.parse(storageData.drawing);
+              const elements = drawingData.elements || [];
+              initialElementsRef.current = JSON.stringify(elements);
               setInitialData({
-                elements: drawingData.elements || [],
+                elements: elements,
                 appState: {
                   viewBackgroundColor: drawingData.appState?.viewBackgroundColor || '#ffffff',
                 },
@@ -179,6 +183,9 @@ const ExcalidrawEditor: React.FC = () => {
       try {
         AP.confluence.saveMacro({}, macroBody);
         console.log('Editor - saveMacro completed successfully');
+        // Update initial reference and clear dirty state after successful save
+        initialElementsRef.current = JSON.stringify([...elements].filter((el: any) => !el.isDeleted));
+        setIsDirty(false);
       } catch (saveError) {
         console.error('Editor - saveMacro threw error:', saveError);
       }
@@ -228,10 +235,52 @@ const ExcalidrawEditor: React.FC = () => {
     }
   }, [isSaving]);
 
+  const confirmClose = useCallback((): boolean => {
+    if (isDirty) {
+      return window.confirm('You have unsaved changes. Are you sure you want to close without saving?');
+    }
+    return true;
+  }, [isDirty]);
+
   const handleCancel = useCallback((): void => {
-    const AP = getAP();
-    AP.confluence.closeMacroEditor();
+    if (confirmClose()) {
+      const AP = getAP();
+      AP.confluence.closeMacroEditor();
+    }
+  }, [confirmClose]);
+
+  // Track changes to detect dirty state
+  const handleChange = useCallback((elements: readonly ExcalidrawElement[]): void => {
+    // Compare current elements with initial to detect changes
+    // Filter out deleted elements for comparison
+    const activeElements = elements.filter((el: any) => !el.isDeleted);
+    const currentJson = JSON.stringify(activeElements);
+    const hasChanges = currentJson !== initialElementsRef.current;
+    setIsDirty(hasChanges);
   }, []);
+
+  // Handle ESC key to show confirmation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') {
+        // Check if Excalidraw is in a state where ESC should be handled by us
+        // (not in text editing, menu open, etc.)
+        const appState = excalidrawApiRef.current?.getAppState();
+        if (appState?.openMenu || appState?.openPopup || appState?.isResizing ||
+            appState?.isRotating || appState?.draggingElement || appState?.editingElement) {
+          // Let Excalidraw handle ESC for its own UI
+          return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+        handleCancel();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [handleCancel]);
 
   const handleCopyJson = useCallback(async (): Promise<void> => {
     if (!excalidrawApiRef.current) return;
@@ -342,6 +391,15 @@ const ExcalidrawEditor: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 500 }}>Excalidraw</h3>
           <span style={{ fontSize: '11px', color: '#6b778c' }}>v{VERSION}</span>
+          {isDirty && (
+            <span style={{
+              fontSize: '11px',
+              color: '#de350b',
+              fontWeight: 500,
+            }}>
+              • Unsaved changes
+            </span>
+          )}
           {!isRunningInConfluence() && (
             <span style={{
               fontSize: '10px',
@@ -434,6 +492,7 @@ const ExcalidrawEditor: React.FC = () => {
               currentItemBackgroundColor: 'transparent',
             },
           }}
+          onChange={handleChange}
           theme="light"
           UIOptions={{
             canvasActions: {

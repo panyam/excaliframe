@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 /**
  * Updates version number and build timestamp before each build
+ * Updates both src/version.ts and atlassian-connect.json
  */
 
 const fs = require('fs');
 const path = require('path');
 
 const versionFile = path.join(__dirname, '..', 'src', 'version.ts');
+const connectFile = path.join(__dirname, '..', 'atlassian-connect.json');
 
 // Read current version or start at 0.0.0
 let major = 0, minor = 0, patch = 0;
@@ -25,11 +27,21 @@ if (fs.existsSync(versionFile)) {
 const version = `${major}.${minor}.${patch}`;
 const buildDate = new Date().toISOString();
 
-const content = `// Auto-generated - do not edit manually
+// Update src/version.ts
+const versionContent = `// Auto-generated - do not edit manually
 export const VERSION = '${version}';
 export const BUILD_DATE = '${buildDate}';
 export const BUILD_INFO = \`Excaliframe v\${VERSION} (built \${BUILD_DATE})\`;
 `;
 
-fs.writeFileSync(versionFile, content);
-console.log(`Updated version to ${version} (${buildDate})`);
+fs.writeFileSync(versionFile, versionContent);
+console.log(`Updated src/version.ts to ${version} (${buildDate})`);
+
+// Update atlassian-connect.json
+if (fs.existsSync(connectFile)) {
+  const connectContent = fs.readFileSync(connectFile, 'utf8');
+  const connectJson = JSON.parse(connectContent);
+  connectJson.version = version;
+  fs.writeFileSync(connectFile, JSON.stringify(connectJson, null, 2) + '\n');
+  console.log(`Updated atlassian-connect.json version to ${version}`);
+}
