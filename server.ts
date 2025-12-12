@@ -68,8 +68,8 @@ async function setupDevMiddleware(): Promise<void> {
   console.log('Webpack dev middleware ready - changes will hot reload');
 }
 
-// Serve atlassian-connect.json from root (required by Confluence Connect)
-app.get('/atlassian-connect.json', (_req: Request, res: Response): void => {
+// Serve atlassian-connect.json for Confluence (required by Confluence Connect)
+app.get('/confluence/atlassian-connect.json', (_req: Request, res: Response): void => {
   res.setHeader('Content-Type', 'application/json');
 
   const distPath = path.join(__dirname, 'atlassian-connect.json');
@@ -93,8 +93,8 @@ if (fs.existsSync(imagesPath)) {
   app.use('/images', express.static(imagesPathAlt));
 }
 
-// Lifecycle endpoints (required by Confluence Connect with JWT)
-app.post('/lifecycle/installed', (req: Request, res: Response): void => {
+// Confluence lifecycle endpoints (required by Confluence Connect with JWT)
+app.post('/confluence/lifecycle/installed', (req: Request, res: Response): void => {
   const { clientKey, sharedSecret, baseUrl } = req.body;
   console.log('Plugin installed for tenant:', clientKey);
   console.log('Base URL:', baseUrl);
@@ -108,7 +108,7 @@ app.post('/lifecycle/installed', (req: Request, res: Response): void => {
   res.status(200).json({ status: 'ok' });
 });
 
-app.post('/lifecycle/uninstalled', (req: Request, res: Response): void => {
+app.post('/confluence/lifecycle/uninstalled', (req: Request, res: Response): void => {
   const { clientKey } = req.body;
   console.log('Plugin uninstalled for tenant:', clientKey);
 
@@ -130,18 +130,8 @@ function findHtmlFile(filename: string): string | null {
   return null;
 }
 
-// Macro render endpoint - serves the renderer HTML
-app.get('/macro', (_req: Request, res: Response): void => {
-  const rendererPath = findHtmlFile('renderer.html');
-  if (rendererPath) {
-    res.sendFile(rendererPath);
-  } else {
-    res.status(404).send('Renderer not found');
-  }
-});
-
-// Editor endpoint - serves the editor HTML
-app.get('/editor', (_req: Request, res: Response): void => {
+// Excalidraw editor endpoint
+app.get('/excalidraw/editor', (_req: Request, res: Response): void => {
   const editorPath = findHtmlFile('editor.html');
   if (editorPath) {
     res.sendFile(editorPath);
@@ -150,8 +140,8 @@ app.get('/editor', (_req: Request, res: Response): void => {
   }
 });
 
-// Renderer endpoint - serves the renderer HTML
-app.get('/renderer', (_req: Request, res: Response): void => {
+// Excalidraw renderer endpoint
+app.get('/excalidraw/renderer', (_req: Request, res: Response): void => {
   const rendererPath = findHtmlFile('renderer.html');
   if (rendererPath) {
     res.sendFile(rendererPath);
@@ -176,7 +166,7 @@ async function start(): Promise<void> {
   app.listen(PORT, '0.0.0.0', (): void => {
     console.log(`Excaliframe server running on http://0.0.0.0:${PORT}`);
     console.log(`Mode: ${isDev ? 'DEVELOPMENT (hot reload enabled)' : 'PRODUCTION'}`);
-    console.log(`Plugin descriptor: http://0.0.0.0:${PORT}/atlassian-connect.json`);
+    console.log(`Confluence descriptor: http://0.0.0.0:${PORT}/confluence/atlassian-connect.json`);
   });
 }
 

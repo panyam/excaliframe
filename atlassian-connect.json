@@ -12,8 +12,8 @@
     "type": "jwt"
   },
   "lifecycle": {
-    "installed": "/lifecycle/installed",
-    "uninstalled": "/lifecycle/uninstalled"
+    "installed": "/confluence/lifecycle/installed",
+    "uninstalled": "/confluence/lifecycle/uninstalled"
   },
   "scopes": [
     "READ",
@@ -30,7 +30,7 @@
         "description": {
           "value": "Embed an Excalidraw drawing"
         },
-        "url": "/macro",
+        "url": "/excalidraw/renderer",
         "icon": {
           "url": "/images/excalidraw-icon.svg",
           "width": 24,
@@ -39,7 +39,7 @@
         "categories": ["visuals"],
         "outputType": "block",
         "editor": {
-          "url": "/editor",
+          "url": "/excalidraw/editor",
           "editTitle": {
             "value": "Edit Excalidraw Drawing"
           },

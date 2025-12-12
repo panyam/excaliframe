@@ -134,7 +134,7 @@ cloud-url: ## Show current tunnel URL
 		docker-compose -f docker-compose.cloud.yml logs tunnel 2>/dev/null | grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' | tail -1 || echo "$(RED)Tunnel not running or URL not found$(NC)"; \
 	fi
 	@echo ""
-	@echo "$(YELLOW)Install in Confluence Cloud: <tunnel-url>/atlassian-connect.json$(NC)"
+	@echo "$(YELLOW)Install in Confluence Cloud: <tunnel-url>/confluence/atlassian-connect.json$(NC)"
 
 ##@ Deployment (Google App Engine)
 
@@ -162,7 +162,7 @@ gae-deploy: ## Build and deploy to Google App Engine
 	@echo "$(GREEN)Deployed to $(GAE_URL)$(NC)"
 	@echo ""
 	@echo "$(YELLOW)Install in Confluence Cloud:$(NC)"
-	@echo "   $(GAE_URL)/atlassian-connect.json"
+	@echo "   $(GAE_URL)/confluence/atlassian-connect.json"
 
 gae-logs: ## View App Engine logs
 	@gcloud app logs tail -s default --project=$(GAE_PROJECT)

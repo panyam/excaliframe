@@ -30,7 +30,7 @@ try {
   console.log(`  Old: ${oldUrl}`);
   console.log(`  New: ${newUrl}`);
   console.log(`\nNow install the app in Confluence using:`);
-  console.log(`  ${newUrl}/atlassian-connect.json`);
+  console.log(`  ${newUrl}/confluence/atlassian-connect.json`);
 } catch (error) {
   console.error('Error updating baseUrl:', error.message);
   process.exit(1);

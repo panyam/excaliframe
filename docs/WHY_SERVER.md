@@ -18,8 +18,8 @@ Confluence needs to fetch `atlassian-connect.json` from a URL:
 ### 2. **Lifecycle Endpoints**
 
 Confluence calls these endpoints:
-- `POST /lifecycle/installed` - When app is installed
-- `POST /lifecycle/uninstalled` - When app is removed
+- `POST /confluence/lifecycle/installed` - When app is installed
+- `POST /confluence/lifecycle/uninstalled` - When app is removed
 - These need to be actual HTTP endpoints (even if they just return 204)
 
 ### 3. **Custom Content Type URLs**
@@ -27,13 +27,13 @@ Confluence calls these endpoints:
 In `atlassian-connect.json`, we specify:
 ```json
 {
-  "editor": { "url": "/editor.html" },
-  "renderer": { "url": "/renderer.html" }
+  "editor": { "url": "/excalidraw/editor" },
+  "url": "/excalidraw/renderer"
 }
 ```
 
 Confluence loads these as **iframes** from `baseUrl + url`:
-- Browser loads: `http://localhost:3000/editor.html`
+- Browser loads: `http://localhost:3000/excalidraw/editor`
 - Confluence validates the origin matches the registered app
 - **Security requirement**: Files must be served from the registered `baseUrl`
 
@@ -49,8 +49,8 @@ Confluence Connect enforces that:
 Looking at `server.ts`, it's **very minimal**:
 
 1. **Serves static files** (`dist/editor.html`, `dist/renderer.html`, etc.)
-2. **Serves descriptor** (`/atlassian-connect.json`)
-3. **Lifecycle endpoints** (just return 204)
+2. **Serves descriptor** (`/confluence/atlassian-connect.json`)
+3. **Lifecycle endpoints** (`/confluence/lifecycle/*` - just return 200)
 4. **Serves images** (`/images/excalidraw-icon.svg`)
 
 That's it! No backend logic, no API, no database - just a static file server + a few endpoints.
@@ -86,13 +86,13 @@ In production, you'd typically:
 ```
 1. Install App in Confluence
    ↓
-2. Confluence fetches: http://your-server/atlassian-connect.json
+2. Confluence fetches: http://your-server/confluence/atlassian-connect.json
    ↓
 3. Confluence registers app with baseUrl
    ↓
 4. User creates Excalidraw Drawing
    ↓
-5. Confluence loads iframe: http://your-server/editor.html
+5. Confluence loads iframe: http://your-server/excalidraw/editor
    ↓
 6. Browser loads editor.html (client-side React + Excalidraw)
    ↓

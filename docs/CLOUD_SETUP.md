@@ -58,9 +58,9 @@ docker compose -f docker-compose.cloud.yml up --build
 2. Click the gear icon (Settings) > **Manage apps**
 3. On the left sidebar, click **Apps** (you might need to enable development mode first)
 4. Click **Upload app**
-5. Enter your tunnel URL + `/atlassian-connect.json`:
+5. Enter your tunnel URL + `/confluence/atlassian-connect.json`:
    ```
-   https://random-words.trycloudflare.com/atlassian-connect.json
+   https://random-words.trycloudflare.com/confluence/atlassian-connect.json
    ```
 6. Click **Upload**
 

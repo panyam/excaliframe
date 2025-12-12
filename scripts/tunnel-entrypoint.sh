@@ -28,7 +28,7 @@ cloudflared tunnel --no-autoupdate --url "$TUNNEL_TARGET" 2>&1 | while read -r l
             echo "Updated atlassian-connect.json with new baseUrl"
             echo ""
             echo "Install in Confluence Cloud:"
-            echo "  ${TUNNEL_URL}/atlassian-connect.json"
+            echo "  ${TUNNEL_URL}/confluence/atlassian-connect.json"
             echo ""
             echo "============================================"
         fi

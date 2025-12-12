@@ -138,7 +138,7 @@ NODE_ENV=production
 
 1. Go to Confluence → Settings → Manage Apps
 2. Click "Upload app"
-3. Enter: `https://excaliframe.com/atlassian-connect.json`
+3. Enter: `https://excaliframe.com/confluence/atlassian-connect.json`
 4. Click "Upload"
 
 ## Production Checklist
@@ -188,7 +188,7 @@ git push heroku main
 
 ### 6. Install in Confluence
 
-Use: `https://excaliframe.herokuapp.com/atlassian-connect.json`
+Use: `https://excaliframe.herokuapp.com/confluence/atlassian-connect.json`
 
 ## Custom Domain Setup
 
@@ -206,9 +206,9 @@ If you want `https://excaliframe.com` instead of a platform URL:
 ### Health Checks
 
 Your server should respond to:
-- `GET /atlassian-connect.json` - Should return descriptor
-- `GET /editor.html` - Should return editor page
-- `GET /renderer.html` - Should return renderer page
+- `GET /confluence/atlassian-connect.json` - Should return descriptor
+- `GET /excalidraw/editor` - Should return editor page
+- `GET /excalidraw/renderer` - Should return renderer page
 
 ### Logging
 

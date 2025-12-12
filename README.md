@@ -38,7 +38,7 @@ Look for the tunnel URL in the output (e.g., `https://xxx.trycloudflare.com`), t
 
 1. Go to your Confluence Cloud instance → Settings → Apps → Manage apps
 2. Enable development mode
-3. Upload app using: `<tunnel-url>/atlassian-connect.json`
+3. Upload app using: `<tunnel-url>/confluence/atlassian-connect.json`
 
 See [docs/CLOUD_SETUP.md](./docs/CLOUD_SETUP.md) for detailed instructions.
 
@@ -163,7 +163,7 @@ make gae-deploy
 ```
 
 This builds, updates `baseUrl`, and deploys. Install in Confluence using:
-`https://excaliframe.appspot.com/atlassian-connect.json`
+`https://excaliframe.appspot.com/confluence/atlassian-connect.json`
 
 ### Other Platforms
 

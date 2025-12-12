@@ -48,7 +48,7 @@ This guide explains how to test the Excalfluence plugin locally with Confluence 
 7. **Install in Confluence**:
    - Go to Confluence → Settings → Manage Apps
    - Click "Upload app" or "Development" → "Upload app"
-   - Paste your ngrok URL + `/atlassian-connect.json` (e.g., `https://abc123.ngrok.io/atlassian-connect.json`)
+   - Paste your ngrok URL + `/confluence/atlassian-connect.json` (e.g., `https://abc123.ngrok.io/confluence/atlassian-connect.json`)
    - Click "Upload"
 
 ### Option 2: Using localtunnel (No installation needed)
@@ -142,7 +142,7 @@ For active development, use watch mode:
 
 ### App won't install
 - Make sure your tunnel URL is HTTPS (required by Confluence)
-- Verify `atlassian-connect.json` is accessible at `{baseUrl}/atlassian-connect.json`
+- Verify `atlassian-connect.json` is accessible at `{baseUrl}/confluence/atlassian-connect.json`
 - Check browser console for errors
 
 ### Editor/Renderer won't load
