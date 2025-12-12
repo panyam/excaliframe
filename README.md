@@ -1,4 +1,4 @@
-# Excalfluence
+# Excaliframe
 
 A Confluence plugin for custom drawing types, starting with Excalidraw. Create and edit Excalidraw drawings directly in Confluence pages without requiring external network connectivity.
 
@@ -13,7 +13,7 @@ A Confluence plugin for custom drawing types, starting with Excalidraw. Create a
 ## Project Structure
 
 ```
-excalfluence/
+excaliframe/
 ├── src/
 │   ├── editor/          # Editor component for creating/editing drawings
 │   │   ├── ExcalidrawEditor.tsx
@@ -144,7 +144,7 @@ See [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) for common issues and solutions.
 
 For production deployment to a live Confluence instance:
 
-1. **Deploy your server** to a publicly accessible HTTPS URL (e.g., `https://excalfluence.com`)
+1. **Deploy your server** to a publicly accessible HTTPS URL (e.g., `https://excaliframe.com`)
 2. **Update `baseUrl`** in `atlassian-connect.json` to your production URL
 3. **Build and deploy:**
    ```bash

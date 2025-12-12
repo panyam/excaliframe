@@ -4,7 +4,7 @@
  */
 
 // Local storage key for mock macro data
-const MOCK_STORAGE_KEY = 'excalfluence_mock_macro_body';
+const MOCK_STORAGE_KEY = 'excaliframe_mock_macro_body';
 
 // Check if we're running inside Confluence (AP with full functionality is available)
 const isInConfluence = (): boolean => {

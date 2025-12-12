@@ -40,7 +40,7 @@ const ExcalidrawEditor: React.FC = () => {
 
   // Dynamically load Excalidraw
   useEffect(() => {
-    console.log(`Excalfluence v${VERSION} (built ${BUILD_DATE})`);
+    console.log(`Excaliframe v${VERSION} (built ${BUILD_DATE})`);
     import('@excalidraw/excalidraw').then((module) => {
       setExcalidrawComponent(() => module.Excalidraw);
     });
@@ -128,7 +128,7 @@ const ExcalidrawEditor: React.FC = () => {
       const drawingData: DrawingData = {
         type: 'excalidraw',
         version: 2,
-        source: 'excalfluence',
+        source: 'excaliframe',
         elements: [...elements],
         appState: {
           viewBackgroundColor: appState.viewBackgroundColor,

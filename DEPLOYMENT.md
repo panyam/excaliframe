@@ -23,7 +23,7 @@ Deploy to a cloud platform that supports Node.js:
 echo "web: node dist/server.js" > Procfile
 
 # Deploy
-heroku create excalfluence
+heroku create excaliframe
 git push heroku main
 ```
 
@@ -63,7 +63,7 @@ If you have your own server:
 3. **Run with PM2** (process manager):
    ```bash
    npm install -g pm2
-   pm2 start dist/server.js --name excalfluence
+   pm2 start dist/server.js --name excaliframe
    pm2 save
    pm2 startup
    ```
@@ -71,7 +71,7 @@ If you have your own server:
    ```nginx
    server {
        listen 443 ssl;
-       server_name excalfluence.com;
+       server_name excaliframe.com;
        
        ssl_certificate /path/to/cert.pem;
        ssl_certificate_key /path/to/key.pem;
@@ -85,7 +85,7 @@ If you have your own server:
    ```
 5. **Get SSL certificate** (Let's Encrypt):
    ```bash
-   certbot --nginx -d excalfluence.com
+   certbot --nginx -d excaliframe.com
    ```
 
 ### Option 3: Serverless Functions
@@ -110,7 +110,7 @@ Change `baseUrl` to your production URL:
 
 ```json
 {
-  "baseUrl": "https://excalfluence.com",
+  "baseUrl": "https://excaliframe.com",
   ...
 }
 ```
@@ -138,7 +138,7 @@ NODE_ENV=production
 
 1. Go to Confluence → Settings → Manage Apps
 2. Click "Upload app"
-3. Enter: `https://excalfluence.com/atlassian-connect.json`
+3. Enter: `https://excaliframe.com/atlassian-connect.json`
 4. Click "Upload"
 
 ## Production Checklist
@@ -157,7 +157,7 @@ NODE_ENV=production
 ### 1. Create Heroku App
 
 ```bash
-heroku create excalfluence
+heroku create excaliframe
 ```
 
 ### 2. Add Buildpack
@@ -176,7 +176,7 @@ heroku config:set NODE_ENV=production
 
 ```json
 {
-  "baseUrl": "https://excalfluence.herokuapp.com"
+  "baseUrl": "https://excaliframe.herokuapp.com"
 }
 ```
 
@@ -188,11 +188,11 @@ git push heroku main
 
 ### 6. Install in Confluence
 
-Use: `https://excalfluence.herokuapp.com/atlassian-connect.json`
+Use: `https://excaliframe.herokuapp.com/atlassian-connect.json`
 
 ## Custom Domain Setup
 
-If you want `https://excalfluence.com` instead of a platform URL:
+If you want `https://excaliframe.com` instead of a platform URL:
 
 1. **Get a domain** (e.g., from Namecheap, Google Domains)
 2. **Point DNS** to your hosting:

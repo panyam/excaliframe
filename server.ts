@@ -174,7 +174,7 @@ async function start(): Promise<void> {
   await setupDevMiddleware();
 
   app.listen(PORT, '0.0.0.0', (): void => {
-    console.log(`Excalfluence server running on http://0.0.0.0:${PORT}`);
+    console.log(`Excaliframe server running on http://0.0.0.0:${PORT}`);
     console.log(`Mode: ${isDev ? 'DEVELOPMENT (hot reload enabled)' : 'PRODUCTION'}`);
     console.log(`Plugin descriptor: http://0.0.0.0:${PORT}/atlassian-connect.json`);
   });

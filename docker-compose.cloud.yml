@@ -8,7 +8,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.plugin
-    container_name: excalfluence-plugin
+    container_name: excaliframe-plugin
     volumes:
       - .:/app
       - /app/node_modules  # Don't override node_modules
@@ -32,7 +32,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.tunnel
-    container_name: excalfluence-tunnel
+    container_name: excaliframe-tunnel
     depends_on:
       plugin:
         condition: service_healthy

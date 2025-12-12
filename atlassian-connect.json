@@ -1,12 +1,12 @@
 {
-  "key": "com.excalfluence.plugin",
-  "name": "Excalfluence",
+  "key": "com.excaliframe.plugin",
+  "name": "Excaliframe",
   "description": "Create and edit Excalidraw drawings directly in Confluence",
-  "baseUrl": "https://inputs-durable-leave-arlington.trycloudflare.com",
+  "baseUrl": "https://excaliframe.appspot.com",
   "version": "1.0.0",
   "vendor": {
-    "name": "Excalfluence",
-    "url": "https://github.com/excalfluence"
+    "name": "Excaliframe",
+    "url": "https://github.com/excaliframe"
   },
   "authentication": {
     "type": "jwt"

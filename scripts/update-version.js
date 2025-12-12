@@ -28,7 +28,7 @@ const buildDate = new Date().toISOString();
 const content = `// Auto-generated - do not edit manually
 export const VERSION = '${version}';
 export const BUILD_DATE = '${buildDate}';
-export const BUILD_INFO = \`Excalfluence v\${VERSION} (built \${BUILD_DATE})\`;
+export const BUILD_INFO = \`Excaliframe v\${VERSION} (built \${BUILD_DATE})\`;
 `;
 
 fs.writeFileSync(versionFile, content);

@@ -1,5 +1,5 @@
 {
-  "name": "excalfluence",
+  "name": "excaliframe",
   "version": "1.0.0",
   "description": "Confluence plugin for custom drawing types starting with Excalidraw",
   "main": "index.js",
@@ -12,7 +12,8 @@
     "dev": "NODE_ENV=development ts-node --project tsconfig.server.json --transpile-only server.ts",
     "start": "node dist/server.js",
     "type-check": "tsc --noEmit",
-    "update-url": "node scripts/update-baseurl.js"
+    "update-url": "node scripts/update-baseurl.js",
+    "gcp-build": ""
   },
   "keywords": [
     "confluence",

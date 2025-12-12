@@ -12,7 +12,7 @@ NC := \033[0m # No Color
 ##@ General
 
 help: ## Display this help message
-	@echo "$(GREEN)Excalfluence - Confluence Plugin for Excalidraw$(NC)"
+	@echo "$(GREEN)Excaliframe - Confluence Plugin for Excalidraw$(NC)"
 	@echo ""
 	@echo "Usage: make [target]"
 	@echo ""
@@ -372,7 +372,7 @@ deploy-info: ## Show deployment information
 ##@ Info
 
 info: ## Show project information
-	@echo "$(GREEN)Excalfluence - Project Information$(NC)"
+	@echo "$(GREEN)Excaliframe - Project Information$(NC)"
 	@echo ""
 	@echo "Confluence (Docker):"
 	@echo "  URL: http://localhost:8090"

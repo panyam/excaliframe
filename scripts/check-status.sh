@@ -2,7 +2,7 @@
 
 # Quick status check of all services
 
-echo "📊 Excalfluence Status Check"
+echo "📊 Excaliframe Status Check"
 echo "============================="
 echo ""
 

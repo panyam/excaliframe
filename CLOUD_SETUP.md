@@ -1,6 +1,6 @@
 # Confluence Cloud Setup (Recommended)
 
-This guide sets up Excalfluence with **Confluence Cloud** using Docker. No Java required!
+This guide sets up Excaliframe with **Confluence Cloud** using Docker. No Java required!
 
 ## Why Confluence Cloud?
 
@@ -145,11 +145,11 @@ For a stable URL that doesn't change:
 3. Create a named tunnel:
    ```bash
    cloudflared tunnel login
-   cloudflared tunnel create excalfluence
-   cloudflared tunnel route dns excalfluence your-subdomain.your-domain.com
+   cloudflared tunnel create excaliframe
+   cloudflared tunnel route dns excaliframe your-subdomain.your-domain.com
    ```
 4. Update `baseUrl` to your permanent URL
-5. Run: `cloudflared tunnel run excalfluence`
+5. Run: `cloudflared tunnel run excaliframe`
 
 ## Next Steps
 

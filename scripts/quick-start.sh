@@ -4,7 +4,7 @@
 
 set -e
 
-echo "🚀 Excalfluence Quick Start"
+echo "🚀 Excaliframe Quick Start"
 echo "============================"
 echo ""
 
@@ -110,16 +110,16 @@ if lsof -ti:3000 > /dev/null 2>&1; then
     echo "   Plugin server might already be running"
 else
     echo "   Starting server in background..."
-    npm start > /tmp/excalfluence-server.log 2>&1 &
+    npm start > /tmp/excaliframe-server.log 2>&1 &
     SERVER_PID=$!
     sleep 2
     
     if kill -0 $SERVER_PID 2>/dev/null; then
         echo -e "${GREEN}✅ Plugin server started (PID: $SERVER_PID)${NC}"
-        echo "   Logs: tail -f /tmp/excalfluence-server.log"
+        echo "   Logs: tail -f /tmp/excaliframe-server.log"
     else
         echo -e "${RED}❌ Failed to start plugin server${NC}"
-        echo "   Check logs: cat /tmp/excalfluence-server.log"
+        echo "   Check logs: cat /tmp/excaliframe-server.log"
         exit 1
     fi
 fi

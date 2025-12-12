@@ -1,6 +1,6 @@
 # Local Development Setup Guide
 
-Complete guide for running Excalfluence with Confluence Server locally.
+Complete guide for running Excaliframe with Confluence Server locally.
 
 ## Prerequisites
 
@@ -152,7 +152,7 @@ make dev         # Terminal 2 - webpack watch mode
    - Click "Upload"
 
 3. **Verify installation**:
-   - You should see "Excalfluence" in your installed apps list
+   - You should see "Excaliframe" in your installed apps list
    - Status should be "Enabled"
 
 **Why `host.docker.internal`?** Confluence runs in Docker and needs to reach your local plugin server. The browser will still access via `localhost:3000` (handled automatically by Confluence).
