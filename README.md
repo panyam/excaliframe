@@ -4,10 +4,17 @@ A Confluence Connect app that lets you create and edit [Excalidraw](https://exca
 
 ## Screenshots
 
-| Insert | Edit | View |
-|--------|------|------|
-| ![Insert macro](screenshots/insert.png) | ![Editor](screenshots/editor.png) | ![Viewer](screenshots/renderer.png) |
-| Type `/Excal` to insert | Full Excalidraw editor | PNG preview on page |
+**Insert a drawing** - Type `/Excal` in the Confluence editor
+
+![Insert macro](screenshots/insert.png)
+
+**Edit with Excalidraw** - Full-featured drawing editor
+
+![Editor](screenshots/editor.png)
+
+**View on page** - Drawings render as PNG previews
+
+![Viewer](screenshots/renderer.png)
 
 ## Features
 
