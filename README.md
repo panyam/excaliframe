@@ -2,11 +2,12 @@
 
 A Confluence Connect app that lets you create and edit [Excalidraw](https://excalidraw.com/) drawings directly in Confluence pages. All drawing data is stored within Confluence—no external services required.
 
-![Excalidraw Editor](screenshots/editor.png)
-*The full Excalidraw editor embedded in Confluence*
+## Screenshots
 
-![Drawing Viewer](screenshots/renderer.png)
-*Drawings render as PNG previews on Confluence pages*
+| Insert | Edit | View |
+|--------|------|------|
+| ![Insert macro](screenshots/insert.png) | ![Editor](screenshots/editor.png) | ![Viewer](screenshots/renderer.png) |
+| Type `/Excal` to insert | Full Excalidraw editor | PNG preview on page |
 
 ## Features
 
