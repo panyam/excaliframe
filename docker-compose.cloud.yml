@@ -15,11 +15,11 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=production
       - PORT=3000
     command: sh -c "npm run build && npm start"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/atlassian-connect.json"]
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:3000/atlassian-connect.json"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -27,13 +27,16 @@ services:
 
   # Cloudflared tunnel - provides a public HTTPS URL for free
   # No account needed - uses "quick tunnels"
+  # Auto-updates atlassian-connect.json with the tunnel URL
   tunnel:
-    image: cloudflare/cloudflared:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.tunnel
     container_name: excalfluence-tunnel
     depends_on:
       plugin:
         condition: service_healthy
-    command: tunnel --no-autoupdate --url http://plugin:3000
-    # The tunnel URL will be printed to the logs
-    # Run: docker compose -f docker-compose.cloud.yml logs tunnel
-    # Look for: "Your quick Tunnel has been created! Visit it at https://xxx.trycloudflare.com"
+    volumes:
+      - ./atlassian-connect.json:/app/atlassian-connect.json
+    environment:
+      - TUNNEL_TARGET=http://plugin:3000

@@ -1,0 +1,14 @@
+# Tunnel container with shell support for entrypoint script
+FROM alpine:latest
+
+# Install cloudflared
+RUN apk add --no-cache curl && \
+    curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /usr/local/bin/cloudflared && \
+    chmod +x /usr/local/bin/cloudflared && \
+    apk del curl
+
+# Copy entrypoint script
+COPY scripts/tunnel-entrypoint.sh /tunnel-entrypoint.sh
+RUN chmod +x /tunnel-entrypoint.sh
+
+ENTRYPOINT ["/bin/sh", "/tunnel-entrypoint.sh"]

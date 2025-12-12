@@ -20,17 +20,23 @@ services:
       - PORT=3000
     command: sh -c "npm install && npm run dev"
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/atlassian-connect.json"]
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3000/atlassian-connect.json"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 60s
+      start_period: 30s
 
   # Cloudflared tunnel for Confluence Cloud
+  # Auto-updates atlassian-connect.json with the tunnel URL
   tunnel:
-    image: cloudflare/cloudflared:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.tunnel
     container_name: excalfluence-tunnel-dev
     depends_on:
       plugin:
         condition: service_healthy
-    command: tunnel --no-autoupdate --url http://plugin:3000
+    volumes:
+      - ./atlassian-connect.json:/app/atlassian-connect.json
+    environment:
+      - TUNNEL_TARGET=http://plugin:3000

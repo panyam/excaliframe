@@ -40,6 +40,7 @@ async function setupDevMiddleware(): Promise<void> {
   const webpack = (await import('webpack')).default;
   const webpackDevMiddleware = (await import('webpack-dev-middleware')).default;
   const webpackHotMiddleware = (await import('webpack-hot-middleware')).default;
+  // @ts-ignore - webpack config is JS, only used in dev mode
   const webpackConfig = (await import('./webpack.config.js')).default;
 
   // Get config for development mode - set mode explicitly

@@ -2,7 +2,7 @@
   "key": "com.excalfluence.plugin",
   "name": "Excalfluence",
   "description": "Create and edit Excalidraw drawings directly in Confluence",
-  "baseUrl": "https://tomato-sir-house-eight.trycloudflare.com",
+  "baseUrl": "https://inputs-durable-leave-arlington.trycloudflare.com",
   "version": "1.0.0",
   "vendor": {
     "name": "Excalfluence",
@@ -23,6 +23,7 @@
     "dynamicContentMacros": [
       {
         "key": "excalidraw-macro",
+        "bodyType": "plain-text",
         "name": {
           "value": "Excalidraw"
         },

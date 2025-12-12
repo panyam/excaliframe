@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getAP } from '../utils/mockAP';
 
 interface DrawingData {
   type?: string;
@@ -24,34 +25,47 @@ const ExcalidrawRenderer: React.FC = () => {
   const [hasContent, setHasContent] = useState<boolean>(false);
 
   useEffect(() => {
+    console.log('Renderer mounting...');
     loadMacroBody();
     // Resize iframe to fit content
+    const AP = getAP();
     setTimeout(() => {
       AP.resize('100%', '400px');
     }, 100);
   }, []);
 
   const loadMacroBody = (): void => {
+    const AP = getAP();
+    console.log('Renderer - Loading macro body...');
     try {
       AP.confluence.getMacroBody((body: string) => {
-        console.log('Renderer - Macro body:', body ? body.substring(0, 100) + '...' : 'empty');
+        console.log('Renderer - Macro body received:', body ? `${body.length} chars` : 'empty');
+        if (body) {
+          console.log('Renderer - Body preview:', body.substring(0, 200));
+        }
 
         if (body && body.trim()) {
           try {
             const storageData: StorageData = JSON.parse(body);
+            console.log('Renderer - Parsed storage data, has preview:', !!storageData.preview, 'has drawing:', !!storageData.drawing);
 
             if (storageData.preview) {
+              console.log('Renderer - Setting preview URL, length:', storageData.preview.length);
               setPreviewUrl(storageData.preview);
               setHasContent(true);
             } else if (storageData.drawing) {
+              console.log('Renderer - Has drawing but no preview');
               // Has drawing but no preview - show placeholder
               setHasContent(true);
+            } else {
+              console.log('Renderer - No preview or drawing in storage data');
             }
           } catch (e) {
-            console.log('Could not parse macro body:', e);
+            console.error('Renderer - Could not parse macro body:', e);
             setError('Invalid drawing data');
           }
         } else {
+          console.log('Renderer - Empty or whitespace-only body');
           // Empty macro - show placeholder
           setHasContent(false);
         }
