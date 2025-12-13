@@ -1,5 +1,7 @@
 # Deployment Guide
 
+> **Note:** You likely don't need to self-host! The public version at `excaliframe.appspot.com` works for everyone - **all diagrams are stored in your Confluence instance**, not on our server. The server only serves static JavaScript files. Self-host only if your organization requires it.
+
 For production use, your plugin server needs to be publicly accessible via HTTPS.
 
 ## Production Requirements
