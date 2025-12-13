@@ -35,10 +35,7 @@ html, body {
 /* Hide Excalidraw's welcome screen if it appears */
 .excalidraw .welcome-screen-center,
 .excalidraw .WelcomeScreen,
-.excalidraw [class*="welcome"],
-.excalidraw [class*="Welcome"],
-.excalidraw .home-menu,
-.excalidraw .App-menu__left {
+.excalidraw .welcome-screen-decor {
   display: none !important;
 }
 
