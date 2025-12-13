@@ -2,6 +2,26 @@
 
 A Confluence Cloud app that lets you create and edit [Excalidraw](https://excalidraw.com/) drawings directly in Confluence pages. All drawing data is stored within Confluence - no external services required.
 
+---
+
+## TL;DR - Quick Install for Admins
+
+> **Note:** This app is currently available in **development mode** only. It requires enabling development mode in your Confluence instance and is not yet listed on the Atlassian Marketplace.
+
+**Install in under 2 minutes:**
+
+1. Go to **Confluence Settings** → **Apps** → **Manage apps**
+2. Click **Settings** (bottom of page) → Enable **development mode**
+3. Click **Upload app** → Enter this URL:
+   ```
+   https://excaliframe.appspot.com/confluence/atlassian-connect.json
+   ```
+4. Done! Users can now type `/Excalidraw` in any page to insert a drawing.
+
+> **Why no self-hosting needed?** The hosted version at `excaliframe.appspot.com` is just a static file server - **all your diagrams are stored in Confluence**, not on our server. You only need to self-host if your organization requires it.
+
+---
+
 ## Screenshots
 
 **Insert a drawing** - Type `/Excal` in the Confluence editor
@@ -168,7 +188,6 @@ This builds, updates `baseUrl`, and deploys. Install in Confluence using:
 ### Other Platforms
 
 The app can be deployed to any platform that runs Node.js:
-- **Heroku** - `git push heroku main`
 - **Railway** - Connect GitHub repo
 - **Render** - Connect GitHub repo
 - **Fly.io** - `fly deploy`
