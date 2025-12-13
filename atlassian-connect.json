@@ -3,7 +3,7 @@
   "name": "Excaliframe",
   "description": "Create and edit Excalidraw drawings directly in Confluence",
   "baseUrl": "https://excaliframe.appspot.com",
-  "version": "0.0.36",
+  "version": "0.0.37",
   "vendor": {
     "name": "Excaliframe",
     "url": "https://github.com/excaliframe"
