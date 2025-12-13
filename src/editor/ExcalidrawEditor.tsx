@@ -500,7 +500,7 @@ const ExcalidrawEditor: React.FC = () => {
             },
           }}
         >
-          {/* Custom Menu with Copy/Paste */}
+          {/* Custom Menu with Copy/Paste added to defaults */}
           {MainMenuComponent && (
             <MainMenuComponent>
               <MainMenuComponent.DefaultItems.LoadScene />
@@ -514,6 +514,10 @@ const ExcalidrawEditor: React.FC = () => {
               <MainMenuComponent.Item onSelect={handlePasteJson}>
                 Paste diagram JSON
               </MainMenuComponent.Item>
+              <MainMenuComponent.Separator />
+              <MainMenuComponent.DefaultItems.CommandPalette />
+              <MainMenuComponent.DefaultItems.SearchMenu />
+              <MainMenuComponent.DefaultItems.Help />
               <MainMenuComponent.Separator />
               <MainMenuComponent.DefaultItems.ClearCanvas />
               <MainMenuComponent.DefaultItems.ToggleTheme />
