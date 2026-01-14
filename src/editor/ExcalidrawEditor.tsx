@@ -1,14 +1,23 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { exportToCanvas } from '@excalidraw/excalidraw';
-import type {
-  ExcalidrawImperativeAPI,
-  AppState,
-  BinaryFiles
-} from '@excalidraw/excalidraw/types/types';
 import { VERSION, BUILD_DATE } from '../version';
 import { getAP, isRunningInConfluence } from '../utils/mockAP';
 
+// Excalidraw types (defined locally to avoid module resolution issues)
 type ExcalidrawElement = any;
+type BinaryFiles = Record<string, any>;
+interface AppState {
+  viewBackgroundColor?: string;
+  gridSize?: number | null;
+  [key: string]: any;
+}
+interface ExcalidrawImperativeAPI {
+  getSceneElements: () => readonly ExcalidrawElement[];
+  getAppState: () => AppState;
+  getFiles: () => BinaryFiles;
+  updateScene: (scene: { elements?: readonly ExcalidrawElement[]; appState?: Partial<AppState> }) => void;
+  addFiles: (files: any[]) => void;
+}
 
 interface DrawingData {
   type: string;

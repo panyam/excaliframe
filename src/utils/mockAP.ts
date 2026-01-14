@@ -73,6 +73,12 @@ const mockAP = {
       setTimeout(() => callback(body), 10);
     },
 
+    getMacroData: (callback: (data: any) => void): void => {
+      console.log('[MockAP] getMacroData - returning empty object');
+      // Simulate async behavior like the real API
+      setTimeout(() => callback({}), 10);
+    },
+
     saveMacro: (params: any, body: string, callback?: () => void): void => {
       console.log('[MockAP] saveMacro - saving to localStorage, length:', body.length);
       localStorage.setItem(MOCK_STORAGE_KEY, body);
