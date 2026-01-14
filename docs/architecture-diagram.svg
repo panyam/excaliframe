@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800" height="500" viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .box { fill: none; stroke: #1e1e1e; stroke-width: 2; }
+    .box-fill-blue { fill: #a5d8ff; }
+    .box-fill-green { fill: #b2f2bb; }
+    .box-fill-yellow { fill: #ffec99; }
+    .box-fill-purple { fill: #d0bfff; }
+    .label { font-family: 'Virgil', 'Segoe UI', sans-serif; font-size: 14px; fill: #1e1e1e; }
+    .label-bold { font-family: 'Virgil', 'Segoe UI', sans-serif; font-size: 16px; fill: #1e1e1e; font-weight: bold; }
+    .label-small { font-family: 'Virgil', 'Segoe UI', sans-serif; font-size: 12px; fill: #555; }
+    .arrow { fill: none; stroke: #1e1e1e; stroke-width: 2; marker-end: url(#arrowhead); }
+    .arrow-dashed { fill: none; stroke: #1e1e1e; stroke-width: 2; stroke-dasharray: 8,4; marker-end: url(#arrowhead); }
+  </style>
+
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#1e1e1e" />
+    </marker>
+  </defs>
+
+  <!-- Title -->
+  <text x="400" y="30" text-anchor="middle" class="label-bold" style="font-size: 20px;">Excaliframe Architecture</text>
+
+  <!-- Confluence Cloud Box -->
+  <rect x="50" y="60" width="450" height="280" rx="8" class="box box-fill-blue" />
+  <text x="275" y="85" text-anchor="middle" class="label-bold">Confluence Cloud</text>
+
+  <!-- Confluence Page Box -->
+  <rect x="70" y="100" width="410" height="220" rx="6" class="box" style="fill: white;" />
+  <text x="275" y="125" text-anchor="middle" class="label-bold">Confluence Page</text>
+
+  <!-- Excalidraw Macro Box -->
+  <rect x="90" y="140" width="370" height="160" rx="4" class="box box-fill-yellow" />
+  <text x="275" y="165" text-anchor="middle" class="label-bold">Excalidraw Macro</text>
+
+  <!-- Renderer -->
+  <rect x="110" y="180" width="150" height="100" rx="4" class="box box-fill-green" />
+  <text x="185" y="205" text-anchor="middle" class="label-bold">Renderer</text>
+  <text x="185" y="225" text-anchor="middle" class="label-small">PNG preview</text>
+  <text x="185" y="245" text-anchor="middle" class="label-small">on page view</text>
+  <text x="185" y="265" text-anchor="middle" class="label-small">(iframe)</text>
+
+  <!-- Editor -->
+  <rect x="290" y="180" width="150" height="100" rx="4" class="box box-fill-purple" />
+  <text x="365" y="205" text-anchor="middle" class="label-bold">Editor</text>
+  <text x="365" y="225" text-anchor="middle" class="label-small">Full Excalidraw</text>
+  <text x="365" y="245" text-anchor="middle" class="label-small">on edit click</text>
+  <text x="365" y="265" text-anchor="middle" class="label-small">(iframe)</text>
+
+  <!-- Data Storage Note -->
+  <rect x="530" y="120" width="220" height="80" rx="4" class="box" style="fill: #fff3bf;" />
+  <text x="640" y="145" text-anchor="middle" class="label-bold">Data Storage</text>
+  <text x="640" y="165" text-anchor="middle" class="label-small">JSON in macro body</text>
+  <text x="640" y="185" text-anchor="middle" class="label-small">Lives IN Confluence</text>
+
+  <!-- Arrow from macro to storage -->
+  <path d="M 460 180 L 520 160" class="arrow" />
+
+  <!-- Excaliframe Server Box -->
+  <rect x="530" y="280" width="220" height="140" rx="8" class="box box-fill-green" />
+  <text x="640" y="310" text-anchor="middle" class="label-bold">Excaliframe Server</text>
+  <text x="640" y="335" text-anchor="middle" class="label-small">Stateless - No DB</text>
+  <text x="640" y="360" text-anchor="middle" class="label-small">Serves: HTML, JS, CSS</text>
+  <text x="640" y="385" text-anchor="middle" class="label-small">Handles: Connect lifecycle</text>
+  <text x="640" y="410" text-anchor="middle" class="label-small">~500 lines of code</text>
+
+  <!-- Arrow from Confluence to Server -->
+  <path d="M 500 300 L 520 320" class="arrow" />
+  <text x="480" y="295" class="label-small">Loads</text>
+
+  <!-- Arrow from Server to Confluence (serves assets) -->
+  <path d="M 530 350 Q 490 350 490 310 L 490 290" class="arrow" style="marker-end: url(#arrowhead);" />
+
+  <!-- User icon and flow -->
+  <circle cx="60" cy="420" r="20" class="box" style="fill: #ffc9c9;" />
+  <text x="60" y="425" text-anchor="middle" class="label-small">User</text>
+
+  <!-- User actions -->
+  <path d="M 85 410 L 150 350" class="arrow-dashed" />
+  <text x="90" y="385" class="label-small">View/Edit</text>
+
+  <!-- AP.confluence.saveMacro arrow -->
+  <rect x="180" y="360" width="180" height="35" rx="4" class="box" style="fill: #e7f5ff;" />
+  <text x="270" y="382" text-anchor="middle" class="label-small">AP.confluence.saveMacro()</text>
+
+  <!-- Arrow showing save flow -->
+  <path d="M 270 360 L 270 300" class="arrow" />
+
+  <!-- Footer note -->
+  <text x="400" y="475" text-anchor="middle" class="label-small" style="font-style: italic;">All diagram data stays in Confluence - server is stateless</text>
+</svg>
