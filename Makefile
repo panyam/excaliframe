@@ -1,4 +1,4 @@
-.PHONY: help install build build-frontend build-server dev dev-watch start stop clean validate-json update-url dev-tunnel cloud-dev cloud-dev-stop cloud-start cloud-start-bg cloud-stop cloud-logs cloud-url gae-deploy gae-logs gae-browse gae-describe deploy-info
+.PHONY: help install build dev type-check clean deploy install-app tunnel lint
 
 # Default target
 .DEFAULT_GOAL := help
@@ -9,15 +9,10 @@ YELLOW := \033[1;33m
 RED := \033[0;31m
 NC := \033[0m # No Color
 
-# Binary output
-BIN_DIR := bin
-SERVER_BIN := $(BIN_DIR)/server
-
 ##@ General
 
 help: ## Display this help message
-	@echo "$(GREEN)Excaliframe - Confluence Cloud Plugin for Excalidraw$(NC)"
-	@echo "$(YELLOW)Go server branch - Node.js removed$(NC)"
+	@echo "$(GREEN)Excaliframe - Atlassian Forge App for Excalidraw$(NC)"
 	@echo ""
 	@echo "Usage: make [target]"
 	@echo ""
@@ -26,24 +21,16 @@ help: ## Display this help message
 
 ##@ Setup
 
-install: ## Install npm dependencies (for frontend build only)
-	@echo "$(GREEN)Installing npm dependencies (frontend build)...$(NC)"
+install: ## Install npm dependencies
+	@echo "$(GREEN)Installing dependencies...$(NC)"
 	npm install
 
 ##@ Build
 
-build: build-frontend build-server ## Build frontend and Go server
-	@echo "$(GREEN)Build complete$(NC)"
-
-build-frontend: ## Build frontend assets (webpack)
+build: ## Build frontend assets for Forge
 	@echo "$(GREEN)Building frontend assets...$(NC)"
 	npm run build
-
-build-server: ## Build Go server binary
-	@echo "$(GREEN)Building Go server...$(NC)"
-	@mkdir -p $(BIN_DIR)
-	go build -o $(SERVER_BIN) .
-	@echo "$(GREEN)Server binary: $(SERVER_BIN)$(NC)"
+	@echo "$(GREEN)Build output: dist/forge/$(NC)"
 
 type-check: ## Run TypeScript type checking
 	@echo "$(GREEN)Type checking...$(NC)"
@@ -51,160 +38,75 @@ type-check: ## Run TypeScript type checking
 
 clean: ## Remove build artifacts
 	@echo "$(YELLOW)Cleaning build artifacts...$(NC)"
-	rm -rf dist/ $(BIN_DIR)/
+	rm -rf dist/
 	@echo "$(GREEN)Clean complete$(NC)"
+
+lint: ## Run lint checks
+	@echo "$(GREEN)Running lint checks...$(NC)"
+	npm run type-check
 
 ##@ Development
 
-dev: ## Start Go server + webpack watch (run in two terminals, or use dev-all)
-	@echo "$(GREEN)Starting Go server...$(NC)"
-	@echo "$(YELLOW)Run 'make dev-watch' in another terminal for frontend hot rebuild$(NC)"
-	@$(MAKE) build-frontend
-	@DIST_DIR=dist $(SERVER_BIN) || ($(MAKE) build-server && DIST_DIR=dist $(SERVER_BIN))
-
-dev-watch: ## Watch and rebuild frontend on changes
-	@echo "$(GREEN)Watching frontend for changes...$(NC)"
+dev: ## Watch mode - rebuild on file changes
+	@echo "$(GREEN)Starting watch mode...$(NC)"
+	@echo "$(YELLOW)Run 'make tunnel' in another terminal for live testing$(NC)"
 	npm run dev
 
-dev-all: build-server ## Build and run server with frontend watch (requires terminal multiplexer)
-	@echo "$(GREEN)Starting dev environment...$(NC)"
-	@echo "$(YELLOW)Building frontend first...$(NC)"
-	@npm run build
-	@echo "$(YELLOW)Starting server and watch in parallel...$(NC)"
-	@trap 'kill 0' EXIT; \
-		(npm run dev &) && \
-		(sleep 2 && DIST_DIR=dist $(SERVER_BIN))
+tunnel: build ## Start Forge tunnel for local development
+	@echo "$(GREEN)Starting Forge tunnel...$(NC)"
+	@echo "$(YELLOW)Make sure you have deployed at least once first$(NC)"
+	forge tunnel
 
-dev-tunnel: ## Start cloudflared tunnel (run alongside 'make dev')
-	@echo "$(GREEN)Starting cloudflared tunnel...$(NC)"
-	@echo "$(YELLOW)Run 'make dev' in another terminal first$(NC)"
-	docker run --rm -it --network host cloudflare/cloudflared:latest tunnel --no-autoupdate --url http://localhost:3000
+##@ Deployment
 
-start: build ## Build and start production server
-	@if lsof -ti:3000 > /dev/null 2>&1; then \
-		echo "$(YELLOW)Port 3000 in use, stopping existing process...$(NC)"; \
-		lsof -ti:3000 | xargs kill -9 2>/dev/null || true; \
-		sleep 1; \
-	fi
-	@echo "$(GREEN)Starting Go server...$(NC)"
-	DIST_DIR=dist $(SERVER_BIN)
-
-stop: ## Stop server
-	@echo "$(YELLOW)Stopping server...$(NC)"
-	@if lsof -ti:3000 > /dev/null 2>&1; then \
-		lsof -ti:3000 | xargs kill -9 2>/dev/null || true; \
-		echo "$(GREEN)Server stopped$(NC)"; \
-	else \
-		echo "$(YELLOW)No process running on port 3000$(NC)"; \
-	fi
-
-##@ Confluence Cloud (Docker)
-
-cloud-dev: ## Start dev mode with hot-reload + tunnel
-	@echo "$(GREEN)Starting dev mode with tunnel...$(NC)"
-	@if docker compose version > /dev/null 2>&1; then \
-		docker compose -f docker-compose.dev.yml up --build; \
-	else \
-		docker-compose -f docker-compose.dev.yml up --build; \
-	fi
-
-cloud-dev-stop: ## Stop dev mode
-	@if docker compose version > /dev/null 2>&1; then \
-		docker compose -f docker-compose.dev.yml down; \
-	else \
-		docker-compose -f docker-compose.dev.yml down; \
-	fi
-
-cloud-start: ## Start server + tunnel (production mode)
-	@echo "$(GREEN)Starting server + tunnel for Confluence Cloud...$(NC)"
-	@if docker compose version > /dev/null 2>&1; then \
-		docker compose -f docker-compose.cloud.yml up --build; \
-	else \
-		docker-compose -f docker-compose.cloud.yml up --build; \
-	fi
-
-cloud-start-bg: ## Start server + tunnel in background
-	@echo "$(GREEN)Starting server + tunnel (background)...$(NC)"
-	@if docker compose version > /dev/null 2>&1; then \
-		docker compose -f docker-compose.cloud.yml up -d --build; \
-	else \
-		docker-compose -f docker-compose.cloud.yml up -d --build; \
-	fi
+deploy-dev: build ## Deploy to development environment (for your testing)
+	@echo "$(GREEN)Deploying to DEVELOPMENT environment...$(NC)"
+	forge deploy -e development --no-verify
 	@echo ""
-	@echo "$(YELLOW)Waiting for tunnel URL...$(NC)"
-	@sleep 10
-	@$(MAKE) cloud-url
+	@echo "$(GREEN)Development deployment complete!$(NC)"
 
-cloud-stop: ## Stop cloud services
-	@echo "$(YELLOW)Stopping cloud services...$(NC)"
-	@if docker compose version > /dev/null 2>&1; then \
-		docker compose -f docker-compose.cloud.yml down; \
-	else \
-		docker-compose -f docker-compose.cloud.yml down; \
-	fi
-	@echo "$(GREEN)Cloud services stopped$(NC)"
-
-cloud-logs: ## View tunnel logs to get URL
-	@echo "$(GREEN)Tunnel logs (look for trycloudflare.com URL)...$(NC)"
-	@if docker compose version > /dev/null 2>&1; then \
-		docker compose -f docker-compose.cloud.yml logs tunnel; \
-	else \
-		docker-compose -f docker-compose.cloud.yml logs tunnel; \
-	fi
-
-cloud-url: ## Show current tunnel URL
-	@echo "$(GREEN)Current tunnel URL:$(NC)"
-	@if docker compose version > /dev/null 2>&1; then \
-		docker compose -f docker-compose.cloud.yml logs tunnel 2>/dev/null | grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' | tail -1 || echo "$(RED)Tunnel not running or URL not found$(NC)"; \
-	else \
-		docker-compose -f docker-compose.cloud.yml logs tunnel 2>/dev/null | grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' | tail -1 || echo "$(RED)Tunnel not running or URL not found$(NC)"; \
-	fi
+deploy-prod: build ## Deploy to production environment (for company use)
+	@echo "$(GREEN)Deploying to PRODUCTION environment...$(NC)"
+	forge deploy -e production --no-verify
 	@echo ""
-	@echo "$(YELLOW)Install in Confluence Cloud: <tunnel-url>/confluence/atlassian-connect.json$(NC)"
+	@echo "$(GREEN)Production deployment complete!$(NC)"
+	@echo "$(YELLOW)Share with your company: they can install via 'forge install -e production'$(NC)"
 
-##@ Deployment (Google App Engine)
+deploy: deploy-dev ## Alias for deploy-dev
 
-GAE_PROJECT := excaliframe
-GAE_URL := https://$(GAE_PROJECT).appspot.com
+install-dev: ## Install dev version on a Confluence site
+	@echo "$(GREEN)Installing DEVELOPMENT version...$(NC)"
+	forge install -e development -p Confluence
 
-gae-deploy: build ## Build and deploy to Google App Engine
-	@echo "$(GREEN)Deploying to Google App Engine...$(NC)"
-	@echo "$(YELLOW)Project: $(GAE_PROJECT)$(NC)"
+install-prod: ## Install production version on a Confluence site
+	@echo "$(GREEN)Installing PRODUCTION version...$(NC)"
+	forge install -e production -p Confluence
+
+install-app: install-dev ## Alias for install-dev
+
+register: ## Register a new Forge app (first time only)
+	@echo "$(GREEN)Registering new Forge app...$(NC)"
+	forge register
+
+##@ Forge CLI Shortcuts
+
+logs: ## View Forge app logs
+	forge logs
+
+lint-manifest: ## Validate manifest.yml
+	forge lint
+
+environments: ## List Forge environments
+	forge environment list
+
+##@ Quick Start
+
+setup: install register ## First-time setup: install deps + register app
+	@echo "$(GREEN)Setup complete!$(NC)"
 	@echo ""
-	@echo "$(YELLOW)Step 1: Updating baseUrl to $(GAE_URL)...$(NC)"
-	@if [[ "$$(uname)" == "Darwin" ]]; then \
-		sed -i '' 's|"baseUrl": "[^"]*"|"baseUrl": "$(GAE_URL)"|g' atlassian-connect.json; \
-	else \
-		sed -i 's|"baseUrl": "[^"]*"|"baseUrl": "$(GAE_URL)"|g' atlassian-connect.json; \
-	fi
-	@cp atlassian-connect.json dist/
-	@echo ""
-	@echo "$(YELLOW)Step 2: Deploying to GAE...$(NC)"
-	@gcloud app deploy --project=$(GAE_PROJECT) --quiet
-	@echo ""
-	@echo "$(GREEN)Deployed to $(GAE_URL)$(NC)"
-	@echo ""
-	@echo "$(YELLOW)Install in Confluence Cloud:$(NC)"
-	@echo "   $(GAE_URL)/confluence/atlassian-connect.json"
+	@echo "$(YELLOW)Next steps:$(NC)"
+	@echo "  1. Run 'make deploy' to deploy the app"
+	@echo "  2. Run 'make install-app' to install on Confluence"
 
-gae-logs: ## View App Engine logs
-	@gcloud app logs tail -s default --project=$(GAE_PROJECT)
-
-gae-browse: ## Open App Engine app in browser
-	@gcloud app browse --project=$(GAE_PROJECT)
-
-gae-describe: ## Show App Engine deployment info
-	@gcloud app describe --project=$(GAE_PROJECT)
-
-##@ Utilities
-
-validate-json: ## Validate atlassian-connect.json schema
-	@node scripts/validate-connect-json.js
-
-update-url: ## Update baseUrl (usage: make update-url URL=https://example.com)
-	@if [ -z "$(URL)" ]; then \
-		echo "$(RED)Error: URL is required$(NC)"; \
-		echo "Usage: make update-url URL=https://example.com"; \
-		exit 1; \
-	fi
-	@node scripts/update-baseurl.js $(URL)
+quickstart: install build deploy install-app ## Full setup: install, build, deploy, and install app
+	@echo "$(GREEN)Quickstart complete! App is now installed.$(NC)"

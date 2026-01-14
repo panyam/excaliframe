@@ -1,24 +1,40 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-const webpack = require('webpack');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 
-module.exports = (env, argv) => {
-  const isDev = argv.mode === 'development';
+// Build config for a single entry point
+const createConfig = (name, isDev) => {
+  const plugins = [
+    new HtmlWebpackPlugin({
+      template: `./src/${name}/index.html`,
+      filename: 'index.html',
+    }),
+  ];
 
-  const config = {
-    entry: {
-      editor: isDev
-        ? ['webpack-hot-middleware/client?reload=true', './src/editor/index.tsx']
-        : './src/editor/index.tsx',
-      renderer: isDev
-        ? ['webpack-hot-middleware/client?reload=true', './src/renderer/index.tsx']
-        : './src/renderer/index.tsx',
-    },
+  // Copy Excalidraw fonts only for editor
+  if (name === 'editor') {
+    plugins.push(
+      new CopyWebpackPlugin({
+        patterns: [
+          {
+            from: 'node_modules/@excalidraw/excalidraw/dist/prod/fonts',
+            to: 'fonts',
+          },
+        ],
+      })
+    );
+  }
+
+  return {
+    name,
+    entry: `./src/${name}/index.tsx`,
     output: {
-      path: path.resolve(__dirname, 'dist/static/excalidraw'),
-      filename: '[name].bundle.js',
-      clean: !isDev, // Don't clean in dev mode (middleware serves from memory)
-      publicPath: '/static/excalidraw/',
+      path: path.resolve(__dirname, `static/${name}`),
+      filename: 'bundle.js',
+      chunkFilename: '[id].js',
+      assetModuleFilename: '[hash][ext]',
+      clean: true,
+      publicPath: './',
     },
     module: {
       rules: [
@@ -46,25 +62,24 @@ module.exports = (env, argv) => {
         'roughjs/bin/math': path.resolve(__dirname, 'node_modules/roughjs/bin/math.js'),
       },
     },
-    plugins: [
-      new HtmlWebpackPlugin({
-        template: './src/editor/index.html',
-        filename: '../../excalidraw/editor.html',  // Output to dist/excalidraw/
-        chunks: ['editor'],
-      }),
-      new HtmlWebpackPlugin({
-        template: './src/renderer/index.html',
-        filename: '../../excalidraw/renderer.html',  // Output to dist/excalidraw/
-        chunks: ['renderer'],
-      }),
-    ],
+    plugins,
     devtool: isDev ? 'eval-source-map' : 'source-map',
+    optimization: {
+      splitChunks: false,
+      runtimeChunk: false,
+    },
+    performance: {
+      hints: false,
+    },
   };
+};
 
-  // Add HMR plugin in development
-  if (isDev) {
-    config.plugins.push(new webpack.HotModuleReplacementPlugin());
-  }
+module.exports = (env, argv) => {
+  const isDev = argv.mode === 'development';
 
-  return config;
+  // Return array of configs - webpack builds each independently
+  return [
+    createConfig('editor', isDev),
+    createConfig('renderer', isDev),
+  ];
 };

@@ -1,33 +1,38 @@
 {
   "name": "excaliframe",
   "version": "0.0.2",
-  "description": "Confluence plugin for custom drawing types starting with Excalidraw",
+  "description": "Atlassian Forge app for Excalidraw drawings in Confluence",
   "scripts": {
-    "build": "npm run update-version && npm run build:webpack && npm run copy-assets",
-    "build:webpack": "webpack --mode production",
+    "build": "npm run update-version && webpack --mode production",
     "update-version": "node scripts/update-version.js",
-    "copy-assets": "mkdir -p dist/images && cp atlassian-connect.json dist/ && cp -r images/* dist/images/ 2>/dev/null || true",
     "dev": "webpack --mode development --watch",
     "type-check": "tsc --noEmit",
-    "update-url": "node scripts/update-baseurl.js"
+    "forge:deploy": "npm run build && forge deploy",
+    "forge:install": "forge install",
+    "forge:tunnel": "npm run build && forge tunnel"
   },
   "keywords": [
     "confluence",
-    "plugin",
+    "atlassian",
+    "forge",
     "excalidraw",
-    "drawing"
+    "drawing",
+    "whiteboard"
   ],
   "author": "",
   "license": "MIT",
   "dependencies": {
     "@excalidraw/excalidraw": "^0.18.0",
+    "@forge/bridge": "^4.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
+    "@forge/cli": "^10.0.0",
     "@types/node": "^20.5.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
+    "copy-webpack-plugin": "^13.0.1",
     "css-loader": "^6.8.1",
     "html-webpack-plugin": "^5.5.3",
     "style-loader": "^3.3.3",

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { exportToCanvas } from '@excalidraw/excalidraw';
+import { view } from '@forge/bridge';
 import { VERSION, BUILD_DATE } from '../version';
-import { getAP, isRunningInConfluence } from '../utils/mockAP';
 
 // Excalidraw types (defined locally to avoid module resolution issues)
 type ExcalidrawElement = any;
@@ -31,14 +31,14 @@ interface DrawingData {
   files?: Record<string, any>;
 }
 
-interface StorageData {
-  drawing: string;
-  preview: string;
+// Macro config stored in Forge
+interface MacroConfig {
+  drawing: string;   // JSON stringified DrawingData
+  preview: string;   // Base64 PNG preview
 }
 
 const ExcalidrawEditor: React.FC = () => {
   const [ExcalidrawComponent, setExcalidrawComponent] = useState<any>(null);
-  const [FooterComponent, setFooterComponent] = useState<any>(null);
   const [MainMenuComponent, setMainMenuComponent] = useState<any>(null);
   const excalidrawApiRef = useRef<ExcalidrawImperativeAPI | null>(null);
   const [initialData, setInitialData] = useState<{
@@ -51,91 +51,52 @@ const ExcalidrawEditor: React.FC = () => {
   const [isDirty, setIsDirty] = useState<boolean>(false);
   const initialElementsRef = useRef<string>('[]');
 
-  // Dynamically load Excalidraw and its UI components
+  // Dynamically load Excalidraw components
   useEffect(() => {
     console.log(`Excaliframe v${VERSION} (built ${BUILD_DATE})`);
     import('@excalidraw/excalidraw').then((module) => {
       setExcalidrawComponent(() => module.Excalidraw);
-      setFooterComponent(() => module.Footer);
       setMainMenuComponent(() => module.MainMenu);
     });
   }, []);
 
-  // Load macro body on mount and set up dialog button binding
+  // Load existing macro config on mount
   useEffect(() => {
-    const AP = getAP();
-    try {
-      AP.resize('100%', '100%');
-    } catch (e) {
-      console.log('Could not resize:', e);
-    }
-    loadMacroBody();
-
-    // Bind to Confluence's dialog submit button using the official pattern
-    // This is the recommended way per Atlassian docs for macro custom editors
-    if (AP.dialog && AP.dialog.getButton) {
-      console.log('Editor - Binding to dialog submit button');
-      AP.dialog.getButton('submit').bind(() => {
-        console.log('Editor - Dialog submit button clicked');
-        if (excalidrawApiRef.current) {
-          saveDrawingFromEvent();
-        }
-        return true; // Allow dialog to proceed
-      });
-    }
+    loadMacroConfig();
   }, []);
 
-  const loadMacroBody = (): void => {
-    const AP = getAP();
-    console.log('Editor - loadMacroBody called');
-
-    // Also check getMacroData to see parameters
-    if (AP.confluence.getMacroData) {
-      AP.confluence.getMacroData((data: any) => {
-        console.log('Editor - getMacroData result:', data);
-      });
-    }
-
+  const loadMacroConfig = async (): Promise<void> => {
+    console.log('Editor - Loading macro config...');
     try {
-      AP.confluence.getMacroBody((body: string) => {
-        console.log('Editor - getMacroBody callback, body type:', typeof body, 'length:', body?.length || 0);
-        console.log('Editor - getMacroBody body preview:', body ? body.substring(0, 200) : '(empty or null)');
-        if (body && body.trim()) {
-          try {
-            const storageData: StorageData = JSON.parse(body);
-            if (storageData.drawing) {
-              const drawingData: DrawingData = JSON.parse(storageData.drawing);
-              const elements = drawingData.elements || [];
-              initialElementsRef.current = JSON.stringify(elements);
-              setInitialData({
-                elements: elements,
-                appState: {
-                  viewBackgroundColor: drawingData.appState?.viewBackgroundColor || '#ffffff',
-                },
-                files: drawingData.files || {},
-              });
-            }
-          } catch (e) {
-            console.log('Could not parse macro body:', e);
-          }
-        }
-        setIsLoading(false);
-      });
+      const context = await view.getContext();
+      const config = (context as any).extension?.config as MacroConfig | undefined;
+
+      if (config?.drawing) {
+        console.log('Editor - Found existing drawing data');
+        const drawingData: DrawingData = JSON.parse(config.drawing);
+        const elements = drawingData.elements || [];
+        initialElementsRef.current = JSON.stringify(elements);
+        setInitialData({
+          elements: elements,
+          appState: {
+            viewBackgroundColor: drawingData.appState?.viewBackgroundColor || '#ffffff',
+          },
+          files: drawingData.files || {},
+        });
+      } else {
+        console.log('Editor - No existing drawing, starting fresh');
+      }
     } catch (error) {
-      console.log('Error loading macro body:', error);
-      setIsLoading(false);
+      console.error('Editor - Error loading config:', error);
     }
+    setIsLoading(false);
   };
 
-  // Core save logic - used by both button click and dialog event
-  // closeAfterSave: true for button click, false for dialog.submit (Confluence handles close)
-  const performSave = async (closeAfterSave: boolean = true): Promise<void> => {
-    if (!excalidrawApiRef.current) {
-      console.log('Editor - No excalidraw API ref, cannot save');
-      return;
-    }
+  const saveDrawing = useCallback(async (): Promise<void> => {
+    if (!excalidrawApiRef.current || isSaving) return;
 
-    console.log('Editor - performSave starting...');
+    setIsSaving(true);
+    console.log('Editor - Saving drawing...');
 
     try {
       const elements = excalidrawApiRef.current.getSceneElements();
@@ -155,7 +116,7 @@ const ExcalidrawEditor: React.FC = () => {
       };
 
       // Generate PNG preview
-      let pngDataURL = '';
+      let preview = '';
       if (elements.length > 0) {
         try {
           const canvas = await exportToCanvas({
@@ -166,121 +127,57 @@ const ExcalidrawEditor: React.FC = () => {
             },
             files,
           });
-          pngDataURL = canvas.toDataURL('image/png');
+          preview = canvas.toDataURL('image/png');
         } catch (e) {
           console.log('Editor - Could not generate preview:', e);
         }
       }
 
-      const storageData: StorageData = {
+      const macroConfig: MacroConfig = {
         drawing: JSON.stringify(drawingData),
-        preview: pngDataURL,
+        preview: preview,
       };
 
-      const macroBody = JSON.stringify(storageData);
-      console.log('Editor - Saving macro body, length:', macroBody.length);
-      console.log('Editor - Elements count:', elements.length);
-      console.log('Editor - Preview generated:', pngDataURL ? 'yes' : 'no');
+      console.log('Editor - Submitting config, elements:', elements.length);
 
-      const AP = getAP();
-      console.log('Editor - Calling AP.confluence.saveMacro...');
+      // view.submit() saves config AND closes the config panel
+      // Must wrap in { config: ... } for Forge
+      await view.submit({ config: macroConfig });
+      console.log('Editor - Save complete');
 
-      // Call saveMacro to save the macro data
-      // First arg is macro parameters (key-value pairs), second is macro body
-      console.log('Editor - About to call saveMacro with body length:', macroBody.length);
-
-      try {
-        AP.confluence.saveMacro({}, macroBody);
-        console.log('Editor - saveMacro completed successfully');
-        // Update initial reference and clear dirty state after successful save
-        initialElementsRef.current = JSON.stringify([...elements].filter((el: any) => !el.isDeleted));
-        setIsDirty(false);
-      } catch (saveError) {
-        console.error('Editor - saveMacro threw error:', saveError);
-      }
-
-      // Close the macro editor to signal Confluence to insert the macro
-      // Only call this when triggered by our own button, not dialog.submit
-      if (closeAfterSave) {
-        console.log('Editor - Calling closeMacroEditor');
-        AP.confluence.closeMacroEditor();
-      } else {
-        console.log('Editor - Not calling closeMacroEditor (dialog.submit handles it)');
-      }
     } catch (error) {
-      console.error('Editor - Error saving drawing:', error);
-      throw error;
-    }
-  };
-
-  // Called from dialog.submit event
-  const saveDrawingFromEvent = (): void => {
-    console.log('Editor - saveDrawingFromEvent called');
-    // Call saveMacro, then closeMacroEditor after a delay
-    performSave(false).then(() => {
-      // Give saveMacro time to complete, then close
-      setTimeout(() => {
-        console.log('Editor - Delayed closeMacroEditor call');
-        const AP = getAP();
-        AP.confluence.closeMacroEditor();
-      }, 100);
-    }).catch((error) => {
-      console.error('Editor - Save from event failed:', error);
-      alert('Failed to save drawing. Please try again.');
-    });
-  };
-
-  const saveDrawing = useCallback(async (): Promise<void> => {
-    if (!excalidrawApiRef.current || isSaving) return;
-
-    setIsSaving(true);
-    try {
-      await performSave();
-      // performSave now calls closeMacroEditor
-    } catch (error) {
-      console.error('Error saving drawing:', error);
+      console.error('Editor - Error saving:', error);
       alert('Failed to save drawing. Please try again.');
       setIsSaving(false);
     }
   }, [isSaving]);
 
-  const confirmClose = useCallback((): boolean => {
-    if (isDirty) {
-      return window.confirm('You have unsaved changes. Are you sure you want to close without saving?');
-    }
-    return true;
-  }, [isDirty]);
-
   const handleCancel = useCallback((): void => {
-    if (confirmClose()) {
-      const AP = getAP();
-      AP.confluence.closeMacroEditor();
+    if (isDirty) {
+      if (!window.confirm('You have unsaved changes. Are you sure you want to close?')) {
+        return;
+      }
     }
-  }, [confirmClose]);
+    view.close();
+  }, [isDirty]);
 
   // Track changes to detect dirty state
   const handleChange = useCallback((elements: readonly ExcalidrawElement[]): void => {
-    // Compare current elements with initial to detect changes
-    // Filter out deleted elements for comparison
     const activeElements = elements.filter((el: any) => !el.isDeleted);
     const currentJson = JSON.stringify(activeElements);
     const hasChanges = currentJson !== initialElementsRef.current;
     setIsDirty(hasChanges);
   }, []);
 
-  // Handle ESC key to show confirmation
+  // Handle ESC key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') {
-        // Check if Excalidraw is in a state where ESC should be handled by us
-        // (not in text editing, menu open, etc.)
         const appState = excalidrawApiRef.current?.getAppState();
         if (appState?.openMenu || appState?.openPopup || appState?.isResizing ||
             appState?.isRotating || appState?.draggingElement || appState?.editingElement) {
-          // Let Excalidraw handle ESC for its own UI
-          return;
+          return; // Let Excalidraw handle ESC
         }
-
         e.preventDefault();
         e.stopPropagation();
         handleCancel();
@@ -326,7 +223,6 @@ const ExcalidrawEditor: React.FC = () => {
       const text = await navigator.clipboard.readText();
       const data = JSON.parse(text);
 
-      // Validate it looks like Excalidraw data
       if (!data.elements || !Array.isArray(data.elements)) {
         alert('Invalid Excalidraw data - no elements array found');
         return;
@@ -337,7 +233,6 @@ const ExcalidrawEditor: React.FC = () => {
         appState: data.appState || {},
       });
 
-      // Load files if present
       if (data.files && Object.keys(data.files).length > 0) {
         excalidrawApiRef.current.addFiles(Object.values(data.files));
       }
@@ -371,9 +266,6 @@ const ExcalidrawEditor: React.FC = () => {
         <div style={{ color: '#172b4d', fontSize: '16px', fontWeight: 500 }}>
           Loading Excalidraw...
         </div>
-        <div style={{ color: '#6b778c', fontSize: '13px' }}>
-          {!ExcalidrawComponent ? 'Loading editor components' : 'Loading your drawing'}
-        </div>
         <style>{`
           @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -401,60 +293,12 @@ const ExcalidrawEditor: React.FC = () => {
           <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 500 }}>Excalidraw</h3>
           <span style={{ fontSize: '11px', color: '#6b778c' }}>v{VERSION}</span>
           {isDirty && (
-            <span style={{
-              fontSize: '11px',
-              color: '#de350b',
-              fontWeight: 500,
-            }}>
+            <span style={{ fontSize: '11px', color: '#de350b', fontWeight: 500 }}>
               • Unsaved changes
             </span>
           )}
-          {!isRunningInConfluence() && (
-            <span style={{
-              fontSize: '10px',
-              color: '#fff',
-              backgroundColor: '#ff7452',
-              padding: '2px 6px',
-              borderRadius: '3px',
-            }}>
-              DEV MODE
-            </span>
-          )}
         </div>
-        {/* Action buttons - fullscreen mode has no Confluence chrome */}
         <div style={{ display: 'flex', gap: '8px' }}>
-        { false &&  <>
-          <button
-            onClick={handleCopyJson}
-            title="Copy diagram JSON to clipboard"
-            style={{
-              padding: '6px 12px',
-              backgroundColor: '#fff',
-              border: '1px solid #dfe1e6',
-              borderRadius: '3px',
-              cursor: 'pointer',
-              fontSize: '14px'
-            }}
-          >
-            📋 Copy
-          </button>
-          <button
-            onClick={handlePasteJson}
-            title="Paste diagram JSON from clipboard"
-            style={{
-              padding: '6px 12px',
-              backgroundColor: '#fff',
-              border: '1px solid #dfe1e6',
-              borderRadius: '3px',
-              cursor: 'pointer',
-              fontSize: '14px'
-            }}
-          >
-            📥 Paste
-          </button>
-          </>
-        }
-          <div style={{ width: '1px', backgroundColor: '#dfe1e6', margin: '0 4px' }} />
           <button
             onClick={handleCancel}
             disabled={isSaving}
@@ -509,7 +353,6 @@ const ExcalidrawEditor: React.FC = () => {
             },
           }}
         >
-          {/* Custom Menu with Copy/Paste added to defaults */}
           {MainMenuComponent && (
             <MainMenuComponent>
               <MainMenuComponent.DefaultItems.LoadScene />
@@ -525,54 +368,12 @@ const ExcalidrawEditor: React.FC = () => {
               </MainMenuComponent.Item>
               <MainMenuComponent.Separator />
               <MainMenuComponent.DefaultItems.CommandPalette />
-              <MainMenuComponent.DefaultItems.SearchMenu />
               <MainMenuComponent.DefaultItems.Help />
               <MainMenuComponent.Separator />
               <MainMenuComponent.DefaultItems.ClearCanvas />
               <MainMenuComponent.DefaultItems.ToggleTheme />
               <MainMenuComponent.DefaultItems.ChangeCanvasBackground />
             </MainMenuComponent>
-          )}
-          {/* Footer with Copy/Paste buttons */}
-          {false && FooterComponent && (
-            <FooterComponent>
-              <button
-                onClick={handleCopyJson}
-                title="Copy diagram JSON to clipboard"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  padding: '8px 12px',
-                  backgroundColor: 'var(--color-surface-low)',
-                  border: '1px solid var(--color-border-outline-variant)',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                  color: 'var(--color-on-surface)',
-                }}
-              >
-                <span>📋</span> Copy JSON
-              </button>
-              <button
-                onClick={handlePasteJson}
-                title="Paste diagram JSON from clipboard"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  padding: '8px 12px',
-                  backgroundColor: 'var(--color-surface-low)',
-                  border: '1px solid var(--color-border-outline-variant)',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                  color: 'var(--color-on-surface)',
-                }}
-              >
-                <span>📥</span> Paste JSON
-              </button>
-            </FooterComponent>
           )}
         </ExcalidrawComponent>
       </div>

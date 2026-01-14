@@ -1,0 +1,29 @@
+modules:
+  macro:
+    - key: excalidraw-macro
+      title: Excalidraw
+      description: Create and edit Excalidraw drawings directly in Confluence
+      resource: renderer
+      config:
+        resource: editor
+        viewportSize: max
+        title: Edit Excalidraw Drawing
+
+resources:
+  - key: renderer
+    path: static/renderer
+  - key: editor
+    path: static/editor
+
+permissions:
+  scopes: []
+  content:
+    scripts:
+      - 'unsafe-eval'
+    styles:
+      - 'unsafe-inline'
+
+app:
+  id: ari:cloud:ecosystem::app/ee12109a-bcc5-4b9b-8bfb-3dec2daa0393
+  runtime:
+    name: nodejs20.x
