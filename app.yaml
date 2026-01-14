@@ -1,18 +1,28 @@
-# Google App Engine Standard - Node.js runtime
-# Deploy: gcloud app deploy
+# Google App Engine Standard - Go runtime
+# Deploy: make gae-deploy
 #
-# Before deploying:
-# 1. Run: npm run build
-# 2. Update atlassian-connect.json baseUrl to your GAE URL
-# 3. Run: gcloud app deploy
+# Free tier safe: F1 instance, scales to zero when idle
+# Static files served directly by GAE (faster, no instance hours)
 
-runtime: nodejs20
+runtime: go124
 
+# Free tier settings
 instance_class: F1
-
 automatic_scaling:
   min_instances: 0
-  max_instances: 2
+  max_instances: 1
 
 env_variables:
-  NODE_ENV: "production"
+  DIST_DIR: "./dist"
+
+handlers:
+  # Static directories served directly by GAE (no instance hours)
+  - url: /images
+    static_dir: dist/images
+
+  - url: /static
+    static_dir: dist/static
+
+  # All other requests go to the Go app
+  - url: /.*
+    script: auto

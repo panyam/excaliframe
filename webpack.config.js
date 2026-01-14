@@ -15,10 +15,10 @@ module.exports = (env, argv) => {
         : './src/renderer/index.tsx',
     },
     output: {
-      path: path.resolve(__dirname, 'dist'),
+      path: path.resolve(__dirname, 'dist/static/excalidraw'),
       filename: '[name].bundle.js',
       clean: !isDev, // Don't clean in dev mode (middleware serves from memory)
-      publicPath: '/',
+      publicPath: '/static/excalidraw/',
     },
     module: {
       rules: [
@@ -49,12 +49,12 @@ module.exports = (env, argv) => {
     plugins: [
       new HtmlWebpackPlugin({
         template: './src/editor/index.html',
-        filename: 'editor.html',
+        filename: '../../excalidraw/editor.html',  // Output to dist/excalidraw/
         chunks: ['editor'],
       }),
       new HtmlWebpackPlugin({
         template: './src/renderer/index.html',
-        filename: 'renderer.html',
+        filename: '../../excalidraw/renderer.html',  // Output to dist/excalidraw/
         chunks: ['renderer'],
       }),
     ],

@@ -1,25 +1,21 @@
-# Docker Compose for Confluence Cloud development
-# This runs the plugin server + cloudflared tunnel
+# Docker Compose for Confluence Cloud deployment
+# This runs the Go plugin server + cloudflared tunnel
 # Use with a free Confluence Cloud developer instance
 
 services:
-  # Plugin server (Express + Excalidraw)
+  # Plugin server (Go + Excalidraw frontend)
   plugin:
     build:
       context: .
       dockerfile: Dockerfile.plugin
     container_name: excaliframe-plugin
-    volumes:
-      - .:/app
-      - /app/node_modules  # Don't override node_modules
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=production
       - PORT=3000
-    command: sh -c "npm run build && npm start"
+      - DIST_DIR=/app/dist
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://127.0.0.1:3000/atlassian-connect.json"]
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:3000/confluence/atlassian-connect.json"]
       interval: 10s
       timeout: 5s
       retries: 3

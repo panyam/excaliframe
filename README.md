@@ -66,34 +66,26 @@ See [docs/CLOUD_SETUP.md](./docs/CLOUD_SETUP.md) for detailed instructions.
 
 ```
 excaliframe/
-├── src/
+├── src/                        # Frontend (React + TypeScript)
 │   ├── editor/                 # Excalidraw editor component
-│   │   ├── ExcalidrawEditor.tsx
-│   │   ├── index.tsx
-│   │   ├── index.html
-│   │   └── styles.css
 │   ├── renderer/               # Drawing viewer component
-│   │   ├── ExcalidrawRenderer.tsx
-│   │   ├── index.tsx
-│   │   ├── index.html
-│   │   └── styles.css
-│   ├── utils/
-│   │   └── mockAP.ts           # Mock Atlassian Connect API for dev
-│   ├── types/
-│   │   └── atlassian-connect.d.ts
-│   └── version.ts
-├── docs/                       # Documentation
-├── scripts/                    # Utility scripts
-├── images/
-│   └── excalidraw-icon.svg     # Macro icon
-├── server.ts                   # Express server
-├── webpack.config.js           # Webpack build config
-├── atlassian-connect.json      # Confluence Connect app descriptor
-├── docker-compose.cloud.yml    # Plugin + tunnel for Cloud
-├── docker-compose.dev.yml      # Dev mode with hot reload
+│   ├── utils/                  # Utilities (mockAP for dev)
+│   └── types/                  # TypeScript declarations
+├── server/                     # Go backend (handler packages)
+│   ├── confluence/             # /confluence/* routes
+│   ├── excalidraw/             # /excalidraw/* routes
+│   └── middleware/             # HTTP middleware
+├── dist/                       # Build output (generated)
+│   ├── excalidraw/             # Excalidraw HTML pages
+│   ├── static/excalidraw/      # JS bundles (served by GAE/CDN)
+│   └── images/                 # Static images
+├── main.go                     # Go server entry point
+├── go.mod                      # Go module definition
+├── webpack.config.js           # Frontend build config
+├── atlassian-connect.json      # Confluence Connect descriptor
 ├── app.yaml                    # Google App Engine config
-├── Makefile                    # All common commands
-└── package.json
+├── Makefile                    # Build commands
+└── package.json                # Frontend dependencies
 ```
 
 ## Development
@@ -187,11 +179,11 @@ This builds, updates `baseUrl`, and deploys. Install in Confluence using:
 
 ### Other Platforms
 
-The app can be deployed to any platform that runs Node.js:
-- **Railway** - Connect GitHub repo
+The app can be deployed to any platform that can run a Go binary or Docker container:
+- **Railway** - Connect GitHub repo (auto-detects Go)
 - **Render** - Connect GitHub repo
 - **Fly.io** - `fly deploy`
-- **VPS** - Use PM2 + Nginx
+- **VPS** - Single binary + systemd, or Docker
 
 See [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) for detailed instructions.
 
@@ -199,6 +191,8 @@ See [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) for detailed instructions.
 
 | Document | Description |
 |----------|-------------|
+| [docs/FAQ.md](./docs/FAQ.md) | Enterprise FAQ - security, compliance, deployment, justification |
+| [SECURITY_ROADMAP.md](./SECURITY_ROADMAP.md) | Security validation roadmap for enterprise readiness |
 | [docs/CLOUD_SETUP.md](./docs/CLOUD_SETUP.md) | Confluence Cloud setup with tunnels |
 | [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) | Production deployment options |
 | [docs/TESTING.md](./docs/TESTING.md) | Testing strategies |
@@ -223,10 +217,10 @@ make start   # Restart the server
 ## Tech Stack
 
 - **Frontend**: React 18, Excalidraw 0.18, TypeScript
-- **Backend**: Express.js, TypeScript
-- **Build**: Webpack 5, ts-loader
+- **Backend**: Go 1.24 (stateless HTTP server)
+- **Build**: Webpack 5 (frontend), Go compiler (backend)
 - **Infrastructure**: Docker, Docker Compose
-- **Deployment**: Google App Engine, or any Node.js host
+- **Deployment**: Google App Engine (Go runtime), or any platform
 
 ## License
 

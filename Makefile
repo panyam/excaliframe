@@ -1,4 +1,4 @@
-.PHONY: help install build dev start stop clean validate-json update-url dev-tunnel cloud-dev cloud-dev-stop cloud-start cloud-start-bg cloud-stop cloud-logs cloud-url gae-deploy gae-logs gae-browse gae-describe deploy-info
+.PHONY: help install build build-frontend build-server dev dev-watch start stop clean validate-json update-url dev-tunnel cloud-dev cloud-dev-stop cloud-start cloud-start-bg cloud-stop cloud-logs cloud-url gae-deploy gae-logs gae-browse gae-describe deploy-info
 
 # Default target
 .DEFAULT_GOAL := help
@@ -9,10 +9,15 @@ YELLOW := \033[1;33m
 RED := \033[0;31m
 NC := \033[0m # No Color
 
+# Binary output
+BIN_DIR := bin
+SERVER_BIN := $(BIN_DIR)/server
+
 ##@ General
 
 help: ## Display this help message
 	@echo "$(GREEN)Excaliframe - Confluence Cloud Plugin for Excalidraw$(NC)"
+	@echo "$(YELLOW)Go server branch - Node.js removed$(NC)"
 	@echo ""
 	@echo "Usage: make [target]"
 	@echo ""
@@ -21,16 +26,24 @@ help: ## Display this help message
 
 ##@ Setup
 
-install: ## Install npm dependencies
-	@echo "$(GREEN)Installing dependencies...$(NC)"
+install: ## Install npm dependencies (for frontend build only)
+	@echo "$(GREEN)Installing npm dependencies (frontend build)...$(NC)"
 	npm install
 
 ##@ Build
 
-build: ## Build plugin (webpack + server + copy assets)
-	@echo "$(GREEN)Building plugin...$(NC)"
-	npm run build
+build: build-frontend build-server ## Build frontend and Go server
 	@echo "$(GREEN)Build complete$(NC)"
+
+build-frontend: ## Build frontend assets (webpack)
+	@echo "$(GREEN)Building frontend assets...$(NC)"
+	npm run build
+
+build-server: ## Build Go server binary
+	@echo "$(GREEN)Building Go server...$(NC)"
+	@mkdir -p $(BIN_DIR)
+	go build -o $(SERVER_BIN) .
+	@echo "$(GREEN)Server binary: $(SERVER_BIN)$(NC)"
 
 type-check: ## Run TypeScript type checking
 	@echo "$(GREEN)Type checking...$(NC)"
@@ -38,48 +51,61 @@ type-check: ## Run TypeScript type checking
 
 clean: ## Remove build artifacts
 	@echo "$(YELLOW)Cleaning build artifacts...$(NC)"
-	rm -rf dist/
+	rm -rf dist/ $(BIN_DIR)/
 	@echo "$(GREEN)Clean complete$(NC)"
 
 ##@ Development
 
-dev: ## Start dev server with hot reload
-	@echo "$(GREEN)Starting dev server with hot reload...$(NC)"
-	@echo "$(YELLOW)Changes to src/ will hot reload instantly$(NC)"
+dev: ## Start Go server + webpack watch (run in two terminals, or use dev-all)
+	@echo "$(GREEN)Starting Go server...$(NC)"
+	@echo "$(YELLOW)Run 'make dev-watch' in another terminal for frontend hot rebuild$(NC)"
+	@$(MAKE) build-frontend
+	@DIST_DIR=dist $(SERVER_BIN) || ($(MAKE) build-server && DIST_DIR=dist $(SERVER_BIN))
+
+dev-watch: ## Watch and rebuild frontend on changes
+	@echo "$(GREEN)Watching frontend for changes...$(NC)"
 	npm run dev
+
+dev-all: build-server ## Build and run server with frontend watch (requires terminal multiplexer)
+	@echo "$(GREEN)Starting dev environment...$(NC)"
+	@echo "$(YELLOW)Building frontend first...$(NC)"
+	@npm run build
+	@echo "$(YELLOW)Starting server and watch in parallel...$(NC)"
+	@trap 'kill 0' EXIT; \
+		(npm run dev &) && \
+		(sleep 2 && DIST_DIR=dist $(SERVER_BIN))
 
 dev-tunnel: ## Start cloudflared tunnel (run alongside 'make dev')
 	@echo "$(GREEN)Starting cloudflared tunnel...$(NC)"
 	@echo "$(YELLOW)Run 'make dev' in another terminal first$(NC)"
 	docker run --rm -it --network host cloudflare/cloudflared:latest tunnel --no-autoupdate --url http://localhost:3000
 
-start: ## Start production server locally
+start: build ## Build and start production server
 	@if lsof -ti:3000 > /dev/null 2>&1; then \
 		echo "$(YELLOW)Port 3000 in use, stopping existing process...$(NC)"; \
 		lsof -ti:3000 | xargs kill -9 2>/dev/null || true; \
 		sleep 1; \
 	fi
-	@echo "$(GREEN)Starting plugin server...$(NC)"
-	npm start
+	@echo "$(GREEN)Starting Go server...$(NC)"
+	DIST_DIR=dist $(SERVER_BIN)
 
-stop: ## Stop plugin server
-	@echo "$(YELLOW)Stopping plugin server...$(NC)"
+stop: ## Stop server
+	@echo "$(YELLOW)Stopping server...$(NC)"
 	@if lsof -ti:3000 > /dev/null 2>&1; then \
 		lsof -ti:3000 | xargs kill -9 2>/dev/null || true; \
-		echo "$(GREEN)Plugin server stopped$(NC)"; \
+		echo "$(GREEN)Server stopped$(NC)"; \
 	else \
 		echo "$(YELLOW)No process running on port 3000$(NC)"; \
 	fi
 
-##@ Confluence Cloud
+##@ Confluence Cloud (Docker)
 
-cloud-dev: ## Start dev mode with hot-reload + tunnel (recommended)
-	@echo "$(GREEN)Starting dev mode with hot-reload + tunnel...$(NC)"
-	@echo "$(YELLOW)Changes to src/ will hot reload instantly$(NC)"
+cloud-dev: ## Start dev mode with hot-reload + tunnel
+	@echo "$(GREEN)Starting dev mode with tunnel...$(NC)"
 	@if docker compose version > /dev/null 2>&1; then \
-		docker compose -f docker-compose.dev.yml up; \
+		docker compose -f docker-compose.dev.yml up --build; \
 	else \
-		docker-compose -f docker-compose.dev.yml up; \
+		docker-compose -f docker-compose.dev.yml up --build; \
 	fi
 
 cloud-dev-stop: ## Stop dev mode
@@ -89,16 +115,16 @@ cloud-dev-stop: ## Stop dev mode
 		docker-compose -f docker-compose.dev.yml down; \
 	fi
 
-cloud-start: ## Start plugin server + tunnel (production mode)
-	@echo "$(GREEN)Starting plugin + tunnel for Confluence Cloud...$(NC)"
+cloud-start: ## Start server + tunnel (production mode)
+	@echo "$(GREEN)Starting server + tunnel for Confluence Cloud...$(NC)"
 	@if docker compose version > /dev/null 2>&1; then \
 		docker compose -f docker-compose.cloud.yml up --build; \
 	else \
 		docker-compose -f docker-compose.cloud.yml up --build; \
 	fi
 
-cloud-start-bg: ## Start plugin server + tunnel in background
-	@echo "$(GREEN)Starting plugin + tunnel (background)...$(NC)"
+cloud-start-bg: ## Start server + tunnel in background
+	@echo "$(GREEN)Starting server + tunnel (background)...$(NC)"
 	@if docker compose version > /dev/null 2>&1; then \
 		docker compose -f docker-compose.cloud.yml up -d --build; \
 	else \
@@ -141,14 +167,11 @@ cloud-url: ## Show current tunnel URL
 GAE_PROJECT := excaliframe
 GAE_URL := https://$(GAE_PROJECT).appspot.com
 
-gae-deploy: ## Build and deploy to Google App Engine
+gae-deploy: build ## Build and deploy to Google App Engine
 	@echo "$(GREEN)Deploying to Google App Engine...$(NC)"
 	@echo "$(YELLOW)Project: $(GAE_PROJECT)$(NC)"
 	@echo ""
-	@echo "$(YELLOW)Step 1: Building...$(NC)"
-	@npm run build
-	@echo ""
-	@echo "$(YELLOW)Step 2: Updating baseUrl to $(GAE_URL)...$(NC)"
+	@echo "$(YELLOW)Step 1: Updating baseUrl to $(GAE_URL)...$(NC)"
 	@if [[ "$$(uname)" == "Darwin" ]]; then \
 		sed -i '' 's|"baseUrl": "[^"]*"|"baseUrl": "$(GAE_URL)"|g' atlassian-connect.json; \
 	else \
@@ -156,7 +179,7 @@ gae-deploy: ## Build and deploy to Google App Engine
 	fi
 	@cp atlassian-connect.json dist/
 	@echo ""
-	@echo "$(YELLOW)Step 3: Deploying to GAE...$(NC)"
+	@echo "$(YELLOW)Step 2: Deploying to GAE...$(NC)"
 	@gcloud app deploy --project=$(GAE_PROJECT) --quiet
 	@echo ""
 	@echo "$(GREEN)Deployed to $(GAE_URL)$(NC)"
