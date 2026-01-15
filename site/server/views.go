@@ -79,6 +79,23 @@ func (c *ContactUs) Load(r *http.Request, w http.ResponseWriter, app *goal.App[*
 	return nil, false
 }
 
+// Documentation page
+type Documentation struct {
+	goal.BasePage
+	Header          Header
+	GitHubURL       string
+	GitHubIssuesURL string
+}
+
+func (d *Documentation) Load(r *http.Request, w http.ResponseWriter, app *goal.App[*ExcaliframeApp]) (error, bool) {
+	d.Title = "Documentation - Excaliframe"
+	d.DisableSplashScreen = true
+	d.Header.AppName = app.Context.AppName
+	d.GitHubURL = app.Context.GitHubURL
+	d.GitHubIssuesURL = app.Context.GitHubIssuesURL
+	return nil, false
+}
+
 // SetupRoutes registers all page routes
 func SetupRoutes(app *goal.App[*ExcaliframeApp]) *http.ServeMux {
 	mux := http.NewServeMux()
@@ -87,6 +104,7 @@ func SetupRoutes(app *goal.App[*ExcaliframeApp]) *http.ServeMux {
 	goal.Register[*PrivacyPolicy](app, mux, "/privacy/")
 	goal.Register[*TermsOfService](app, mux, "/terms/")
 	goal.Register[*ContactUs](app, mux, "/contact/")
+	goal.Register[*Documentation](app, mux, "/docs/")
 
 	// Redirect without trailing slash
 	mux.HandleFunc("/privacy", func(w http.ResponseWriter, r *http.Request) {
@@ -97,6 +115,9 @@ func SetupRoutes(app *goal.App[*ExcaliframeApp]) *http.ServeMux {
 	})
 	mux.HandleFunc("/contact", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/contact/", http.StatusMovedPermanently)
+	})
+	mux.HandleFunc("/docs", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/docs/", http.StatusMovedPermanently)
 	})
 
 	return mux

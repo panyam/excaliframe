@@ -1,0 +1,181 @@
+{{# include "./BasePage.html" #}}
+
+{{ define "BodySection" }}
+<main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">Documentation</h1>
+    <p class="text-gray-600 dark:text-gray-400 mb-8">Everything you need to get started with Excaliframe.</p>
+
+    <!-- Quick Start -->
+    <section class="mb-12">
+        <h2 class="text-2xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+            <span class="w-8 h-8 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center mr-3 text-indigo-600 dark:text-indigo-400 text-sm font-bold">1</span>
+            Installation
+        </h2>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+            <ol class="space-y-4 text-gray-700 dark:text-gray-300">
+                <li class="flex items-start">
+                    <span class="font-semibold mr-2">1.</span>
+                    <span>Go to the <a href="https://marketplace.atlassian.com" class="text-indigo-600 dark:text-indigo-400 hover:underline">Atlassian Marketplace</a> and search for "Excaliframe"</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="font-semibold mr-2">2.</span>
+                    <span>Click "Get it now" and select your Confluence site</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="font-semibold mr-2">3.</span>
+                    <span>Approve the installation - Excaliframe requires no special permissions</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="font-semibold mr-2">4.</span>
+                    <span>You're ready to start drawing!</span>
+                </li>
+            </ol>
+        </div>
+    </section>
+
+    <!-- Usage -->
+    <section class="mb-12">
+        <h2 class="text-2xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+            <span class="w-8 h-8 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center mr-3 text-indigo-600 dark:text-indigo-400 text-sm font-bold">2</span>
+            How to Use
+        </h2>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
+            <!-- Insert -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Insert a Drawing</h3>
+                <p class="text-gray-700 dark:text-gray-300 mb-3">
+                    Open any Confluence page in edit mode and type <code class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-indigo-600 dark:text-indigo-400">/Excalidraw</code> to insert a new drawing.
+                </p>
+                <img src="/static/images/insert.png" alt="Insert Excalidraw" class="rounded-lg border border-gray-200 dark:border-gray-700 max-w-full">
+            </div>
+
+            <!-- Edit -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Edit Your Diagram</h3>
+                <p class="text-gray-700 dark:text-gray-300 mb-3">
+                    The full Excalidraw editor opens with all drawing tools: shapes, arrows, text, freehand drawing, and more. Use the toolbar at the top to select tools.
+                </p>
+                <img src="/static/images/editor.png" alt="Excalidraw Editor" class="rounded-lg border border-gray-200 dark:border-gray-700 max-w-full">
+            </div>
+
+            <!-- Save -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Save and View</h3>
+                <p class="text-gray-700 dark:text-gray-300 mb-3">
+                    Click "Save" to embed your diagram in the page. It renders inline with your content. Click the diagram anytime to edit it again.
+                </p>
+                <img src="/static/images/renderer.png" alt="Rendered Diagram" class="rounded-lg border border-gray-200 dark:border-gray-700 max-w-full">
+            </div>
+        </div>
+    </section>
+
+    <!-- Tips -->
+    <section class="mb-12">
+        <h2 class="text-2xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+            <span class="w-8 h-8 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center mr-3 text-indigo-600 dark:text-indigo-400 text-sm font-bold">3</span>
+            Tips & Tricks
+        </h2>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+            <ul class="space-y-3 text-gray-700 dark:text-gray-300">
+                <li class="flex items-start">
+                    <svg class="w-5 h-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    <span><strong>Keyboard shortcuts:</strong> Press <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">1-9</code> to quickly select tools</span>
+                </li>
+                <li class="flex items-start">
+                    <svg class="w-5 h-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    <span><strong>Pan canvas:</strong> Hold spacebar and drag, or use the hand tool</span>
+                </li>
+                <li class="flex items-start">
+                    <svg class="w-5 h-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    <span><strong>Zoom:</strong> Use mouse wheel or pinch to zoom in/out</span>
+                </li>
+                <li class="flex items-start">
+                    <svg class="w-5 h-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    <span><strong>Library:</strong> Click the Library button to access pre-made shapes and icons</span>
+                </li>
+                <li class="flex items-start">
+                    <svg class="w-5 h-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    <span><strong>Duplicate:</strong> Select elements and press <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">Ctrl/Cmd + D</code></span>
+                </li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="mb-12">
+        <h2 class="text-2xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+            <span class="w-8 h-8 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center mr-3 text-indigo-600 dark:text-indigo-400 text-sm font-bold">?</span>
+            FAQ
+        </h2>
+        <div class="space-y-4">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                <h3 class="font-semibold text-gray-900 dark:text-white mb-2">Where is my data stored?</h3>
+                <p class="text-gray-700 dark:text-gray-300">
+                    All your drawings are stored directly in Confluence, as part of your page content. Excaliframe doesn't send any data to external servers.
+                </p>
+            </div>
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                <h3 class="font-semibold text-gray-900 dark:text-white mb-2">Is Excaliframe free?</h3>
+                <p class="text-gray-700 dark:text-gray-300">
+                    Yes! Excaliframe is free and open source. There are no premium features or paid tiers.
+                </p>
+            </div>
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                <h3 class="font-semibold text-gray-900 dark:text-white mb-2">Can I export my diagrams?</h3>
+                <p class="text-gray-700 dark:text-gray-300">
+                    Yes, while editing you can use the Excalidraw menu to export as PNG, SVG, or the native Excalidraw format.
+                </p>
+            </div>
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                <h3 class="font-semibold text-gray-900 dark:text-white mb-2">Something's not working. How do I get help?</h3>
+                <p class="text-gray-700 dark:text-gray-300">
+                    Please <a href="{{ .GitHubIssuesURL }}" class="text-indigo-600 dark:text-indigo-400 hover:underline">open an issue on GitHub</a> with details about the problem. Include your browser and any error messages if possible.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Resources -->
+    <section>
+        <h2 class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">Additional Resources</h2>
+        <div class="grid md:grid-cols-2 gap-4">
+            <a href="{{ .GitHubURL }}" target="_blank" rel="noopener noreferrer"
+               class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow flex items-center">
+                <svg class="w-8 h-8 text-gray-700 dark:text-gray-300 mr-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd"/>
+                </svg>
+                <div>
+                    <h3 class="font-semibold text-gray-900 dark:text-white">Source Code</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">View on GitHub</p>
+                </div>
+            </a>
+            <a href="https://excalidraw.com" target="_blank" rel="noopener noreferrer"
+               class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow flex items-center">
+                <svg class="w-8 h-8 text-indigo-600 dark:text-indigo-400 mr-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                </svg>
+                <div>
+                    <h3 class="font-semibold text-gray-900 dark:text-white">Excalidraw</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Learn more about Excalidraw</p>
+                </div>
+            </a>
+        </div>
+    </section>
+</main>
+{{ end }}
+
+{{ define "PostBodySection" }}{{ end }}
+
+{{ define "Documentation" }}
+{{ template "BasePage" . }}
+{{ end }}

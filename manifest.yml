@@ -2,7 +2,7 @@ modules:
   macro:
     - key: excalidraw-macro
       title: Excalidraw
-      description: Create and edit Excalidraw drawings directly in Confluence
+      description: Create and edit hand-drawn style diagrams directly in Confluence using Excalidraw
       resource: renderer
       config:
         resource: editor
