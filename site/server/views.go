@@ -68,7 +68,6 @@ type ContactUs struct {
 	Header          Header
 	GitHubURL       string
 	GitHubIssuesURL string
-	Email           string
 }
 
 func (c *ContactUs) Load(r *http.Request, w http.ResponseWriter, app *goal.App[*ExcaliframeApp]) (error, bool) {
@@ -77,7 +76,6 @@ func (c *ContactUs) Load(r *http.Request, w http.ResponseWriter, app *goal.App[*
 	c.Header.AppName = app.Context.AppName
 	c.GitHubURL = app.Context.GitHubURL
 	c.GitHubIssuesURL = app.Context.GitHubIssuesURL
-	c.Email = app.Context.Email
 	return nil, false
 }
 
