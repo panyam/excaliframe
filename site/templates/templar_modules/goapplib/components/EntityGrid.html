@@ -1,0 +1,156 @@
+<!-- goapplib/templates/components/EntityGrid.html -->
+<!-- Generic entity grid component -->
+
+{{ define "EntityGrid" }}
+<div id="{{ or .ContainerId "entity-grid" }}"
+     class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+     {{ if .HtmxEnabled }}
+     hx-trigger="{{ or .RefreshTrigger "entityUpdated" }} from:body"
+     hx-get="{{ .RefreshUrl }}"
+     hx-swap="innerHTML"
+     {{ end }}>
+
+    {{ range .Items }}
+    {{ block "GridItem" . }}
+    <div id="item-{{ .Id }}"
+         class="entity-card bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-xl transition-shadow duration-200 overflow-hidden border border-gray-200 dark:border-gray-700"
+         data-entity-id="{{ .Id }}">
+
+        {{ block "GridItemImage" . }}
+        {{ if .PreviewUrl }}
+        <a href="{{ $.ViewUrl .Id }}" class="block">
+            <div class="aspect-video w-full bg-gray-100 dark:bg-gray-900 overflow-hidden">
+                <img src="{{ .PreviewUrl }}"
+                     alt="{{ .Name }}"
+                     class="w-full h-full object-cover"
+                     loading="lazy"
+                     onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 96 64%22%3E%3Crect fill=%22%23e5e7eb%22 width=%22100%25%22 height=%22100%25%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22sans-serif%22 font-size=%2212%22 fill=%22%239ca3af%22%3ENo Image%3C/text%3E%3C/svg%3E';">
+            </div>
+        </a>
+        {{ end }}
+        {{ end }}
+
+        <div class="p-4">
+            {{ block "GridItemTitle" . }}
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white truncate mb-2">
+                <a href="{{ $.ViewUrl .Id }}" class="hover:text-blue-600 dark:hover:text-blue-400">
+                    {{ .Name }}
+                </a>
+            </h3>
+            {{ end }}
+
+            {{ block "GridItemDescription" . }}
+            {{ if .Description }}
+            <p class="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-3">
+                {{ .Description }}
+            </p>
+            {{ end }}
+            {{ end }}
+
+            {{ block "GridItemMeta" . }}
+            <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                {{ if .UpdatedAt }}
+                <span>{{ .UpdatedAt | Ago }}</span>
+                {{ end }}
+
+                {{ if $.ShowActions }}
+                <button class="entity-actions-btn p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-full hover:bg-gray-100 dark:hover:bg-gray-600"
+                        onclick="toggleEntityMenu(this, event)">
+                    <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"/>
+                    </svg>
+                </button>
+                {{ end }}
+            </div>
+            {{ end }}
+
+            {{ block "GridItemActions" . }}
+            {{ if $.ShowActions }}
+            <div class="entity-action-menu hidden absolute right-2 mt-2 w-48 bg-white dark:bg-gray-700 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-10">
+                <div class="py-1" role="menu">
+                    {{ if $.ViewUrl .Id }}
+                    <a href="{{ $.ViewUrl .Id }}" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600">
+                        View
+                    </a>
+                    {{ end }}
+                    {{ if $.EditUrl .Id }}
+                    <a href="{{ $.EditUrl .Id }}" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600">
+                        Edit
+                    </a>
+                    {{ end }}
+                    {{ if $.DeleteUrl .Id }}
+                    <button class="block w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-600"
+                            {{ if $.HtmxEnabled }}
+                            hx-delete="{{ $.DeleteUrl .Id }}"
+                            hx-target="#item-{{ .Id }}"
+                            hx-swap="outerHTML swap:200ms"
+                            hx-confirm="Delete {{ .Name }}?"
+                            {{ else }}
+                            onclick="confirmDelete('{{ .Id }}', '{{ .Name }}')"
+                            {{ end }}>
+                        Delete
+                    </button>
+                    {{ end }}
+                </div>
+            </div>
+            {{ end }}
+            {{ end }}
+        </div>
+    </div>
+    {{ end }}
+    {{ end }}
+</div>
+
+{{ if not .Items }}
+{{ template "EmptyState" . }}
+{{ end }}
+
+<script>
+function toggleEntityMenu(button, event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const card = button.closest('.entity-card');
+    const menu = card.querySelector('.entity-action-menu');
+
+    if (menu) {
+        menu.classList.toggle('hidden');
+        // Close other menus
+        document.querySelectorAll('.entity-action-menu').forEach(m => {
+            if (m !== menu) m.classList.add('hidden');
+        });
+    }
+}
+
+document.addEventListener('click', function(event) {
+    if (!event.target.closest('.entity-actions-btn') && !event.target.closest('.entity-action-menu')) {
+        document.querySelectorAll('.entity-action-menu').forEach(m => m.classList.add('hidden'));
+    }
+});
+</script>
+{{ end }}
+
+{{ define "EmptyState" }}
+<div id="empty-state" class="col-span-full text-center py-12">
+    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+    </svg>
+    <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">
+        {{ or .EmptyTitle "No items found" }}
+    </h3>
+    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        {{ or .EmptyMessage "Get started by creating a new item." }}
+    </p>
+    {{ if .CreateUrl }}
+    <div class="mt-6">
+        <a href="{{ .CreateUrl }}"
+           class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 20 20" stroke="currentColor">
+                <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd"/>
+            </svg>
+            {{ or .CreateLabel "Create New" }}
+        </a>
+    </div>
+    {{ end }}
+</div>
+{{ end }}

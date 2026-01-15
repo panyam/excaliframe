@@ -1,0 +1,10 @@
+# AUTO-GENERATED - Do not edit manually
+# Run 'templar get' to regenerate
+
+version: 1
+sources:
+    goapplib:
+        url: github.com/panyam/goapplib
+        ref: main
+        resolved_commit: main
+        fetched_at: "2026-01-14T17:15:59Z"

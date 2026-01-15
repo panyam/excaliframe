@@ -11,3 +11,7 @@ static/
 
 # Data directories (persistent storage)
 data/
+
+# Site build artifacts
+site/locallinks/
+site/bin/

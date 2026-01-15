@@ -1,0 +1,185 @@
+<!-- goapplib/templates/components/Drawer.html -->
+<!-- Mobile drawer component -->
+
+{{ define "Drawer" }}
+<div id="drawer-{{ .Id }}" class="drawer-overlay fixed inset-0 z-40 pointer-events-none">
+    <!-- Backdrop -->
+    <div class="drawer-backdrop absolute inset-0 bg-black/0 transition-colors duration-300"
+         onclick="closeDrawer('{{ .Id }}')"></div>
+
+    <!-- Drawer Panel -->
+    <div class="drawer-panel absolute {{ or .Position "bottom-0 inset-x-0" }}
+                {{ or .Height "h-[70vh] max-h-[70vh]" }}
+                bg-white dark:bg-gray-800 rounded-t-xl shadow-2xl
+                transform translate-y-full transition-transform duration-300 ease-out">
+
+        <!-- Handle (for bottom drawers) -->
+        {{ if ne .Position "right-0 inset-y-0" }}
+        <div class="drawer-handle flex justify-center py-2">
+            <div class="w-12 h-1 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
+        </div>
+        {{ end }}
+
+        <!-- Header -->
+        {{ if .Title }}
+        <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ .Title }}</h3>
+            <button type="button" class="drawer-close p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                    onclick="closeDrawer('{{ .Id }}')">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        {{ end }}
+
+        <!-- Content -->
+        <div class="drawer-content overflow-y-auto {{ if .Title }}h-[calc(100%-4rem)]{{ else }}h-full{{ end }} p-4">
+            {{ block "DrawerContent" . }}{{ end }}
+        </div>
+    </div>
+</div>
+{{ end }}
+
+{{ define "DrawerRight" }}
+<!-- Right-side drawer (desktop sidebar style) -->
+<div id="drawer-{{ .Id }}" class="drawer-overlay fixed inset-0 z-40 pointer-events-none">
+    <div class="drawer-backdrop absolute inset-0 bg-black/0 transition-colors duration-300"
+         onclick="closeDrawer('{{ .Id }}')"></div>
+
+    <div class="drawer-panel absolute right-0 inset-y-0 {{ or .Width "w-80 max-w-full" }}
+                bg-white dark:bg-gray-800 shadow-2xl
+                transform translate-x-full transition-transform duration-300 ease-out">
+
+        <!-- Header -->
+        <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ .Title }}</h3>
+            <button type="button" class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                    onclick="closeDrawer('{{ .Id }}')">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Content -->
+        <div class="drawer-content overflow-y-auto h-[calc(100%-4rem)] p-4">
+            {{ block "DrawerContent" . }}{{ end }}
+        </div>
+    </div>
+</div>
+{{ end }}
+
+{{ define "BottomBar" }}
+<!-- Mobile bottom navigation bar -->
+<nav id="bottom-bar" class="fixed bottom-0 inset-x-0 h-16 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700
+                            flex items-center justify-around z-50
+                            md:hidden">
+    {{ range .Items }}
+    <button type="button"
+            class="bottom-bar-btn flex flex-col items-center justify-center px-3 py-2 min-w-[60px]
+                   text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100
+                   transition-colors duration-200
+                   {{ if .Active }}text-blue-600 dark:text-blue-400{{ end }}"
+            {{ if .DrawerId }}onclick="toggleDrawer('{{ .DrawerId }}')"{{ end }}
+            {{ if .Action }}onclick="{{ .Action }}"{{ end }}
+            {{ if .Href }}onclick="window.location.href='{{ .Href }}'"{{ end }}>
+        {{ .Icon | safeHTML }}
+        <span class="text-xs mt-1">{{ .Label }}</span>
+    </button>
+    {{ end }}
+</nav>
+{{ end }}
+
+<style>
+/* Drawer open state */
+.drawer-overlay.open {
+    pointer-events: auto;
+}
+
+.drawer-overlay.open .drawer-backdrop {
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.drawer-overlay.open .drawer-panel {
+    transform: translateY(0) translateX(0);
+}
+
+/* Touch gestures support */
+.drawer-panel {
+    touch-action: pan-y;
+}
+</style>
+
+<script>
+function openDrawer(id) {
+    const drawer = document.getElementById('drawer-' + id);
+    if (drawer) {
+        drawer.classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function closeDrawer(id) {
+    const drawer = document.getElementById('drawer-' + id);
+    if (drawer) {
+        drawer.classList.remove('open');
+        document.body.style.overflow = '';
+    }
+}
+
+function toggleDrawer(id) {
+    const drawer = document.getElementById('drawer-' + id);
+    if (drawer) {
+        if (drawer.classList.contains('open')) {
+            closeDrawer(id);
+        } else {
+            openDrawer(id);
+        }
+    }
+}
+
+// Close drawer on escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        document.querySelectorAll('.drawer-overlay.open').forEach(drawer => {
+            const id = drawer.id.replace('drawer-', '');
+            closeDrawer(id);
+        });
+    }
+});
+
+// Swipe to close (basic implementation)
+document.querySelectorAll('.drawer-panel').forEach(panel => {
+    let startY = 0;
+    let currentY = 0;
+
+    panel.addEventListener('touchstart', (e) => {
+        startY = e.touches[0].clientY;
+    });
+
+    panel.addEventListener('touchmove', (e) => {
+        currentY = e.touches[0].clientY;
+        const diff = currentY - startY;
+
+        // Only allow downward swipe for bottom drawers
+        if (diff > 0 && panel.closest('.drawer-overlay')) {
+            panel.style.transform = `translateY(${diff}px)`;
+        }
+    });
+
+    panel.addEventListener('touchend', () => {
+        const diff = currentY - startY;
+        panel.style.transform = '';
+
+        // Close if swiped more than 100px down
+        if (diff > 100) {
+            const drawer = panel.closest('.drawer-overlay');
+            if (drawer) {
+                const id = drawer.id.replace('drawer-', '');
+                closeDrawer(id);
+            }
+        }
+    });
+});
+</script>

@@ -1,0 +1,250 @@
+<!-- goapplib/templates/ProfilePage.html -->
+<!-- Base profile page template - extend this for your app's profile page -->
+{{# include "./BasePage.html" #}}
+
+<!-- Override this for custom profile header -->
+{{ define "ProfileHeader" }}
+<div class="bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-6">
+    <h1 class="text-3xl font-bold text-white">Profile</h1>
+    <p class="text-blue-100 mt-1">Manage your account settings</p>
+</div>
+{{ end }}
+
+<!-- Status messages section -->
+{{ define "ProfileMessages" }}
+{{if .VerificationSent}}
+<div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+    <div class="flex items-start">
+        <svg class="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+        </svg>
+        <div class="ml-3">
+            <h3 class="text-sm font-medium text-green-800 dark:text-green-200">Verification email sent</h3>
+            <p class="text-sm text-green-700 dark:text-green-300 mt-1">Check your inbox for the verification link.</p>
+        </div>
+    </div>
+</div>
+{{end}}
+
+{{if .VerificationError}}
+<div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+    <div class="flex items-start">
+        <svg class="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293z" clip-rule="evenodd"/>
+        </svg>
+        <div class="ml-3">
+            <h3 class="text-sm font-medium text-red-800 dark:text-red-200">Error sending verification email</h3>
+            <p class="text-sm text-red-700 dark:text-red-300 mt-1">{{.VerificationError}}</p>
+        </div>
+    </div>
+</div>
+{{end}}
+{{ end }}
+
+<!-- Account information section -->
+{{ define "ProfileAccountInfo" }}
+<div class="space-y-4">
+    <h2 class="text-xl font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2">
+        Account Information
+    </h2>
+
+    <div class="grid grid-cols-1 gap-4">
+        {{if .Username}}
+        <div class="flex items-start">
+            <div class="flex-shrink-0">
+                <svg class="h-6 w-6 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
+            </div>
+            <div class="ml-4 flex-1">
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Username</p>
+                <p class="mt-1 text-base text-gray-900 dark:text-white">{{.Username}}</p>
+            </div>
+        </div>
+        {{end}}
+
+        <div class="flex items-start">
+            <div class="flex-shrink-0">
+                <svg class="h-6 w-6 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                </svg>
+            </div>
+            <div class="ml-4 flex-1">
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">User ID</p>
+                <p class="mt-1 text-sm font-mono text-gray-900 dark:text-white break-all">{{.UserID}}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{{ end }}
+
+<!-- Email section -->
+{{ define "ProfileEmail" }}
+{{if .Email}}
+<div class="space-y-4">
+    <h2 class="text-xl font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2">
+        Email
+    </h2>
+
+    <div class="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 space-y-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center flex-1">
+                <svg class="h-6 w-6 text-gray-400 dark:text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                </svg>
+                <div class="ml-4 flex-1">
+                    <p class="text-base text-gray-900 dark:text-white">{{.Email}}</p>
+                </div>
+            </div>
+
+            {{if .EmailVerified}}
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                <svg class="h-4 w-4 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+                Verified
+            </span>
+            {{else}}
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+                <svg class="h-4 w-4 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                </svg>
+                Not Verified
+            </span>
+            {{end}}
+        </div>
+
+        {{if not .EmailVerified}}
+        <div class="pt-2 border-t border-gray-200 dark:border-gray-700">
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                Please verify your email address to enable all features.
+            </p>
+            <form action="/auth/resend-verification" method="POST">
+                <input type="hidden" name="email" value="{{.Email}}">
+                <button type="submit"
+                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800 transition-colors">
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 19v-8.93a2 2 0 01.89-1.664l7-4.666a2 2 0 012.22 0l7 4.666A2 2 0 0121 10.07V19M3 19a2 2 0 002 2h14a2 2 0 002-2M3 19l6.75-4.5M21 19l-6.75-4.5M3 10l6.75 4.5M21 10l-6.75 4.5m0 0l-1.14.76a2 2 0 01-2.22 0l-1.14-.76"/>
+                    </svg>
+                    Resend Verification Email
+                </button>
+            </form>
+        </div>
+        {{end}}
+    </div>
+</div>
+{{end}}
+{{ end }}
+
+<!-- Profile details section -->
+{{ define "ProfileDetails" }}
+{{if .Profile}}
+<div class="space-y-4">
+    <h2 class="text-xl font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2">
+        Profile Details
+    </h2>
+
+    <div class="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4">
+        <dl class="space-y-3">
+            {{range $key, $value := .Profile}}
+            {{if and (ne $key "email") (ne $key "username") (ne $key "email_verified")}}
+            <div class="flex justify-between text-sm">
+                <dt class="font-medium text-gray-500 dark:text-gray-400">{{$key}}</dt>
+                <dd class="text-gray-900 dark:text-white">{{$value}}</dd>
+            </div>
+            {{end}}
+            {{end}}
+        </dl>
+    </div>
+</div>
+{{end}}
+{{ end }}
+
+<!-- Change password section -->
+{{ define "ProfileChangePassword" }}
+{{if .Email}}
+<div class="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+    <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+        Change Password
+    </h2>
+
+    <form id="change-password-form" class="space-y-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4">
+        <div>
+            <label for="current-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Current Password
+            </label>
+            <input type="password" id="current-password" name="current_password" required
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
+        </div>
+
+        <div>
+            <label for="new-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                New Password
+            </label>
+            <input type="password" id="new-password" name="new_password" required minlength="8"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Minimum 8 characters</p>
+        </div>
+
+        <div>
+            <label for="confirm-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Confirm New Password
+            </label>
+            <input type="password" id="confirm-password" name="confirm_password" required minlength="8"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
+        </div>
+
+        <button type="submit"
+                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800 transition-colors">
+            <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+            </svg>
+            Change Password
+        </button>
+    </form>
+</div>
+{{end}}
+{{ end }}
+
+<!-- Account actions section -->
+{{ define "ProfileActions" }}
+<div class="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+    <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+        Account Actions
+    </h2>
+
+    <div class="flex flex-wrap gap-3">
+        <a href="/auth/logout"
+           class="inline-flex items-center px-4 py-2 border border-red-300 dark:border-red-600 text-sm font-medium rounded-lg text-red-700 dark:text-red-400 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-offset-gray-800 transition-colors">
+            <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+            </svg>
+            Logout
+        </a>
+    </div>
+</div>
+{{ end }}
+
+<!-- Main body section for profile page -->
+{{ define "BodySection" }}
+<div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 pt-20">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="bg-white dark:bg-gray-800 shadow-xl rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
+            {{ template "ProfileHeader" . }}
+
+            <div class="p-8 space-y-6">
+                {{ template "ProfileMessages" . }}
+                {{ template "ProfileAccountInfo" . }}
+                {{ template "ProfileEmail" . }}
+                {{ template "ProfileDetails" . }}
+                {{ template "ProfileChangePassword" . }}
+                {{ template "ProfileActions" . }}
+            </div>
+        </div>
+    </div>
+</div>
+{{ end }}
+
+{{ define "BaseProfilePage" }}
+{{ template "BasePage" . }}
+{{ end }}

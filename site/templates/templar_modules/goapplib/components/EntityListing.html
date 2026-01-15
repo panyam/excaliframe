@@ -1,0 +1,550 @@
+<!-- goapplib/templates/components/EntityListing.html -->
+<!-- Complete entity listing with page header, controls, and grid/list views -->
+{{#/*
+USAGE WITH NAMESPACES AND EXTENSION:
+
+1. Include with namespace:
+   {{# namespace "EL" "goapplib/components/EntityListing.html" #}}
+
+2. Extend the main template to override customizable parts:
+   {{# extend "EL:EntityListing" "MyListing" "EL:GridCardPlaceholder" "MyPlaceholder" "EL:GridCardMeta" "MyMeta" #}}
+
+3. Define your overrides:
+   {{ define "MyPlaceholder" }}<svg>...</svg>{{ end }}
+   {{ define "MyMeta" }}{{ if .CustomField }}...{{ end }}{{ end }}
+
+4. Use the extended template:
+   {{ template "MyListing" .ListingData }}
+
+CUSTOMIZABLE TEMPLATES (override via extend):
+- GridCardPlaceholder: Icon shown when no preview image (large, for grid)
+- TableRowIcon: Icon shown in table rows (small)
+- EmptyStateIcon: Icon for empty state
+- GridCardMeta: Meta info below description in grid cards
+*/#}}
+
+<!-- Default placeholder icon for grid cards -->
+{{ define "GridCardPlaceholder" }}
+<svg class="w-16 h-16 text-blue-200 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+</svg>
+{{ end }}
+
+<!-- Default icon for table rows -->
+{{ define "TableRowIcon" }}
+<svg class="w-6 h-6 text-blue-500 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+</svg>
+{{ end }}
+
+<!-- Default icon for empty state -->
+{{ define "EmptyStateIcon" }}
+<svg class="w-12 h-12 text-blue-500 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+</svg>
+{{ end }}
+
+<!-- Default meta info slot for grid cards -->
+{{ define "GridCardMeta" }}
+{{ end }}
+
+<!-- Grid card preview section - renders image or placeholder -->
+<!-- Override this to handle custom image fields (e.g., PreviewUrls array) -->
+{{ define "GridCardPreview" }}
+<div class="flex items-center justify-center h-full">
+    {{ template "GridCardPlaceholder" $ }}
+</div>
+{{ end }}
+
+<!-- Table row preview - renders image or icon -->
+<!-- Override this to handle custom image fields -->
+{{ define "TableRowPreview" }}
+{{ template "TableRowIcon" $ }}
+{{ end }}
+
+<!-- Page Header Section -->
+{{ define "PageHeader" }}
+<div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ .Title }}</h1>
+                {{ if .Subtitle }}
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">{{ .Subtitle }}</p>
+                {{ end }}
+            </div>
+            {{ if .CreateUrl }}
+            <a href="{{ .CreateUrl }}"
+               class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800 shadow-sm">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+                {{ or .CreateLabel "Create New" }}
+            </a>
+            {{ end }}
+        </div>
+    </div>
+</div>
+{{ end }}
+
+<!-- Controls Bar -->
+{{ define "Controls" }}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <!-- Search Bar -->
+            <div class="relative flex-1 max-w-md w-full">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </div>
+                <input type="text"
+                       id="{{ or .SearchInputId "search-entities" }}"
+                       placeholder="{{ or .SearchPlaceholder "Search..." }}"
+                       class="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                       {{ if .HtmxEnabled }}
+                       hx-get="{{ .SearchUrl }}"
+                       hx-trigger="keyup changed delay:500ms, search"
+                       hx-target="#{{ or .GridContainerId "entity-grid" }}"
+                       hx-swap="innerHTML"
+                       {{ end }}>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <!-- Sort Dropdown -->
+                {{ if .SortOptions }}
+                <div class="relative">
+                    <select id="{{ or .SortSelectId "sort-entities" }}"
+                            class="appearance-none block w-full pl-3 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            {{ if .HtmxEnabled }}
+                            hx-get="{{ .SearchUrl }}"
+                            hx-trigger="change"
+                            hx-target="#{{ or .GridContainerId "entity-grid" }}"
+                            hx-swap="innerHTML"
+                            hx-include="#{{ or .SearchInputId "search-entities" }}"
+                            {{ end }}>
+                        {{ range .SortOptions }}
+                        <option value="{{ .Value }}" {{ if .Selected }}selected{{ end }}>{{ .Label }}</option>
+                        {{ end }}
+                    </select>
+                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                        <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </div>
+                </div>
+                {{ end }}
+
+                <!-- View Mode Toggle -->
+                {{ if .EnableViewToggle }}
+                <div class="inline-flex rounded-lg border border-gray-300 dark:border-gray-600 p-1 bg-gray-50 dark:bg-gray-700" role="group">
+                    <button type="button"
+                            data-view="grid"
+                            class="view-toggle-btn px-3 py-1.5 text-sm font-medium rounded-md transition-all {{ if ne .ViewMode "list" }}bg-blue-600 text-white shadow-sm{{ else }}text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white{{ end }}"
+                            title="Grid view">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+                        </svg>
+                    </button>
+                    <button type="button"
+                            data-view="list"
+                            class="view-toggle-btn px-3 py-1.5 text-sm font-medium rounded-md transition-all {{ if eq .ViewMode "list" }}bg-blue-600 text-white shadow-sm{{ else }}text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white{{ end }}"
+                            title="List view">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                </div>
+                {{ end }}
+            </div>
+        </div>
+    </div>
+</div>
+{{ end }}
+
+<!-- Grid View -->
+{{ define "Grid" }}
+<div id="{{ or .GridContainerId "entity-grid" }}-view" class="{{ if eq .ViewMode "list" }}hidden{{ end }}">
+    <div id="{{ or .GridContainerId "entity-grid" }}"
+         class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+         {{ if .HtmxEnabled }}
+         hx-trigger="{{ or .RefreshTrigger "entityUpdated" }} from:body"
+         hx-get="{{ .RefreshUrl }}"
+         hx-swap="innerHTML"
+         {{ end }}>
+
+        {{ range .Items }}
+        <div id="item-{{ .Id }}"
+             class="entity-card group relative bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-lg transition-all duration-200 overflow-hidden border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600"
+             data-entity-id="{{ .Id }}">
+
+            <!-- Preview Image/Placeholder -->
+            <a href="{{ $.ViewUrl .Id }}" class="block relative">
+                <div class="aspect-video w-full bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-700 dark:to-gray-800 overflow-hidden">
+                    {{ template "GridCardPreview" . }}
+                </div>
+                <!-- Hover Overlay -->
+                <div class="absolute inset-0 bg-blue-600/0 group-hover:bg-blue-600/10 transition-colors duration-200"></div>
+            </a>
+
+            <!-- Item Info -->
+            <div class="p-4">
+                <div class="flex items-start justify-between mb-2">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white truncate flex-1 mr-2">
+                        <a href="{{ $.ViewUrl .Id }}" class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                            {{ if .Name }}{{ .Name }}{{ else }}Untitled{{ end }}
+                        </a>
+                    </h3>
+                    <!-- Action Menu Button - always visible on mobile, hover-reveal on desktop -->
+                    {{ if $.ShowActions }}
+                    <button class="entity-actions-btn p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                            title="Actions"
+                            data-view-url="{{ $.ViewUrl .Id }}"
+                            data-edit-url="{{ $.EditUrl .Id }}"
+                            data-delete-url="{{ $.DeleteUrl .Id }}"
+                            data-entity-name="{{ .Name }}"
+                            data-entity-id="{{ .Id }}"
+                            onclick="toggleEntityMenu(this, event)">
+                        <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"/>
+                        </svg>
+                    </button>
+                    {{ end }}
+                </div>
+
+                <!-- Description -->
+                <p class="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-3 min-h-[2.5rem]">
+                    {{ if .Description }}{{ .Description }}{{ else }}No description{{ end }}
+                </p>
+
+                <!-- Meta info slot -->
+                {{ template "GridCardMeta" . }}
+
+                <!-- Action Buttons -->
+                <div class="flex gap-2">
+                    <a href="{{ $.ViewUrl .Id }}"
+                       class="flex-1 inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
+                        View
+                    </a>
+                    {{/* Edit button - hidden on mobile (use dropdown instead), shown on desktop hover only */}}
+                    {{ if and $.ShowEditButton ($.EditUrl .Id) }}
+                    <a href="{{ $.EditUrl .Id }}"
+                       class="hidden sm:hidden sm:group-hover:inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                        </svg>
+                    </a>
+                    {{ end }}
+                </div>
+            </div>
+        </div>
+        {{ end }}
+    </div>
+
+    <!-- Shared Action Dropdown Menu (positioned dynamically via JS) -->
+    {{ if .ShowActions }}
+    <div id="entity-action-menu" class="entity-action-menu hidden fixed w-48 bg-white dark:bg-gray-700 rounded-lg shadow-lg ring-1 ring-black ring-opacity-5 z-50">
+        <div class="py-1" role="menu">
+            <a id="entity-menu-view" href="#" class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600">
+                View
+            </a>
+            <a id="entity-menu-edit" href="#" class="hidden items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600">
+                Edit
+            </a>
+            <hr id="entity-menu-divider" class="hidden my-1 border-gray-200 dark:border-gray-600">
+            <button id="entity-menu-delete" class="hidden items-center w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-600">
+                Delete
+            </button>
+        </div>
+    </div>
+    {{ end }}
+</div>
+{{ end }}
+
+<!-- List/Table View -->
+{{ define "Table" }}
+<div id="{{ or .GridContainerId "entity-grid" }}-list-view" class="{{ if ne .ViewMode "list" }}hidden{{ end }}">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-700/50">
+                <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden md:table-cell">Description</th>
+                    <th scope="col" class="relative px-6 py-3"><span class="sr-only">Actions</span></th>
+                </tr>
+            </thead>
+            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                {{ range .Items }}
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0 h-12 w-12 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-gray-600 dark:to-gray-700 rounded-lg flex items-center justify-center">
+                                {{ template "TableRowPreview" . }}
+                            </div>
+                            <div class="ml-4">
+                                <a href="{{ $.ViewUrl .Id }}" class="text-sm font-medium text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                                    {{ if .Name }}{{ .Name }}{{ else }}Untitled{{ end }}
+                                </a>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">
+                        <p class="line-clamp-1">{{ if .Description }}{{ .Description }}{{ else }}No description{{ end }}</p>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div class="flex items-center justify-end gap-2">
+                            <a href="{{ $.ViewUrl .Id }}"
+                               class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors">
+                                View
+                            </a>
+                            {{ if and $.ShowEditButton ($.EditUrl .Id) }}
+                            <a href="{{ $.EditUrl .Id }}"
+                               class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                                Edit
+                            </a>
+                            {{ end }}
+                            {{ if $.DeleteUrl .Id }}
+                            <button onclick="confirmEntityDelete('{{ $.DeleteUrl .Id }}', '{{ .Id }}', '{{ .Name }}')"
+                                    class="p-1.5 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                                    title="Delete">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                </svg>
+                            </button>
+                            {{ end }}
+                        </div>
+                    </td>
+                </tr>
+                {{ end }}
+            </tbody>
+        </table>
+    </div>
+</div>
+{{ end }}
+
+<!-- Empty State -->
+{{ define "EmptyState" }}
+<div class="text-center py-16 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+    <div class="mx-auto w-24 h-24 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-gray-700 dark:to-gray-800 rounded-full flex items-center justify-center mb-6">
+        {{ template "EmptyStateIcon" . }}
+    </div>
+    <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+        {{ or .EmptyTitle "No items yet" }}
+    </h3>
+    <p class="text-gray-600 dark:text-gray-400 mb-6 max-w-sm mx-auto">
+        {{ or .EmptyMessage "Get started by creating your first item." }}
+    </p>
+    {{ if .CreateUrl }}
+    <a href="{{ .CreateUrl }}"
+       class="inline-flex items-center px-5 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+        </svg>
+        {{ or .CreateLabel "Create Your First" }}
+    </a>
+    {{ end }}
+</div>
+{{ end }}
+
+<!-- Scripts for interactivity -->
+{{ define "Scripts" }}
+<script>
+// View Toggle
+document.querySelectorAll('[data-view]').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const view = this.getAttribute('data-view');
+        const containerId = '{{ or .GridContainerId "entity-grid" }}';
+        const gridView = document.getElementById(containerId + '-view');
+        const listView = document.getElementById(containerId + '-list-view');
+
+        // Update view visibility
+        if (view === 'grid') {
+            if (gridView) gridView.classList.remove('hidden');
+            if (listView) listView.classList.add('hidden');
+        } else {
+            if (gridView) gridView.classList.add('hidden');
+            if (listView) listView.classList.remove('hidden');
+        }
+
+        // Update button states
+        document.querySelectorAll('[data-view]').forEach(b => {
+            if (b.getAttribute('data-view') === view) {
+                b.classList.add('bg-blue-600', 'text-white', 'shadow-sm');
+                b.classList.remove('text-gray-600', 'dark:text-gray-300');
+            } else {
+                b.classList.remove('bg-blue-600', 'text-white', 'shadow-sm');
+                b.classList.add('text-gray-600', 'dark:text-gray-300');
+            }
+        });
+
+        // Save preference
+        localStorage.setItem('{{ or .ViewModeStorageKey "entity-view-mode" }}', view);
+    });
+});
+
+// Restore view preference
+document.addEventListener('DOMContentLoaded', function() {
+    const savedView = localStorage.getItem('{{ or .ViewModeStorageKey "entity-view-mode" }}');
+    if (savedView) {
+        const btn = document.querySelector(`[data-view="${savedView}"]`);
+        if (btn) btn.click();
+    }
+});
+
+// Toggle action menu for grid cards - uses shared dropdown positioned dynamically
+function toggleEntityMenu(button, event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const menu = document.getElementById('entity-action-menu');
+    if (!menu) return;
+
+    const isCurrentlyOpen = !menu.classList.contains('hidden') && menu.dataset.activeButton === button.dataset.entityId;
+
+    // Close menu if clicking same button
+    if (isCurrentlyOpen) {
+        menu.classList.add('hidden');
+        return;
+    }
+
+    // Get URLs from button data attributes
+    const viewUrl = button.dataset.viewUrl;
+    const editUrl = button.dataset.editUrl;
+    const deleteUrl = button.dataset.deleteUrl;
+    const entityName = button.dataset.entityName;
+    const entityId = button.dataset.entityId;
+
+    // Populate menu links
+    const viewLink = document.getElementById('entity-menu-view');
+    const editLink = document.getElementById('entity-menu-edit');
+    const deleteBtn = document.getElementById('entity-menu-delete');
+    const divider = document.getElementById('entity-menu-divider');
+
+    if (viewLink) viewLink.href = viewUrl;
+
+    // Show/hide Edit based on URL availability
+    if (editLink) {
+        editLink.href = editUrl || '#';
+        if (editUrl) {
+            editLink.classList.remove('hidden');
+            editLink.classList.add('flex');
+        } else {
+            editLink.classList.add('hidden');
+            editLink.classList.remove('flex');
+        }
+    }
+
+    // Show/hide Delete and divider based on URL availability
+    if (deleteBtn) {
+        deleteBtn.onclick = () => confirmEntityDelete(deleteUrl, entityId, entityName);
+        if (deleteUrl) {
+            deleteBtn.classList.remove('hidden');
+            deleteBtn.classList.add('flex');
+            if (divider) divider.classList.remove('hidden');
+        } else {
+            deleteBtn.classList.add('hidden');
+            deleteBtn.classList.remove('flex');
+            if (divider) divider.classList.add('hidden');
+        }
+    }
+
+    // Position menu near the button
+    const rect = button.getBoundingClientRect();
+    menu.style.top = (rect.bottom + 4) + 'px';
+    menu.style.left = Math.max(8, rect.right - 192) + 'px'; // 192 = w-48, min 8px from edge
+
+    // Track which button opened this menu
+    menu.dataset.activeButton = entityId;
+    menu.classList.remove('hidden');
+}
+
+// Close menus when clicking outside
+document.addEventListener('click', function(event) {
+    if (!event.target.closest('.entity-actions-btn') && !event.target.closest('.entity-action-menu')) {
+        const menu = document.getElementById('entity-action-menu');
+        if (menu) menu.classList.add('hidden');
+    }
+});
+
+// Search functionality (for non-HTMX usage)
+{{ if not .HtmxEnabled }}
+const searchInput = document.getElementById('{{ or .SearchInputId "search-entities" }}');
+if (searchInput) {
+    searchInput.addEventListener('input', function(e) {
+        const query = e.target.value.toLowerCase();
+        const cards = document.querySelectorAll('.entity-card');
+        const rows = document.querySelectorAll('tbody tr');
+
+        // Filter grid cards
+        cards.forEach(card => {
+            const name = card.querySelector('h3 a')?.textContent.toLowerCase() || '';
+            const desc = card.querySelector('p')?.textContent.toLowerCase() || '';
+            card.style.display = (name.includes(query) || desc.includes(query)) ? '' : 'none';
+        });
+
+        // Filter table rows
+        rows.forEach(row => {
+            const name = row.querySelector('a')?.textContent.toLowerCase() || '';
+            const desc = row.querySelector('p')?.textContent.toLowerCase() || '';
+            row.style.display = (name.includes(query) || desc.includes(query)) ? '' : 'none';
+        });
+    });
+}
+{{ end }}
+
+// Delete confirmation
+function confirmEntityDelete(deleteUrl, id, name) {
+    if (!confirm(`Are you sure you want to delete "${name || 'this item'}"? This action cannot be undone.`)) {
+        return;
+    }
+
+    fetch(deleteUrl, { method: 'DELETE' }).then(response => {
+        if (response.ok || response.redirected) {
+            window.location.reload();
+        } else {
+            alert('Failed to delete item');
+        }
+    }).catch(err => {
+        console.error('Delete error:', err);
+        alert('Failed to delete item');
+    });
+}
+</script>
+
+<style>
+.line-clamp-1 {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+</style>
+{{ end }}
+
+<!-- Main EntityListing template that combines all parts -->
+{{ define "EntityListing" }}
+<div>
+    {{ template "PageHeader" . }}
+    {{ template "Controls" . }}
+
+    <!-- Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+        {{ if .Items }}
+        {{ template "Grid" . }}
+        {{ template "Table" . }}
+        {{ else }}
+        {{ template "EmptyState" . }}
+        {{ end }}
+    </div>
+
+    {{ template "Scripts" . }}
+</div>
+{{ end }}

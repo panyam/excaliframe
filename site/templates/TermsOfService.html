@@ -1,0 +1,99 @@
+{{# include "./BasePage.html" #}}
+
+{{ define "BodySection" }}
+<main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-gray-600 dark:text-gray-300">
+    <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-8">Terms of Service</h1>
+
+    <div class="space-y-6 prose dark:prose-invert max-w-none">
+        <h2 id="1-terms" class="text-xl font-semibold text-gray-800 dark:text-gray-200">1. Terms</h2>
+        <p>
+            By using Excaliframe, you agree to be bound by these terms of service.
+            If you do not agree with any of these terms, you should not use Excaliframe.
+        </p>
+
+        <h2 id="2-license" class="text-xl font-semibold text-gray-800 dark:text-gray-200 mt-8">2. MIT License</h2>
+        <p>
+            Excaliframe is open source software released under the MIT License:
+        </p>
+        <div class="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg text-sm font-mono">
+            <p>MIT License</p>
+            <p class="mt-2">Copyright (c) 2025 Excaliframe Contributors</p>
+            <p class="mt-2">
+                Permission is hereby granted, free of charge, to any person obtaining a copy
+                of this software and associated documentation files (the "Software"), to deal
+                in the Software without restriction, including without limitation the rights
+                to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+                copies of the Software, and to permit persons to whom the Software is
+                furnished to do so, subject to the following conditions:
+            </p>
+            <p class="mt-2">
+                The above copyright notice and this permission notice shall be included in all
+                copies or substantial portions of the Software.
+            </p>
+            <p class="mt-2">
+                THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+                IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+                FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+                AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+                LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+                OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+                SOFTWARE.
+            </p>
+        </div>
+
+        <h2 id="3-disclaimer" class="text-xl font-semibold text-gray-800 dark:text-gray-200 mt-8">3. Disclaimer</h2>
+        <p>
+            Excaliframe is provided "as is" without warranty of any kind. The authors and contributors:
+        </p>
+        <ul class="list-disc list-inside ml-4 space-y-2">
+            <li>Make no warranties about the software's functionality or reliability</li>
+            <li>Are not responsible for any data loss or damages</li>
+            <li>Do not guarantee compatibility with all Confluence versions</li>
+            <li>May discontinue development at any time</li>
+        </ul>
+
+        <h2 id="4-support" class="text-xl font-semibold text-gray-800 dark:text-gray-200 mt-8">4. Support</h2>
+        <p>
+            As an open source project, Excaliframe is maintained by volunteers. Support is provided on a best-effort basis through:
+        </p>
+        <ul class="list-disc list-inside ml-4 space-y-2">
+            <li>GitHub Issues for bug reports and feature requests</li>
+            <li>Community discussions and contributions</li>
+        </ul>
+        <p class="mt-4">
+            There is no guaranteed response time or resolution for any issues.
+        </p>
+
+        <h2 id="5-use" class="text-xl font-semibold text-gray-800 dark:text-gray-200 mt-8">5. Acceptable Use</h2>
+        <p>
+            You agree to use Excaliframe only for lawful purposes and in accordance with:
+        </p>
+        <ul class="list-disc list-inside ml-4 space-y-2">
+            <li>Atlassian's terms of service and acceptable use policies</li>
+            <li>Your organization's policies and guidelines</li>
+            <li>Applicable laws and regulations</li>
+        </ul>
+
+        <h2 id="6-modifications" class="text-xl font-semibold text-gray-800 dark:text-gray-200 mt-8">6. Modifications</h2>
+        <p>
+            These terms may be updated at any time. Continued use of Excaliframe after changes
+            constitutes acceptance of the new terms.
+        </p>
+
+        <h2 id="7-contact" class="text-xl font-semibold text-gray-800 dark:text-gray-200 mt-8">7. Contact</h2>
+        <p>
+            For questions about these terms, please <a href="/contact/" class="text-indigo-600 dark:text-indigo-400 hover:underline">contact us</a>.
+        </p>
+
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-12">
+            This policy is effective as of January 2025.
+        </p>
+    </div>
+</main>
+{{ end }}
+
+{{ define "PostBodySection" }}{{ end }}
+
+{{ define "TermsOfService" }}
+{{ template "BasePage" . }}
+{{ end }}

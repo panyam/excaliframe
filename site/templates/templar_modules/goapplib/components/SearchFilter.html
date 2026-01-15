@@ -1,0 +1,122 @@
+<!-- goapplib/templates/components/SearchFilter.html -->
+<!-- Search and filter component -->
+
+{{ define "SearchFilter" }}
+<div id="{{ or .Id "search-filter" }}" class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+    <!-- Search Input -->
+    <div class="relative flex-grow sm:flex-grow-0 sm:w-64">
+        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 20 20" stroke="currentColor">
+                <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/>
+            </svg>
+        </span>
+        <input type="search"
+               id="{{ or .SearchId "search-input" }}"
+               name="q"
+               value="{{ .Query }}"
+               placeholder="{{ or .Placeholder "Search..." }}"
+               class="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+               {{ if .HtmxEnabled }}
+               hx-get="{{ .SearchUrl }}"
+               hx-trigger="keyup changed delay:300ms, search"
+               hx-target="{{ or .Target "#content" }}"
+               hx-swap="innerHTML"
+               hx-indicator="{{ or .Indicator "#search-indicator" }}"
+               hx-push-url="true"
+               hx-include="[data-filter]"
+               {{ end }}>
+    </div>
+
+    <!-- Sort Select -->
+    {{ if .SortOptions }}
+    <div class="w-full sm:w-auto">
+        <select id="{{ or .SortId "sort-select" }}"
+                name="sort"
+                data-filter
+                class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                {{ if .HtmxEnabled }}
+                hx-get="{{ .SearchUrl }}"
+                hx-trigger="change"
+                hx-target="{{ or .Target "#content" }}"
+                hx-swap="innerHTML"
+                hx-include="[name='q']"
+                hx-push-url="true"
+                {{ end }}>
+            {{ range .SortOptions }}
+            <option value="{{ .Value }}" {{ if eq $.Sort .Value }}selected{{ end }}>{{ .Label }}</option>
+            {{ end }}
+        </select>
+    </div>
+    {{ end }}
+
+    <!-- View Mode Toggle -->
+    {{ if .ViewModes }}
+    <div class="inline-flex rounded-md shadow-sm" role="group">
+        {{ range .ViewModes }}
+        <a href="?view={{ .Value }}{{ if $.Query }}&q={{ $.Query }}{{ end }}{{ if $.Sort }}&sort={{ $.Sort }}{{ end }}"
+           class="px-3 py-2 text-sm font-medium border border-gray-300 dark:border-gray-600
+                  {{ if eq $.ViewMode .Value }}bg-blue-600 text-white border-blue-600{{ else }}bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600{{ end }}
+                  {{ if eq (index $.ViewModes 0).Value .Value }}rounded-l-md{{ end }}
+                  {{ if eq (index $.ViewModes (sub (len $.ViewModes) 1)).Value .Value }}rounded-r-md{{ end }}"
+           {{ if $.HtmxEnabled }}
+           hx-get="{{ $.SearchUrl }}?view={{ .Value }}{{ if $.Query }}&q={{ $.Query }}{{ end }}{{ if $.Sort }}&sort={{ $.Sort }}{{ end }}"
+           hx-target="{{ or $.Target "#content" }}"
+           hx-swap="innerHTML"
+           hx-push-url="true"
+           {{ end }}>
+            {{ .Icon | safeHTML }}
+        </a>
+        {{ end }}
+    </div>
+    {{ end }}
+
+    <!-- Loading Indicator -->
+    <div id="{{ or .Indicator "search-indicator" }}" class="htmx-indicator">
+        <svg class="animate-spin h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+    </div>
+
+    <!-- Create Button (optional) -->
+    {{ if .CreateUrl }}
+    <a href="{{ .CreateUrl }}"
+       class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 whitespace-nowrap">
+        <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 20 20" stroke="currentColor">
+            <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd"/>
+        </svg>
+        {{ or .CreateLabel "Create New" }}
+    </a>
+    {{ end }}
+</div>
+{{ end }}
+
+{{ define "SearchFilterSimple" }}
+<!-- Simpler search without HTMX -->
+<form method="GET" action="{{ .Action }}" class="flex items-center gap-4">
+    <div class="relative flex-grow sm:flex-grow-0 sm:w-64">
+        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 20 20" stroke="currentColor">
+                <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/>
+            </svg>
+        </span>
+        <input type="search"
+               name="q"
+               value="{{ .Query }}"
+               placeholder="{{ or .Placeholder "Search..." }}"
+               class="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+    </div>
+
+    {{ if .SortOptions }}
+    <select name="sort" class="block pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+        {{ range .SortOptions }}
+        <option value="{{ .Value }}" {{ if eq $.Sort .Value }}selected{{ end }}>{{ .Label }}</option>
+        {{ end }}
+    </select>
+    {{ end }}
+
+    <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+        Search
+    </button>
+</form>
+{{ end }}

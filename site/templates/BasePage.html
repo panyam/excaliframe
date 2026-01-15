@@ -1,0 +1,48 @@
+<!-- excaliframe/site/templates/BasePage.html -->
+{{# namespace "GoalBase" "@goapplib/BasePage.html" #}}
+{{# include "./Header.html" #}}
+{{# include "./Footer.html" #}}
+
+{{ define "ExcaliframeExtraHeadSection" }}
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#6366f1',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Favicons -->
+    <link rel="icon" type="image/svg+xml" href="/static/favicons/favicon.svg">
+{{ end }}
+
+{{ define "ExcaliframeCSSSection" }}
+    <!-- Override default CSS since we use Tailwind CDN -->
+{{ end }}
+
+{{ define "ExcaliframeHeaderSection" }}
+    {{ if not .CustomHeader }}
+    <!-- Header Block -->
+    <div class="print:hidden sticky left-0 top-0 z-20 border-b border-gray-200 dark:border-gray-700">
+        {{ template "ExcaliframeHeader" .Header }}
+    </div>
+    {{ end }}
+{{ end }}
+
+{{ define "ExcaliframeFooterSection" }}
+    {{ template "ExcaliframeFooter" . }}
+{{ end }}
+
+{{# extend "GoalBase:BasePage" "BasePage"
+           "GoalBase:CSSSection" "ExcaliframeCSSSection"
+           "GoalBase:ExtraHeadSection" "ExcaliframeExtraHeadSection"
+           "GoalBase:HeaderSection" "ExcaliframeHeaderSection"
+           "GoalBase:BodySection" "BodySection"
+           "GoalBase:FooterSection" "ExcaliframeFooterSection"
+           "GoalBase:PostScriptsSection" "PostBodySection" #}}

@@ -1,0 +1,70 @@
+{{# include "./BasePage.html" #}}
+
+{{ define "BodySection" }}
+<main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-gray-600 dark:text-gray-300">
+    <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-8">Privacy Policy</h1>
+
+    <div class="space-y-6 prose dark:prose-invert max-w-none">
+        <p class="text-lg">
+            Your privacy is important to us. This policy explains how Excaliframe handles your data.
+        </p>
+
+        <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200 mt-8">The Short Version</h2>
+        <p>
+            <strong>Excaliframe does not collect any data.</strong> All your diagrams and data stay within your Confluence instance, managed by Atlassian.
+        </p>
+
+        <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200 mt-8">Data Storage</h2>
+        <p>
+            Excaliframe stores all diagram data directly within Confluence using Atlassian's Forge platform.
+            This means:
+        </p>
+        <ul class="list-disc list-inside ml-4 space-y-2">
+            <li>Your diagrams are stored in Confluence, not on external servers</li>
+            <li>Data is subject to Atlassian's security and privacy policies</li>
+            <li>You maintain full control over your data through Confluence</li>
+        </ul>
+
+        <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200 mt-8">No External Data Collection</h2>
+        <p>
+            Excaliframe does not:
+        </p>
+        <ul class="list-disc list-inside ml-4 space-y-2">
+            <li>Collect personal information</li>
+            <li>Use cookies or tracking technologies</li>
+            <li>Send data to external servers</li>
+            <li>Use analytics or telemetry</li>
+            <li>Store any user data outside of Confluence</li>
+        </ul>
+
+        <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200 mt-8">Open Source</h2>
+        <p>
+            Excaliframe is open source software. You can review the complete source code at
+            <a href="{{ .GitHubURL }}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 dark:text-indigo-400 hover:underline">{{ .GitHubURL }}</a>
+            to verify our privacy practices.
+        </p>
+
+        <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200 mt-8">Third-Party Services</h2>
+        <p>
+            Excaliframe runs on Atlassian's Forge platform. For information about how Atlassian handles data,
+            please refer to <a href="https://www.atlassian.com/legal/privacy-policy" target="_blank" rel="noopener noreferrer" class="text-indigo-600 dark:text-indigo-400 hover:underline">Atlassian's Privacy Policy</a>.
+        </p>
+
+        <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200 mt-8">Contact</h2>
+        <p>
+            If you have questions about this privacy policy, please
+            <a href="/contact/" class="text-indigo-600 dark:text-indigo-400 hover:underline">contact us</a>.
+        </p>
+
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-12">
+            This policy is effective as of January 2025.
+        </p>
+    </div>
+</main>
+{{ end }}
+
+{{ define "PostBodySection" }}{{ end }}
+
+{{ define "PrivacyPolicy" }}
+{{ template "BasePage" . }}
+{{ end }}

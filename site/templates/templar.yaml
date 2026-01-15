@@ -1,0 +1,13 @@
+# Templar configuration for template dependencies
+# Run 'templar get' to fetch dependencies into templar_modules/
+
+sources:
+  goapplib:
+    url: github.com/panyam/goapplib
+    path: templates
+    ref: main
+
+vendor_dir: templar_modules
+search_paths:
+  - .
+  - ./templar_modules

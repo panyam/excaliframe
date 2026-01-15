@@ -1,0 +1,130 @@
+<!-- goapplib/templates/components/Modal.html -->
+<!-- Generic modal container and templates -->
+
+{{ define "ModalContainer" }}
+<!-- Base modal backdrop and container -->
+<div class="modal-backdrop fixed inset-0 bg-black/50 transition-opacity"></div>
+<div class="modal-wrapper fixed inset-0 flex items-center justify-center p-4">
+    <div class="modal-content relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] flex flex-col">
+        <!-- Content injected here -->
+    </div>
+</div>
+{{ end }}
+
+{{ define "Modal" }}
+<!-- Reusable modal structure -->
+<div id="{{ .Id }}" class="modal-overlay hidden fixed inset-0 z-50 flex items-center justify-center p-4"
+     {{ if .HtmxEnabled }}
+     hx-on:modal-close="this.classList.add('hidden')"
+     {{ end }}>
+    <div class="modal-backdrop absolute inset-0 bg-black/50" onclick="closeModal('{{ .Id }}')"></div>
+    <div class="modal-content relative bg-white dark:bg-gray-800 rounded-lg shadow-xl {{ or .MaxWidth "max-w-lg" }} w-full max-h-[90vh] flex flex-col">
+        <!-- Header -->
+        {{ if or .Title .ShowClose }}
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            {{ if .Title }}
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white">{{ .Title }}</h2>
+            {{ end }}
+            {{ if .ShowClose }}
+            <button type="button" class="modal-close-btn text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                    onclick="closeModal('{{ .Id }}')">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+            {{ end }}
+        </div>
+        {{ end }}
+
+        <!-- Body -->
+        <div class="modal-body flex-1 overflow-y-auto px-6 py-4">
+            {{ block "ModalBody" . }}{{ end }}
+        </div>
+
+        <!-- Footer -->
+        {{ if .ShowFooter }}
+        <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
+            {{ block "ModalFooter" . }}
+            <button type="button" class="btn-secondary" onclick="closeModal('{{ .Id }}')">
+                Cancel
+            </button>
+            {{ end }}
+        </div>
+        {{ end }}
+    </div>
+</div>
+{{ end }}
+
+{{ define "ConfirmModal" }}
+<!-- Confirmation dialog modal -->
+<div id="{{ or .Id "confirm-modal" }}" class="modal-overlay hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="modal-backdrop absolute inset-0 bg-black/50" onclick="closeModal('{{ or .Id "confirm-modal" }}')"></div>
+    <div class="modal-content relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
+        <div class="p-6">
+            <div class="flex items-start">
+                {{ if eq .Type "danger" }}
+                <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/20">
+                    <svg class="h-6 w-6 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                </div>
+                {{ else }}
+                <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/20">
+                    <svg class="h-6 w-6 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                {{ end }}
+            </div>
+            <div class="mt-3 text-center">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ .Title }}</h3>
+                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ .Message }}</p>
+            </div>
+        </div>
+        <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 flex justify-end space-x-3 rounded-b-lg">
+            <button type="button" class="btn-secondary" onclick="closeModal('{{ or .Id "confirm-modal" }}')">
+                {{ or .CancelText "Cancel" }}
+            </button>
+            <button type="button"
+                    class="{{ if eq .Type "danger" }}btn-danger{{ else }}btn-primary{{ end }}"
+                    {{ if .OnConfirm }}onclick="{{ .OnConfirm }}"{{ end }}
+                    {{ if .HtmxAction }}
+                    hx-{{ .HtmxMethod | default "post" }}="{{ .HtmxAction }}"
+                    hx-target="{{ or .HtmxTarget "body" }}"
+                    hx-swap="{{ or .HtmxSwap "innerHTML" }}"
+                    {{ end }}>
+                {{ or .ConfirmText "Confirm" }}
+            </button>
+        </div>
+    </div>
+</div>
+{{ end }}
+
+<script>
+function openModal(id) {
+    const modal = document.getElementById(id);
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function closeModal(id) {
+    const modal = document.getElementById(id);
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        document.body.style.overflow = '';
+    }
+}
+
+// Close on escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-overlay:not(.hidden)').forEach(modal => {
+            closeModal(modal.id);
+        });
+    }
+});
+</script>

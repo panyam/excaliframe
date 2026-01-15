@@ -1,0 +1,23 @@
+package server
+
+// ExcaliframeApp holds app-level configuration
+type ExcaliframeApp struct {
+	AppName     string
+	BaseURL     string
+	GitHubURL   string
+	GitHubIssuesURL string
+	Email       string
+	AtlassianURL string
+}
+
+// NewExcaliframeApp creates a new app context with defaults
+func NewExcaliframeApp() *ExcaliframeApp {
+	return &ExcaliframeApp{
+		AppName:     "Excaliframe",
+		BaseURL:     "https://excaliframe.appspot.com",
+		GitHubURL:   "https://github.com/panyam/excaliframe",
+		GitHubIssuesURL: "https://github.com/panyam/excaliframe/issues",
+		Email:       "sriram.panyam@gmail.com",
+		AtlassianURL: "https://marketplace.atlassian.com/apps/", // TODO: Update with actual marketplace URL
+	}
+}

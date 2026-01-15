@@ -1,0 +1,12 @@
+runtime: go124
+
+env_variables:
+  EXCALIFRAME_ENV: production
+  EXCALIFRAME_BASE_URL: https://excaliframe.appspot.com
+
+handlers:
+- url: /static
+  static_dir: static
+
+- url: /.*
+  script: auto
