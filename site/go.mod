@@ -5,8 +5,8 @@ go 1.24.0
 toolchain go1.24.6
 
 require (
-	github.com/panyam/goapplib v0.0.13
-	github.com/panyam/templar v0.0.28
+	github.com/panyam/goapplib v0.0.30
+	github.com/panyam/templar v0.0.29
 )
 
 require (
@@ -23,10 +23,10 @@ require (
 
 // replace github.com/panyam/goutils v0.1.12 => ./locallinks/newstack/goutils
 
-// replace github.com/panyam/templar v0.0.28 => ./locallinks/newstack/templar
+// replace github.com/panyam/templar v0.0.29 => ./locallinks/newstack/templar
 
 // replace github.com/panyam/servicekit v0.0.4 => ./locallinks/newstack/servicekit
 
 // replace github.com/panyam/oneauth v0.0.23 => ./locallinks/newstack/oneauth
 
-// replace github.com/panyam/goapplib v0.0.13 => ./locallinks/newstack/goapplib
+// replace github.com/panyam/goapplib v0.0.30 => ./locallinks/newstack/goapplib
