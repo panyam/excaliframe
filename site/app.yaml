@@ -2,7 +2,7 @@ runtime: go124
 
 env_variables:
   EXCALIFRAME_ENV: production
-  EXCALIFRAME_BASE_URL: https://excaliframe.appspot.com
+  EXCALIFRAME_BASE_URL: https://excaliframe.com
 
 handlers:
 - url: /static

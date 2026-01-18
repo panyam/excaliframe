@@ -4,6 +4,24 @@
 {{# include "./Footer.html" #}}
 
 {{ define "ExcaliframeExtraHeadSection" }}
+    <!-- SEO Meta Tags -->
+    {{ if .MetaDescription }}<meta name="description" content="{{ .MetaDescription }}">{{ end }}
+    {{ if .CanonicalUrl }}<link rel="canonical" href="{{ .CanonicalUrl }}">{{ end }}
+
+    <!-- Open Graph Tags -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="{{ .Title }}">
+    {{ if .MetaDescription }}<meta property="og:description" content="{{ .MetaDescription }}">{{ end }}
+    {{ if .CanonicalUrl }}<meta property="og:url" content="{{ .CanonicalUrl }}">{{ end }}
+    <meta property="og:image" content="https://excaliframe.com/static/images/logo-144.png">
+    <meta property="og:site_name" content="Excaliframe">
+
+    <!-- Twitter Card Tags -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="{{ .Title }}">
+    {{ if .MetaDescription }}<meta name="twitter:description" content="{{ .MetaDescription }}">{{ end }}
+    <meta name="twitter:image" content="https://excaliframe.com/static/images/logo-144.png">
+
     <!-- Tailwind CSS via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>

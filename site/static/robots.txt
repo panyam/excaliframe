@@ -1,0 +1,10 @@
+# Robots.txt for excaliframe.com
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://excaliframe.com/sitemap.xml
+
+# Disallow static assets from being indexed
+Disallow: /static/css/
+Disallow: /static/favicons/

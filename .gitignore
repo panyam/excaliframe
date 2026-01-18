@@ -2,6 +2,8 @@ bin
 node_modules/
 dist/
 static/
+!site/static/robots.txt
+!site/static/sitemap.xml
 *.log
 .DS_Store
 .env

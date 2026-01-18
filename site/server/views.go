@@ -27,6 +27,8 @@ type HomePage struct {
 
 func (p *HomePage) Load(r *http.Request, w http.ResponseWriter, app *goal.App[*ExcaliframeApp]) (error, bool) {
 	p.Title = "Excaliframe - Excalidraw for Confluence"
+	p.MetaDescription = "Excaliframe brings the power of Excalidraw to Confluence. Create beautiful hand-drawn diagrams, wireframes, and sketches directly in your Confluence pages."
+	p.CanonicalUrl = app.Context.BaseURL + "/"
 	p.DisableSplashScreen = true
 	p.Header.AppName = app.Context.AppName
 	p.GitHubURL = app.Context.GitHubURL
@@ -43,6 +45,8 @@ type PrivacyPolicy struct {
 
 func (p *PrivacyPolicy) Load(r *http.Request, w http.ResponseWriter, app *goal.App[*ExcaliframeApp]) (error, bool) {
 	p.Title = "Privacy Policy - Excaliframe"
+	p.MetaDescription = "Privacy Policy for Excaliframe - Excalidraw for Confluence. Learn how we handle your data and protect your privacy."
+	p.CanonicalUrl = app.Context.BaseURL + "/privacy/"
 	p.DisableSplashScreen = true
 	p.Header.AppName = app.Context.AppName
 	p.GitHubURL = app.Context.GitHubURL
@@ -57,6 +61,8 @@ type TermsOfService struct {
 
 func (t *TermsOfService) Load(r *http.Request, w http.ResponseWriter, app *goal.App[*ExcaliframeApp]) (error, bool) {
 	t.Title = "Terms of Service - Excaliframe"
+	t.MetaDescription = "Terms of Service for Excaliframe - Excalidraw for Confluence. Review our terms and conditions for using the application."
+	t.CanonicalUrl = app.Context.BaseURL + "/terms/"
 	t.DisableSplashScreen = true
 	t.Header.AppName = app.Context.AppName
 	return nil, false
@@ -72,6 +78,8 @@ type ContactUs struct {
 
 func (c *ContactUs) Load(r *http.Request, w http.ResponseWriter, app *goal.App[*ExcaliframeApp]) (error, bool) {
 	c.Title = "Contact Us - Excaliframe"
+	c.MetaDescription = "Get in touch with the Excaliframe team. Contact us for support, feedback, or questions about Excalidraw for Confluence."
+	c.CanonicalUrl = app.Context.BaseURL + "/contact/"
 	c.DisableSplashScreen = true
 	c.Header.AppName = app.Context.AppName
 	c.GitHubURL = app.Context.GitHubURL
@@ -89,6 +97,8 @@ type Documentation struct {
 
 func (d *Documentation) Load(r *http.Request, w http.ResponseWriter, app *goal.App[*ExcaliframeApp]) (error, bool) {
 	d.Title = "Documentation - Excaliframe"
+	d.MetaDescription = "Excaliframe documentation - Learn how to install and use Excalidraw in Confluence. Includes FAQ, tips, and getting started guide."
+	d.CanonicalUrl = app.Context.BaseURL + "/docs/"
 	d.DisableSplashScreen = true
 	d.Header.AppName = app.Context.AppName
 	d.GitHubURL = app.Context.GitHubURL
@@ -105,6 +115,15 @@ func SetupRoutes(app *goal.App[*ExcaliframeApp]) *http.ServeMux {
 	goal.Register[*TermsOfService](app, mux, "/terms/")
 	goal.Register[*ContactUs](app, mux, "/contact/")
 	goal.Register[*Documentation](app, mux, "/docs/")
+
+	// Serve robots.txt and sitemap.xml from root
+	mux.HandleFunc("/robots.txt", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "./static/robots.txt")
+	})
+	mux.HandleFunc("/sitemap.xml", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/xml")
+		http.ServeFile(w, r, "./static/sitemap.xml")
+	})
 
 	// Redirect without trailing slash
 	mux.HandleFunc("/privacy", func(w http.ResponseWriter, r *http.Request) {
