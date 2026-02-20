@@ -17,7 +17,7 @@ const createConfig = (name, isDev) => {
       new CopyWebpackPlugin({
         patterns: [
           {
-            from: 'node_modules/@excalidraw/excalidraw/dist/prod/fonts',
+            from: path.join(path.dirname(require.resolve('@excalidraw/excalidraw')), 'fonts'),
             to: 'fonts',
           },
         ],
@@ -57,9 +57,9 @@ const createConfig = (name, isDev) => {
     resolve: {
       extensions: ['.ts', '.tsx', '.js', '.jsx'],
       alias: {
-        'roughjs/bin/rough': path.resolve(__dirname, 'node_modules/roughjs/bin/rough.js'),
-        'roughjs/bin/generator': path.resolve(__dirname, 'node_modules/roughjs/bin/generator.js'),
-        'roughjs/bin/math': path.resolve(__dirname, 'node_modules/roughjs/bin/math.js'),
+        'roughjs/bin/rough': require.resolve('roughjs/bin/rough'),
+        'roughjs/bin/generator': require.resolve('roughjs/bin/generator'),
+        'roughjs/bin/math': require.resolve('roughjs/bin/math'),
       },
     },
     plugins,

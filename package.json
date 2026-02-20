@@ -3,8 +3,8 @@
   "version": "0.0.2",
   "description": "Atlassian Forge app for Excalidraw drawings in Confluence",
   "scripts": {
-    "build": "npm run update-version && webpack --mode production",
     "update-version": "node scripts/update-version.js",
+    "build": "npm run update-version && webpack --mode production",
     "dev": "webpack --mode development --watch",
     "type-check": "tsc --noEmit",
     "forge:deploy": "npm run build && forge deploy",
@@ -19,13 +19,15 @@
     "drawing",
     "whiteboard"
   ],
-  "author": "",
+  "author": "Sriram Panyam",
   "license": "MIT",
   "dependencies": {
     "@excalidraw/excalidraw": "^0.18.0",
     "@forge/bridge": "^4.0.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "@forge/api": "^4.0.0",
+    "@forge/resolver": "^1.6.0"
   },
   "devDependencies": {
     "@forge/cli": "^10.0.0",
@@ -34,6 +36,7 @@
     "@types/react-dom": "^18.2.0",
     "copy-webpack-plugin": "^13.0.1",
     "css-loader": "^6.8.1",
+    "eslint": "^8.57.0",
     "html-webpack-plugin": "^5.5.3",
     "style-loader": "^3.3.3",
     "ts-loader": "^9.4.4",

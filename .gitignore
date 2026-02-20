@@ -18,3 +18,7 @@ data/
 site/locallinks/
 site/bin/
 site/excaliframe-site
+
+# Sync config and state
+.excalrc
+.excal-state/

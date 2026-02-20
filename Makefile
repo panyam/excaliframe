@@ -1,7 +1,10 @@
-.PHONY: help install build dev type-check clean deploy install-app tunnel lint
+.PHONY: help install build dev type-check clean deploy install-app tunnel lint sync diff sync-status
 
 # Default target
 .DEFAULT_GOAL := help
+
+# Load target from .excalrc if it exists and TARGET not set on command line
+-include .excalrc
 
 # Colors for output
 GREEN := \033[0;32m
@@ -110,3 +113,14 @@ setup: install register ## First-time setup: install deps + register app
 
 quickstart: install build deploy install-app ## Full setup: install, build, deploy, and install app
 	@echo "$(GREEN)Quickstart complete! App is now installed.$(NC)"
+
+##@ Sync (Enterprise Distribution)
+
+sync: ## Preview sync to enterprise target (add COMMIT=1 to apply, FORCE=1 to overwrite)
+	@python3 tools/sync.py sync "$(TARGET)" $(if $(filter 1,$(COMMIT)),--commit) $(if $(filter 1,$(FORCE)),--force)
+
+diff: ## Show diff between source and enterprise target
+	@python3 tools/sync.py diff "$(TARGET)"
+
+sync-status: ## Show what changed since last sync
+	@python3 tools/sync.py status "$(TARGET)"
