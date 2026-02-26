@@ -1,4 +1,4 @@
-.PHONY: help install build dev type-check clean deploy install-app tunnel lint sync diff sync-status migrate
+.PHONY: help install build playground-build dev type-check clean deploy install-app tunnel lint sync diff sync-status migrate
 
 # Default target
 .DEFAULT_GOAL := help
@@ -43,6 +43,11 @@ clean: ## Remove build artifacts
 	@echo "$(YELLOW)Cleaning build artifacts...$(NC)"
 	rm -rf dist/
 	@echo "$(GREEN)Clean complete$(NC)"
+
+playground-build: ## Build playground bundle for site
+	@echo "$(GREEN)Building playground assets...$(NC)"
+	npx webpack --config webpack.playground.js --mode production
+	@echo "$(GREEN)Build output: site/static/playground/excalidraw/$(NC)"
 
 lint: ## Run lint checks
 	@echo "$(GREEN)Running lint checks...$(NC)"

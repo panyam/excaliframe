@@ -1,0 +1,20 @@
+{{# include "./BasePage.html" #}}
+
+{{ define "BodySection" }}
+<main class="flex flex-col" style="height: calc(100vh - 57px);">
+    <script>
+        // Must be set before Excalidraw loads to find bundled fonts
+        window.EXCALIDRAW_ASSET_PATH = '/static/playground/excalidraw/';
+    </script>
+    <div id="playground-root" style="flex: 1; width: 100%; height: 100%;"></div>
+    <script src="/static/playground/excalidraw/bundle.js"></script>
+</main>
+{{ end }}
+
+{{ define "PostBodySection" }}
+<script>
+// Sync site dark mode with Excalidraw theme
+// (The core editor uses theme="light" by default; this could be extended
+// to read from the site's theme toggle and pass it as a prop.)
+</script>
+{{ end }}

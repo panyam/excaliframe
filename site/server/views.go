@@ -106,6 +106,22 @@ func (d *Documentation) Load(r *http.Request, w http.ResponseWriter, app *goal.A
 	return nil, false
 }
 
+// PlaygroundPage - interactive tool playground
+type PlaygroundPage struct {
+	goal.BasePage
+	Header Header
+}
+
+func (p *PlaygroundPage) Load(r *http.Request, w http.ResponseWriter, app *goal.App[*ExcaliframeApp]) (error, bool) {
+	p.Title = "Playground - Excaliframe"
+	p.MetaDescription = "Try Excalidraw right in your browser. No installation required. Draw diagrams, wireframes, and sketches with the same tool available in our Confluence plugin."
+	p.CanonicalUrl = app.Context.BaseURL + "/playground/"
+	p.DisableSplashScreen = true
+	p.CustomHeader = false
+	p.Header.AppName = app.Context.AppName
+	return nil, false
+}
+
 // SetupRoutes registers all page routes
 func SetupRoutes(app *goal.App[*ExcaliframeApp]) *http.ServeMux {
 	mux := http.NewServeMux()
@@ -115,6 +131,7 @@ func SetupRoutes(app *goal.App[*ExcaliframeApp]) *http.ServeMux {
 	goal.Register[*TermsOfService](app, mux, "/terms/")
 	goal.Register[*ContactUs](app, mux, "/contact/")
 	goal.Register[*Documentation](app, mux, "/docs/")
+	goal.Register[*PlaygroundPage](app, mux, "/playground/")
 
 	// Serve robots.txt and sitemap.xml from root
 	mux.HandleFunc("/robots.txt", func(w http.ResponseWriter, r *http.Request) {
@@ -137,6 +154,9 @@ func SetupRoutes(app *goal.App[*ExcaliframeApp]) *http.ServeMux {
 	})
 	mux.HandleFunc("/docs", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/docs/", http.StatusMovedPermanently)
+	})
+	mux.HandleFunc("/playground", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/playground/", http.StatusMovedPermanently)
 	})
 
 	return mux

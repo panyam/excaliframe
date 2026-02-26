@@ -19,7 +19,10 @@ checklinks:
 		echo "You are trying to deploy with symlinks. Remove them first and make sure versions exist" && false ;	\
 	fi
 
-deploy: checklinks
+playground-build:
+	cd .. && npx webpack --config webpack.playground.js --mode production
+
+deploy: checklinks playground-build
 	rm -Rf locallinks ; mkdir locallinks
 	gcloud app deploy --project excaliframe --verbosity=info
 
@@ -29,4 +32,4 @@ prodlogs:
 clean:
 	rm -Rf bin locallinks
 
-.PHONY: all run build resymlink checklinks deploy prodlogs clean
+.PHONY: all run build resymlink checklinks playground-build deploy prodlogs clean

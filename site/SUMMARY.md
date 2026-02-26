@@ -11,6 +11,7 @@ A simple Go web application built with [goapplib](https://github.com/panyam/goap
 ## Pages
 
 - **Home** (`/`) - Landing page with feature highlights, screenshots, and installation link
+- **Playground** (`/playground/`) - Interactive Excalidraw editor (no install, localStorage persistence)
 - **Documentation** (`/docs/`) - Installation guide, FAQ, and tips
 - **Privacy Policy** (`/privacy/`) - Privacy policy (no data collection, all data stays in Confluence)
 - **Terms of Service** (`/terms/`) - MIT license terms and disclaimers

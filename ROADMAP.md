@@ -22,6 +22,8 @@ Make Excaliframe the go-to lightweight diagramming tool inside Confluence — fa
 | Subdirectory sync (excaliframe/ in enterprise target) | Done |
 | Marketing site live | Done |
 | Update ARCHITECTURE.md for Forge | Done |
+| Multi-hostable architecture (core/hosts split) | Done |
+| Interactive playground on marketing site | Done |
 | GitHub Actions CI (build, lint, audit) | TODO |
 | Atlassian Marketplace submission | TODO |
 | SBOM generation on releases | TODO |
@@ -49,11 +51,17 @@ Make Excaliframe the go-to lightweight diagramming tool inside Confluence — fa
 
 | Milestone | Status |
 |-----------|--------|
-| Mermaid editor integration (shared resource model, macro key routing) | Planned |
+| Tool-agnostic DrawingEnvelope (host stores opaque payloads) | Done |
+| Host adapter interface (EditorHost, RendererHost) | Done |
+| Forge host adapter | Done |
+| Web/localStorage host adapter | Done |
+| Server-backed host adapter (API persistence) | Planned |
+| Mermaid editor integration | Planned |
 | Macro key dispatcher in editor/renderer entry points | Planned |
 | Lazy-loaded library bundles (dynamic import per diagram type) | Planned |
+| Playground tool chooser (`/playground/` routes to tools) | Planned |
 
-Architecture uses shared editor/renderer resources with macro key routing — each `/` command maps to a macro key that selects the native library at runtime. See ARCHITECTURE.md "Adding New Diagram Libraries".
+Architecture uses `DrawingEnvelope.tool` field to identify diagram type. Host adapters are shared across all tools — they store/retrieve envelopes without knowing tool-specific data formats. See ARCHITECTURE.md "Adding New Diagram Libraries".
 
 ---
 

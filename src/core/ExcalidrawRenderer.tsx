@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { view } from '@forge/bridge';
+import { RendererHost } from './types';
 
-// Macro config stored in Forge
-interface MacroConfig {
-  drawing: string;   // JSON stringified DrawingData
-  preview: string;   // Base64 PNG preview
+interface Props {
+  host: RendererHost;
 }
 
-const ExcalidrawRenderer: React.FC = () => {
+const ExcalidrawRenderer: React.FC<Props> = ({ host }) => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -15,22 +13,21 @@ const ExcalidrawRenderer: React.FC = () => {
 
   useEffect(() => {
     console.log('Renderer mounting...');
-    loadMacroConfig();
+    loadConfig();
   }, []);
 
-  const loadMacroConfig = async (): Promise<void> => {
-    console.log('Renderer - Loading macro config...');
+  const loadConfig = async (): Promise<void> => {
+    console.log('Renderer - Loading config...');
     try {
-      const context = await view.getContext();
-      const config = (context as any).extension?.config as MacroConfig | undefined;
+      const envelope = await host.loadConfig();
 
-      console.log('Renderer - Config received:', config ? 'yes' : 'no');
+      console.log('Renderer - Config received:', envelope ? 'yes' : 'no');
 
-      if (config?.preview) {
-        console.log('Renderer - Setting preview URL, length:', config.preview.length);
-        setPreviewUrl(config.preview);
+      if (envelope?.preview) {
+        console.log('Renderer - Setting preview URL, length:', envelope.preview.length);
+        setPreviewUrl(envelope.preview);
         setHasContent(true);
-      } else if (config?.drawing) {
+      } else if (envelope?.data) {
         console.log('Renderer - Has drawing but no preview');
         setHasContent(true);
       } else {

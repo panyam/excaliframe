@@ -57,19 +57,29 @@ Design principles:
 ```
 excaliframe/
 ├── src/                            # Plugin frontend (TypeScript/React)
-│   ├── editor/
-│   │   ├── ExcalidrawEditor.tsx    # Full Excalidraw editor (~384 lines)
-│   │   ├── index.tsx               # React entry point
+│   ├── core/                       # Host-agnostic core components
+│   │   ├── types.ts                # DrawingEnvelope, EditorHost, RendererHost interfaces
+│   │   ├── ExcalidrawEditor.tsx    # Core Excalidraw editor (accepts EditorHost prop)
+│   │   └── ExcalidrawRenderer.tsx  # Core renderer (accepts RendererHost prop)
+│   ├── hosts/                      # Platform-specific host adapters
+│   │   ├── forge.ts                # ForgeEditorHost, ForgeRendererHost (@forge/bridge)
+│   │   └── web.ts                  # WebEditorHost, WebRendererHost (localStorage)
+│   ├── editor/                     # Forge editor entry point
+│   │   ├── index.tsx               # Wires core editor + Forge host
 │   │   ├── index.html              # HTML template
 │   │   └── styles.css
-│   ├── renderer/
-│   │   ├── ExcalidrawRenderer.tsx  # PNG preview viewer (~142 lines)
-│   │   ├── index.tsx               # React entry point
+│   ├── renderer/                   # Forge renderer entry point
+│   │   ├── index.tsx               # Wires core renderer + Forge host
 │   │   ├── index.html              # HTML template
 │   │   └── styles.css
 │   ├── types/
 │   │   └── atlassian-connect.d.ts  # TypeScript type definitions
 │   └── version.ts                  # Auto-generated version info
+│
+├── playground/                     # Standalone playground (not synced to enterprise)
+│   └── excalidraw/
+│       ├── index.tsx               # Wires core editor + web host
+│       └── styles.css
 │
 ├── static/                         # Webpack build output (Forge resources)
 │   ├── editor/                     # Editor bundle (served by Forge)
@@ -82,6 +92,7 @@ excaliframe/
 │   │   └── views.go                # Page handlers and routes
 │   ├── templates/                  # HTML templates (goapplib/templar)
 │   ├── static/                     # CSS, images, robots.txt, sitemap
+│   │   └── playground/excalidraw/  # Playground build output (generated)
 │   ├── app.yaml                    # App Engine config
 │   └── Makefile                    # Site build/deploy
 │
@@ -91,6 +102,7 @@ excaliframe/
 ├── manifest.yml                    # Forge app manifest
 ├── package.json                    # npm dependencies
 ├── webpack.config.js               # Webpack config (editor + renderer)
+├── webpack.playground.js           # Webpack config (playground)
 ├── tsconfig.json                   # TypeScript config
 └── Makefile                        # Build, deploy, install commands
 ```
@@ -99,14 +111,49 @@ excaliframe/
 
 ## Confluence Plugin (Forge)
 
+### Multi-Hostable Architecture
+
+The core Excalidraw editor and renderer are host-agnostic — they accept a host adapter via props and have zero platform imports. This enables multiple "installs" of the same diagramming components:
+
+| Host | Adapter | Storage | Use Case |
+|------|---------|---------|----------|
+| **Forge** | `ForgeEditorHost` / `ForgeRendererHost` | Confluence macro config | Confluence plugin |
+| **Web** | `WebEditorHost` / `WebRendererHost` | localStorage | Playground on excaliframe.com |
+| **Server** | _(future)_ | Backend API | Multi-user hosted mode |
+
+#### Host Interface
+
+```typescript
+interface DrawingEnvelope {
+  tool: string;       // e.g. "excalidraw", "mermaid" — tool-agnostic
+  version: number;    // envelope schema version
+  data: string;       // opaque tool-specific payload
+  preview?: string;   // base64 PNG preview
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+interface EditorHost {
+  loadDrawing(): Promise<DrawingEnvelope | null>;
+  saveDrawing(envelope: DrawingEnvelope): Promise<void>;
+  close(): void;
+}
+
+interface RendererHost {
+  loadConfig(): Promise<DrawingEnvelope | null>;
+}
+```
+
+The `DrawingEnvelope` is tool-agnostic — hosts store/retrieve it without knowing whether the `data` field contains Excalidraw JSON, Mermaid markup, or anything else.
+
 ### Dual-Component Model
 
 The plugin consists of two independent React apps, built as separate Webpack bundles:
 
-| Component | Purpose | Entry Point | Key File |
-|-----------|---------|-------------|----------|
-| **Editor** | Full Excalidraw canvas for creating/editing | `src/editor/index.tsx` | `ExcalidrawEditor.tsx` |
-| **Renderer** | PNG preview for viewing on pages | `src/renderer/index.tsx` | `ExcalidrawRenderer.tsx` |
+| Component | Purpose | Entry Point | Core Component |
+|-----------|---------|-------------|----------------|
+| **Editor** | Full Excalidraw canvas for creating/editing | `src/editor/index.tsx` | `src/core/ExcalidrawEditor.tsx` |
+| **Renderer** | PNG preview for viewing on pages | `src/renderer/index.tsx` | `src/core/ExcalidrawRenderer.tsx` |
 
 Configured in `manifest.yml`:
 - Macro `resource` → renderer (what users see on the page)
@@ -114,18 +161,19 @@ Configured in `manifest.yml`:
 
 ### Data Storage
 
-All data is stored in Confluence's macro config (no external storage):
+On Forge, data is stored in Confluence's macro config (no external storage). The Forge host adapter translates between `DrawingEnvelope` and Forge's `MacroConfig`:
 
 ```typescript
+// What Forge stores
 interface MacroConfig {
   drawing: string;   // JSON stringified Excalidraw scene data
   preview: string;   // Base64 PNG data URL for inline display
 }
 ```
 
-The editor reads/writes this config via `@forge/bridge`:
-- **Load**: `view.getContext()` → `context.extension.config`
-- **Save**: `view.submit({ config: macroConfig })` — saves and closes the editor
+The Forge host adapter reads/writes via `@forge/bridge`:
+- **Load**: `view.getContext()` → `context.extension.config` → `DrawingEnvelope`
+- **Save**: `DrawingEnvelope` → `view.submit({ config: macroConfig })` — saves and closes the editor
 
 ### Data Flow
 
@@ -157,14 +205,15 @@ The editor reads/writes this config via `@forge/bridge`:
 ### Build & Deploy
 
 ```bash
-make build          # Webpack builds editor + renderer to static/
-make deploy         # Build + forge deploy -e development
-make deploy-prod    # Build + forge deploy -e production
-make install-app    # forge install -e development -p Confluence
-make tunnel         # Build + forge tunnel (live dev testing)
+make build              # Webpack builds editor + renderer to static/
+make playground-build   # Webpack builds playground to site/static/playground/excalidraw/
+make deploy             # Build + forge deploy -e development
+make deploy-prod        # Build + forge deploy -e production
+make install-app        # forge install -e development -p Confluence
+make tunnel             # Build + forge tunnel (live dev testing)
 ```
 
-Webpack outputs to `static/editor/` and `static/renderer/`, which Forge serves as Custom UI resources. Excalidraw fonts are copied to the editor bundle only.
+Webpack outputs to `static/editor/` and `static/renderer/`, which Forge serves as Custom UI resources. The playground builds separately via `webpack.playground.js` to `site/static/playground/excalidraw/`. Excalidraw fonts are copied to both the editor and playground bundles.
 
 ---
 
@@ -184,10 +233,15 @@ A separate Go web application for the public-facing website.
 | Route | Page |
 |-------|------|
 | `/` | Landing page |
+| `/playground/` | Interactive Excalidraw playground (no install required) |
 | `/docs/` | Documentation |
 | `/privacy/` | Privacy policy |
 | `/terms/` | Terms of service |
 | `/contact/` | Contact (links to GitHub Issues) |
+
+### Playground
+
+The playground page (`/playground/`) embeds the same core Excalidraw editor used in the Confluence plugin, wired to a `WebEditorHost` that persists drawings to localStorage. Built via `webpack.playground.js` and output to `site/static/playground/excalidraw/`. The site's `deploy` target in `site/Makefile` automatically builds the playground first.
 
 ### SEO
 
@@ -246,29 +300,35 @@ Libraries can be lazy-loaded via dynamic `import()` so only the relevant library
 
 ### Source Structure
 
-New libraries add source files under the existing `src/editor/` and `src/renderer/` directories (not separate top-level dirs):
+New libraries add core components under `src/core/` and are wired through the same host adapter interface. The `DrawingEnvelope.tool` field identifies which library created the data:
 
 ```
 src/
+├── core/
+│   ├── types.ts                    # DrawingEnvelope, EditorHost, RendererHost
+│   ├── ExcalidrawEditor.tsx        # Excalidraw-specific editor
+│   ├── ExcalidrawRenderer.tsx      # Excalidraw-specific renderer
+│   ├── MermaidEditor.tsx           # Mermaid-specific editor (future)
+│   └── MermaidRenderer.tsx         # Mermaid-specific renderer (future)
+├── hosts/
+│   ├── forge.ts                    # Forge adapter (shared by all tools)
+│   └── web.ts                      # Web adapter (shared by all tools)
 ├── editor/
-│   ├── ExcalidrawEditor.tsx    # Excalidraw-specific editor
-│   ├── MermaidEditor.tsx       # Mermaid-specific editor (future)
-│   ├── index.tsx               # Shared entry — routes by macro key
-│   └── ...
+│   └── index.tsx                   # Forge entry — routes by macro key
 ├── renderer/
-│   ├── ExcalidrawRenderer.tsx  # Excalidraw-specific renderer
-│   ├── MermaidRenderer.tsx     # Mermaid-specific renderer (future)
-│   ├── index.tsx               # Shared entry — routes by macro key
-│   └── ...
+│   └── index.tsx                   # Forge entry — routes by macro key
 └── types/
 ```
 
+Host adapters are shared across all diagram types — they store/retrieve `DrawingEnvelope` without caring about the tool-specific `data` payload.
+
 ### What Stays the Same
 
-- Webpack config: still two entry points (editor, renderer)
+- Webpack config: still two entry points (editor, renderer) for Forge
 - Forge resources: still `static/editor/` and `static/renderer/`
 - Sync tool: picks up new source files automatically (entire `src/` is synced)
 - No new enterprise-side config changes needed for additional libraries
+- Host adapters are reused across all diagram types
 
 ---
 
@@ -308,4 +368,4 @@ make migrate TARGET=/path/to/enterprise-fork        # One-time: restructure flat
 
 The `migrate` command is a one-time operation for existing enterprise repos that had the old flat layout (src/ at top level). It moves directories and patches config file paths.
 
-Only `src/` and `scripts/` are synced. Generated files (`src/version.ts`) are excluded via ignorelist.
+Only `src/` and `scripts/` are synced. Generated files (`src/version.ts`) are excluded via ignorelist. The `playground/`, `site/`, and `tools/` directories are not synced — they are specific to the open-source repo.

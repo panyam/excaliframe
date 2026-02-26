@@ -4,12 +4,6 @@ Immediate and near-term action items for Excaliframe.
 
 ---
 
-## In Progress
-
-_(nothing currently in progress)_
-
----
-
 ## Up Next
 
 ### 1. Set Up GitHub Actions CI Pipeline
@@ -41,7 +35,10 @@ _(nothing currently in progress)_
 - **Verification scripts** — automated code/dependency verification tooling
 - **Changelog with security notes** — flag security-relevant changes in releases
 - **Atlassian Cloud Fortified** — Atlassian's enterprise security certification
-- **Add Mermaid editor** — second diagram type using existing extensible architecture
+- **Add Mermaid editor** — second diagram type using existing core/hosts architecture
+- **Playground enhancements** — export PNG button, sample drawings gallery, dark mode sync
+- **Server-backed host adapter** — `src/hosts/server.ts` for multi-user persistence via backend API
+- **Playground tool chooser** — `/playground/` as tool picker, `/playground/excalidraw/` and `/playground/mermaid/`
 - **Formal vulnerability disclosure process** — security contact + CVE handling
 
 ---
@@ -60,3 +57,6 @@ _(nothing currently in progress)_
 - [x] Add `migrate` command for one-time flat→subdir restructure
 - [x] Trim sync allowlist to `src/` and `scripts/` only (enterprise configs no longer overwritten)
 - [x] Enterprise PR: GM-SDV/JRA_204485_Forge-Apps#1
+- [x] Multi-hostable architecture: extracted core components (`src/core/`) with host adapter interface
+- [x] Host adapters: Forge (`src/hosts/forge.ts`) and Web/localStorage (`src/hosts/web.ts`)
+- [x] Interactive playground on marketing site (`/playground/` → full Excalidraw editor with localStorage persistence)

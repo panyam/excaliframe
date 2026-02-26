@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { exportToCanvas } from '@excalidraw/excalidraw';
-import { view } from '@forge/bridge';
 import { VERSION, BUILD_DATE } from '../version';
+import { EditorHost, DrawingEnvelope, ExcalidrawDrawingData } from './types';
 
 // Excalidraw types (defined locally to avoid module resolution issues)
 type ExcalidrawElement = any;
@@ -19,25 +19,11 @@ interface ExcalidrawImperativeAPI {
   addFiles: (files: any[]) => void;
 }
 
-interface DrawingData {
-  type: string;
-  version: number;
-  source: string;
-  elements: any[];
-  appState: {
-    viewBackgroundColor?: string;
-    gridSize?: number | null;
-  };
-  files?: Record<string, any>;
+interface Props {
+  host: EditorHost;
 }
 
-// Macro config stored in Forge
-interface MacroConfig {
-  drawing: string;   // JSON stringified DrawingData
-  preview: string;   // Base64 PNG preview
-}
-
-const ExcalidrawEditor: React.FC = () => {
+const ExcalidrawEditor: React.FC<Props> = ({ host }) => {
   const [ExcalidrawComponent, setExcalidrawComponent] = useState<any>(null);
   const [MainMenuComponent, setMainMenuComponent] = useState<any>(null);
   const excalidrawApiRef = useRef<ExcalidrawImperativeAPI | null>(null);
@@ -60,20 +46,19 @@ const ExcalidrawEditor: React.FC = () => {
     });
   }, []);
 
-  // Load existing macro config on mount
+  // Load existing drawing on mount
   useEffect(() => {
-    loadMacroConfig();
+    loadDrawing();
   }, []);
 
-  const loadMacroConfig = async (): Promise<void> => {
-    console.log('Editor - Loading macro config...');
+  const loadDrawing = async (): Promise<void> => {
+    console.log('Editor - Loading drawing...');
     try {
-      const context = await view.getContext();
-      const config = (context as any).extension?.config as MacroConfig | undefined;
+      const envelope = await host.loadDrawing();
 
-      if (config?.drawing) {
+      if (envelope?.data) {
         console.log('Editor - Found existing drawing data');
-        const drawingData: DrawingData = JSON.parse(config.drawing);
+        const drawingData: ExcalidrawDrawingData = JSON.parse(envelope.data);
         const elements = drawingData.elements || [];
         initialElementsRef.current = JSON.stringify(elements);
         setInitialData({
@@ -87,7 +72,7 @@ const ExcalidrawEditor: React.FC = () => {
         console.log('Editor - No existing drawing, starting fresh');
       }
     } catch (error) {
-      console.error('Editor - Error loading config:', error);
+      console.error('Editor - Error loading drawing:', error);
     }
     setIsLoading(false);
   };
@@ -103,7 +88,7 @@ const ExcalidrawEditor: React.FC = () => {
       const appState = excalidrawApiRef.current.getAppState();
       const files = excalidrawApiRef.current.getFiles();
 
-      const drawingData: DrawingData = {
+      const drawingData: ExcalidrawDrawingData = {
         type: 'excalidraw',
         version: 2,
         source: 'excaliframe',
@@ -133,16 +118,17 @@ const ExcalidrawEditor: React.FC = () => {
         }
       }
 
-      const macroConfig: MacroConfig = {
-        drawing: JSON.stringify(drawingData),
-        preview: preview,
+      const now = new Date().toISOString();
+      const envelope: DrawingEnvelope = {
+        tool: 'excalidraw',
+        version: 1,
+        data: JSON.stringify(drawingData),
+        preview,
+        updatedAt: now,
       };
 
-      console.log('Editor - Submitting config, elements:', elements.length);
-
-      // view.submit() saves config AND closes the config panel
-      // Must wrap in { config: ... } for Forge
-      await view.submit({ config: macroConfig });
+      console.log('Editor - Saving envelope, elements:', elements.length);
+      await host.saveDrawing(envelope);
       console.log('Editor - Save complete');
 
     } catch (error) {
@@ -150,7 +136,7 @@ const ExcalidrawEditor: React.FC = () => {
       alert('Failed to save drawing. Please try again.');
       setIsSaving(false);
     }
-  }, [isSaving]);
+  }, [isSaving, host]);
 
   const handleCancel = useCallback((): void => {
     if (isDirty) {
@@ -158,8 +144,8 @@ const ExcalidrawEditor: React.FC = () => {
         return;
       }
     }
-    view.close();
-  }, [isDirty]);
+    host.close();
+  }, [isDirty, host]);
 
   // Track changes to detect dirty state
   const handleChange = useCallback((elements: readonly ExcalidrawElement[]): void => {

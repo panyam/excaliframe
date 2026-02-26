@@ -1,0 +1,48 @@
+/* Playground Excalidraw styles */
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#playground-root {
+  width: 100%;
+  height: 100%;
+}
+
+/* Ensure Excalidraw fills its container */
+.excalidraw-wrapper {
+  width: 100%;
+  height: 100%;
+}
+
+.excalidraw {
+  width: 100%;
+  height: 100%;
+}
+
+/* Hide Excalidraw's welcome screen if it appears */
+.excalidraw .welcome-screen-center,
+.excalidraw .WelcomeScreen,
+.excalidraw .welcome-screen-decor {
+  display: none !important;
+}
+
+.excalidraw .layer-ui__wrapper {
+  height: 100% !important;
+}
+
+.excalidraw canvas {
+  display: block !important;
+}
