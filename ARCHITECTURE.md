@@ -72,8 +72,6 @@ excaliframe/
 │   │   ├── index.tsx               # Wires core renderer + Forge host
 │   │   ├── index.html              # HTML template
 │   │   └── styles.css
-│   ├── types/
-│   │   └── atlassian-connect.d.ts  # TypeScript type definitions
 │   └── version.ts                  # Auto-generated version info
 │
 ├── playground/                     # Standalone playground (not synced to enterprise)
@@ -315,9 +313,8 @@ src/
 │   └── web.ts                      # Web adapter (shared by all tools)
 ├── editor/
 │   └── index.tsx                   # Forge entry — routes by macro key
-├── renderer/
-│   └── index.tsx                   # Forge entry — routes by macro key
-└── types/
+└── renderer/
+    └── index.tsx                   # Forge entry — routes by macro key
 ```
 
 Host adapters are shared across all diagram types — they store/retrieve `DrawingEnvelope` without caring about the tool-specific `data` payload.
@@ -348,9 +345,10 @@ enterprise-repo/
 ├── Makefile                      # Enterprise build targets — untouched
 ├── excaliframe/                  # ← synced content lives here
 │   ├── src/
+│   │   ├── core/
+│   │   ├── hosts/
 │   │   ├── editor/
-│   │   ├── renderer/
-│   │   └── types/
+│   │   └── renderer/
 │   └── scripts/
 └── static/                       # Webpack build output (committed for Forge deploy)
     ├── editor/

@@ -13,12 +13,12 @@ Excalidraw is a standalone web application at excalidraw.com. While powerful, it
 | Challenge | Why Excaliframe Solves It |
 |-----------|---------------------------|
 | **No native Confluence integration** | Excalidraw.com is a separate website - diagrams must be exported as images and manually uploaded to Confluence | Excaliframe embeds Excalidraw as a native Confluence macro with direct save/load |
-| **Confluence Connect requirement** | Atlassian requires apps to register via the Connect framework with lifecycle endpoints, JWT auth, and a hosted descriptor | Excaliframe provides the required server infrastructure |
+| **Forge integration requirement** | Atlassian requires apps to register via the Forge platform with a manifest and Custom UI resources | Excaliframe provides the Forge app manifest and UI bundles |
 | **Data storage** | Excalidraw.com stores diagrams in browser localStorage or requires manual file management | Excaliframe stores diagrams directly in Confluence page content |
 | **Seamless editing** | Using Excalidraw.com requires export → upload → replace workflow for every edit | Excaliframe enables click-to-edit within Confluence |
 | **Permissions** | Excalidraw.com has no concept of Confluence page permissions | Excaliframe inherits Confluence's permission model |
 
-**In short**: Excaliframe is the "glue" that makes Excalidraw work natively within Confluence. The server component is minimal (stateless, no database) but necessary to satisfy Atlassian's integration requirements.
+**In short**: Excaliframe is the "glue" that makes Excalidraw work natively within Confluence. It runs as a Forge app — Atlassian hosts the static assets, no separate server required.
 
 ---
 
@@ -29,7 +29,7 @@ Excalidraw is a standalone web application at excalidraw.com. While powerful, it
 | Factor | Detail |
 |--------|--------|
 | **Licensing Cost** | $0 - Excalidraw is open-source |
-| **Infrastructure Cost** | Minimal - stateless server, can run on free-tier hosting |
+| **Infrastructure Cost** | $0 - hosted on Atlassian's Forge platform, no separate server |
 | **Training Cost** | Low - Excalidraw's interface is intuitive; most users self-serve |
 | **Maintenance Cost** | Low - simple architecture, infrequent updates needed |
 | **Opportunity Cost of Not Adding** | Engineers continue manual export/paste workflow, losing source files and version history |
@@ -116,7 +116,7 @@ Excalidraw is a standalone web application at excalidraw.com. While powerful, it
 
 **Impact**: High value, low cost, complements existing tooling.
 
-**Self-Hosting Note**: Deploying on internal infrastructure (GCP, AWS, Azure, or on-prem) ensures reliability is within our control and aligns with internal compliance requirements. The server is lightweight and stateless - no database required.
+**Hosting Note**: Excaliframe runs as a Forge app — Atlassian hosts the static assets on their infrastructure. No separate server deployment or maintenance required.
 
 **Note**: This is additive - Excaliframe complements Lucidchart rather than replacing it. Users choose the right tool for each situation.
 
@@ -235,7 +235,7 @@ Excalidraw is a standalone web application at excalidraw.com. While powerful, it
 | Implementation effort | Low - straightforward Confluence app installation |
 | **Total incremental cost** | **Near zero** |
 
-**Self-Hosting Benefits**: Deploying Excaliframe on company infrastructure provides full control over availability, compliance with internal policies, and independence from external services. The server is minimal (stateless, ~500 lines of code) and can run on any Node.js platform.
+**Forge Hosting Benefits**: Excaliframe runs on Atlassian's Forge platform — no separate server to deploy or maintain. Assets are hosted by Atlassian alongside Confluence.
 
 ---
 
@@ -315,18 +315,18 @@ Phase 4: Migration to Internal Hosting (When Ready)
 ### How Data Flows
 
 ```
-User Browser                    Confluence Cloud                 Excaliframe Server
-     │                                │                                │
-     │ ──── Views/Edits page ───────► │                                │
-     │                                │ ── Loads iframe from ────────► │
-     │ ◄─────────────────────────────────── Serves HTML/JS/CSS ─────── │
-     │                                │                                │
-     │ ── AP.confluence.saveMacro() ─►│  (Data saved TO Confluence)    │
-     │                                │                                │
-     │  Diagram data NEVER sent to Excaliframe server                  │
+User Browser                    Confluence Cloud (Forge)
+     │                                │
+     │ ──── Views/Edits page ───────► │
+     │                                │ ── Loads Custom UI iframe ──►  (Forge-hosted assets)
+     │ ◄─────────────────────────────── Serves HTML/JS/CSS
+     │                                │
+     │ ── @forge/bridge save ────────►│  (Data saved TO Confluence macro config)
+     │                                │
+     │  All data stays within Confluence/Atlassian infrastructure
 ```
 
-**Key architectural point**: The Excaliframe server serves static assets (HTML, JavaScript, CSS). Diagram data flows between the browser and Confluence via the `AP` JavaScript API - it does not pass through the Excaliframe server.
+**Key architectural point**: Forge hosts Excaliframe's static assets (HTML, JavaScript, CSS) on Atlassian infrastructure. Diagram data flows between the browser and Confluence via `@forge/bridge` — there is no external server.
 
 ### Trust Model - Be Explicit About What You're Trusting
 
@@ -339,7 +339,7 @@ The JavaScript served by Excaliframe runs in the browser and **has access to dia
 | Excalidraw library | Open-source library doesn't exfiltrate data | Partially - large codebase, widely used |
 | npm dependencies | Transitive dependencies are not malicious | Partially - `npm audit`, lockfiles |
 
-**This trust model applies to ANY browser-based application** - Lucidchart, draw.io, or any Confluence Connect app. You are always trusting the JavaScript you run.
+**This trust model applies to ANY browser-based application** - Lucidchart, draw.io, or any Confluence Forge/Connect app. You are always trusting the JavaScript you run.
 
 ### What the Excaliframe Code Actually Does
 
@@ -358,7 +358,7 @@ The JavaScript served by Excaliframe runs in the browser and **has access to dia
 
 | Concern | Reality |
 |---------|---------|
-| "Data stored on Excaliframe server" | **False** - server is stateless, no database, diagram data stored in Confluence |
+| "Data stored on external server" | **False** - no external server; all data stored in Confluence macro config via Forge |
 | "Excaliframe can read our diagrams" | **Partially true** - the JS code CAN access data, but current code doesn't transmit it externally (verifiable via audit) |
 | "Unauthorized access to diagrams" | **Mitigated** - inherits Confluence page permissions, no separate auth |
 | "Data in transit exposure" | **Mitigated** - data flows to Confluence over TLS, not through Excaliframe server |
@@ -431,5 +431,5 @@ The JavaScript served by Excaliframe runs in the browser and **has access to dia
 **Key Security Points**:
 - All drawing data stored in Confluence page content
 - Server is stateless - no user data persisted
-- JWT authentication via Confluence Connect
+- Forge platform authentication (Atlassian-managed)
 - Inherits Confluence page-level permissions

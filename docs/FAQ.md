@@ -33,7 +33,7 @@ Excalidraw is a popular open-source virtual whiteboard with a hand-drawn aesthet
 
 ### Q: How does it integrate with Confluence?
 
-Excaliframe registers as a Confluence Connect app that provides a "dynamic content macro." When users type `/Excalidraw` in a Confluence page, they can:
+Excaliframe is an Atlassian Forge app that provides a "dynamic content macro." When users type `/Excalidraw` in a Confluence page, they can:
 1. Create a new diagram in a full-screen editor
 2. Save the diagram directly to the page
 3. View a PNG preview on the published page
@@ -56,7 +56,7 @@ Excalidraw.com is a standalone web application that doesn't integrate with Confl
 | No permission integration | Inherits Confluence page permissions |
 | Diagrams stored in browser localStorage or local files | Diagrams stored in Confluence with backup/versioning |
 
-**Excaliframe is the integration layer** that makes Excalidraw work as a native Confluence macro. The server is minimal (stateless, no database) but required by Atlassian's Connect framework.
+**Excaliframe is the integration layer** that makes Excalidraw work as a native Confluence macro. It runs as a Forge app — Atlassian hosts everything, no separate server required.
 
 ### Q: What makes Excalidraw great for documentation?
 
@@ -131,13 +131,12 @@ Excaliframe is **additive** - it doesn't replace tools like Lucidchart. Differen
 - No local installation required
 
 **For Deployment:**
-- Node.js 18+ (if self-hosting)
-- HTTPS endpoint accessible to Confluence Cloud
+- Atlassian Forge CLI (`forge deploy`)
 - Confluence Cloud (not Server/Data Center)
 
 ### Q: Does it work with Confluence Server or Data Center?
 
-Currently, Excaliframe is designed for **Confluence Cloud** only. It uses the Confluence Connect framework which is specific to Cloud. A Forge-based version for Data Center would require additional development.
+Currently, Excaliframe is designed for **Confluence Cloud** only. It uses the Atlassian Forge platform which is specific to Cloud.
 
 ### Q: What's the architecture?
 
@@ -150,26 +149,11 @@ Currently, Excaliframe is designed for **Confluence Cloud** only. It uses the Co
 - **Renderer** (iframe) displays PNG preview when viewing the page
 - **Editor** (iframe) loads full Excalidraw when editing
 - **Data Storage** - JSON stored in Confluence macro body (not on Excaliframe server)
-- **Excaliframe Server** - stateless, serves static assets only (~500 lines of code)
+- **Forge Platform** - Atlassian hosts the static assets, no external server
 
-### Q: Can I self-host Excaliframe?
+### Q: How is Excaliframe deployed?
 
-Yes - and self-hosting is **recommended** for enterprise deployments. Benefits include:
-- Full control over availability and uptime
-- Compliance with internal security policies
-- No dependency on external services
-- Data never leaves your infrastructure (beyond Confluence itself)
-
-Excaliframe can be deployed to:
-- GCP (App Engine, Cloud Run)
-- AWS (ECS, Fargate, Lambda)
-- Azure (App Service, Container Apps)
-- Internal Kubernetes cluster
-- Any platform supporting Node.js + HTTPS
-
-The server is lightweight (~500 lines of code) and stateless - no database required.
-
-See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed instructions.
+Excaliframe is deployed via the **Atlassian Forge CLI** (`forge deploy`). Atlassian hosts the app's static assets on their infrastructure. There is no separate server to deploy or maintain.
 
 ### Q: What data format is used?
 
@@ -212,7 +196,7 @@ It does not access other Confluence content, user data, or spaces.
 
 ### Q: How is authentication handled?
 
-Excaliframe uses **JWT (JSON Web Token) authentication** as required by the Confluence Connect framework. Confluence signs requests to verify they come from legitimate Confluence instances.
+Excaliframe uses the **Atlassian Forge platform** for authentication. Forge handles all authentication and authorization — the app runs within Atlassian's sandboxed Custom UI iframe.
 
 ### Q: What about GDPR/privacy compliance?
 
@@ -235,18 +219,18 @@ Excaliframe uses **JWT (JSON Web Token) authentication** as required by the Conf
 Be explicit about what you're trusting when using Excaliframe:
 
 ```
-User Browser                    Confluence Cloud                 Excaliframe Server
-     │                                │                                │
-     │ ──── Views/Edits page ───────► │                                │
-     │                                │ ── Loads iframe from ────────► │
-     │ ◄─────────────────────────────────── Serves HTML/JS/CSS ─────── │
-     │                                │                                │
-     │ ── AP.confluence.saveMacro() ─►│  (Data saved TO Confluence)    │
-     │                                │                                │
-     │  Diagram data NEVER sent to Excaliframe server                  │
+User Browser                    Confluence Cloud (Forge)
+     │                                │
+     │ ──── Views/Edits page ───────► │
+     │                                │ ── Loads Custom UI iframe ──►  (Forge-hosted assets)
+     │ ◄─────────────────────────────── Serves HTML/JS/CSS
+     │                                │
+     │ ── @forge/bridge save ────────►│  (Data saved TO Confluence macro config)
+     │                                │
+     │  All data stays within Confluence/Atlassian infrastructure
 ```
 
-The Excaliframe server serves static assets only. Diagram data flows between browser and Confluence via the `AP` JavaScript API.
+Forge hosts Excaliframe's static assets on Atlassian infrastructure. Diagram data flows between browser and Confluence via the `@forge/bridge` API. There is no external server.
 
 **However**, the JavaScript runs in your browser and has access to diagram data (it must, to render/edit). This means you're trusting:
 
@@ -257,7 +241,7 @@ The Excaliframe server serves static assets only. Diagram data flows between bro
 | Excalidraw library | Open-source library is safe | Partially - widely used |
 | npm dependencies | Transitive dependencies are safe | Partially - `npm audit` |
 
-**This trust model applies to ANY browser-based app** - Lucidchart, draw.io, Miro, or any Confluence Connect app.
+**This trust model applies to ANY browser-based app** - Lucidchart, draw.io, Miro, or any Confluence Forge/Connect app.
 
 ### Q: How can I verify Excaliframe doesn't exfiltrate data?
 
@@ -269,7 +253,7 @@ The Excaliframe server serves static assets only. Diagram data flows between bro
 
 **Network monitoring** - During pilot, use browser DevTools to verify:
 - Only asset requests to Excaliframe server (HTML, JS, CSS)
-- Only API calls to Confluence (`AP.*` methods)
+- Only API calls to Confluence (`@forge/bridge` methods)
 - No POST/PUT requests with diagram data to external endpoints
 
 ### Q: What are the real security risks?
@@ -279,14 +263,14 @@ The Excaliframe server serves static assets only. Diagram data flows between bro
 | Data stored on Excaliframe server | **False** - stateless, no database |
 | Excaliframe can read diagrams | **Partially true** - JS has access, but doesn't transmit (verifiable) |
 | Unauthorized access | **Mitigated** - inherits Confluence permissions |
-| Malicious code injection | **Primary risk** - mitigate with self-hosting + code audit |
+| Malicious code injection | **Primary risk** - mitigate with code audit + dependency scanning |
 | Supply chain attack | **Real risk** - mitigate with dependency scanning, version pinning |
 
 ### Q: What security controls are recommended?
 
 | Control | Purpose | Effort |
 |---------|---------|--------|
-| Self-host on internal infrastructure | Control asset delivery, eliminate external dependency | Medium |
+| Deploy via Forge CLI | Assets hosted by Atlassian, no separate infrastructure | Low |
 | Code audit | Verify no data exfiltration (~300 lines) | Low |
 | Dependency scanning | Monitor npm packages for vulnerabilities | Low |
 | Network monitoring during pilot | Verify no unexpected external requests | Low |
@@ -315,11 +299,11 @@ Excaliframe's advantage: small auditable codebase + data stays in Confluence.
 3. Click Install
 4. Approve requested permissions
 
-**Option 2: Private Installation**
-1. Deploy Excaliframe to your hosting platform
-2. Update `baseUrl` in `atlassian-connect.json`
-3. In Confluence: Settings → Manage apps → Upload app
-4. Enter your descriptor URL: `https://your-domain.com/confluence/atlassian-connect.json`
+**Option 2: Forge CLI (Private Deployment)**
+1. Clone the Excaliframe repository
+2. Run `forge register` to register a new Forge app
+3. Run `make deploy` to build and deploy
+4. Run `make install-app` to install on your Confluence site
 
 ### Q: What's the recommended rollout plan?
 
@@ -470,7 +454,7 @@ Most users are productive within 5-10 minutes due to Excalidraw's intuitive inte
 ### Deployment Checklist
 
 - [ ] Security team has reviewed the integration
-- [ ] Hosting platform selected (Marketplace or self-hosted)
+- [ ] Deployment method selected (Marketplace or Forge CLI)
 - [ ] Sandbox testing completed
 - [ ] Pilot team identified
 - [ ] User documentation prepared
@@ -485,7 +469,7 @@ Most users are productive within 5-10 minutes due to Excalidraw's intuitive inte
 | Excalidraw | https://excalidraw.com |
 | Excalidraw GitHub | https://github.com/excalidraw/excalidraw |
 | Excaliframe GitHub | https://github.com/[your-org]/excaliframe |
-| Confluence Connect Docs | https://developer.atlassian.com/cloud/confluence/ |
+| Atlassian Forge Docs | https://developer.atlassian.com/platform/forge/ |
 
 ### Support Contacts
 
@@ -521,10 +505,9 @@ Add Excaliframe to provide a lightweight, speed-first diagramming option in Conf
 
 ## Cost & Risk
 - Zero licensing cost (open-source)
-- Minimal infrastructure (stateless server, self-hosted on internal platform)
+- No separate infrastructure (Forge-hosted)
 - All data stays in Confluence
-- Full control: self-hosted = no external dependencies
-- Low risk: simple architecture (~500 lines), auditable code
+- Low risk: small auditable codebase, no external server
 
 ## Recommendation
 Add Excaliframe as an option for users who prefer lightweight diagramming.
