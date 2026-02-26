@@ -19,6 +19,7 @@ Make Excaliframe the go-to lightweight diagramming tool inside Confluence — fa
 | Core editor + renderer on Forge | Done |
 | Enterprise documentation (FAQ, security roadmap, justification) | Done |
 | Enterprise sync tooling | Done |
+| Subdirectory sync (excaliframe/ in enterprise target) | Done |
 | Marketing site live | Done |
 | Update ARCHITECTURE.md for Forge | Done |
 | GitHub Actions CI (build, lint, audit) | TODO |
@@ -48,11 +49,11 @@ Make Excaliframe the go-to lightweight diagramming tool inside Confluence — fa
 
 | Milestone | Status |
 |-----------|--------|
-| Mermaid editor integration | Planned |
-| Plugin architecture for new diagram types | Planned |
-| Shared component library across editors | Planned |
+| Mermaid editor integration (shared resource model, macro key routing) | Planned |
+| Macro key dispatcher in editor/renderer entry points | Planned |
+| Lazy-loaded library bundles (dynamic import per diagram type) | Planned |
 
-Architecture already supports this via namespaced `src/<editor>/` directories — see ARCHITECTURE.md.
+Architecture uses shared editor/renderer resources with macro key routing — each `/` command maps to a macro key that selects the native library at runtime. See ARCHITECTURE.md "Adding New Diagram Libraries".
 
 ---
 

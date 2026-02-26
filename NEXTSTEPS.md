@@ -56,3 +56,7 @@ _(nothing currently in progress)_
 - [x] Marketing site (Go + goapplib, deployed to GAE)
 - [x] Forge deploy/install workflow via Makefile
 - [x] Update ARCHITECTURE.md for Forge migration (removed stale Connect references)
+- [x] Restructure sync to use `excaliframe/` subdirectory in enterprise target
+- [x] Add `migrate` command for one-time flat→subdir restructure
+- [x] Trim sync allowlist to `src/` and `scripts/` only (enterprise configs no longer overwritten)
+- [x] Enterprise PR: GM-SDV/JRA_204485_Forge-Apps#1

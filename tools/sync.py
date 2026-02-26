@@ -2,10 +2,15 @@
 """
 sync.py — Sync plugin-relevant files from excaliframe to an enterprise target.
 
+Synced files are placed under an `excaliframe/` subdirectory in the target so
+that enterprise config files (package.json, webpack.config.js, etc.) are never
+overwritten.
+
 Usage (called by Makefile):
-    python3 tools/sync.py sync  <target_dir> [--dry-run]
-    python3 tools/sync.py diff  <target_dir>
-    python3 tools/sync.py status <target_dir>
+    python3 tools/sync.py sync    <target_dir> [--commit] [--force]
+    python3 tools/sync.py diff    <target_dir>
+    python3 tools/sync.py status  <target_dir>
+    python3 tools/sync.py migrate <target_dir>
 """
 
 import difflib
@@ -32,20 +37,15 @@ NC = "\033[0m"
 ALLOWLIST = [
     "src/",
     "scripts/",
-    "manifest.yml",
-    "package.json",
-    "package-lock.json",
-    "webpack.config.js",
-    "tsconfig.json",
-    "Makefile",
-    ".eslintignore",
-    "LICENSE",
 ]
 
 # Files within allowed dirs that are build output and should be excluded
 IGNORELIST = [
     "src/version.ts",
 ]
+
+# Subdirectory in the enterprise target where synced files are placed
+SUBDIR = "excaliframe"
 
 # ── Globals ─────────────────────────────────────────────────────────────────
 
@@ -178,13 +178,14 @@ def git_short_rev() -> str:
         return "unknown"
 
 
-def save_state(target: Path, files: list[str]) -> None:
+def save_state(tgt_base: Path, files: list[str]) -> None:
+    """Save sync state. tgt_base is the subdir root (target/excaliframe/)."""
     STATE_DIR.mkdir(parents=True, exist_ok=True)
 
     src_manifest = generate_manifest(SOURCE_DIR, files)
     save_manifest(src_manifest, STATE_DIR / "source-manifest.sha")
 
-    tgt_manifest = generate_manifest(target, files)
+    tgt_manifest = generate_manifest(tgt_base, files)
     save_manifest(tgt_manifest, STATE_DIR / "target-manifest.sha")
 
     meta = {
@@ -195,7 +196,7 @@ def save_state(target: Path, files: list[str]) -> None:
     (STATE_DIR / "last-sync.json").write_text(json.dumps(meta, indent=2) + "\n")
 
 
-def check_target_modifications(target: Path, files: list[str]) -> None:
+def check_target_modifications(tgt_base: Path, files: list[str]) -> None:
     """Warn and prompt if target files were modified since last sync."""
     manifest_path = STATE_DIR / "target-manifest.sha"
     if not manifest_path.is_file():
@@ -205,7 +206,7 @@ def check_target_modifications(target: Path, files: list[str]) -> None:
     modified = []
 
     for f in files:
-        full = target / f
+        full = tgt_base / f
         if full.is_file():
             current_sha = sha256_file(full)
             old_sha = old_target.get(f)
@@ -227,8 +228,9 @@ def check_target_modifications(target: Path, files: list[str]) -> None:
 
 def cmd_sync(target_str: str, commit: bool = False, force: bool = False) -> None:
     target = validate_target(target_str, "sync", create_ok=commit)
+    tgt_base = target / SUBDIR
 
-    header(f"Syncing excaliframe -> {target}")
+    header(f"Syncing excaliframe -> {tgt_base}")
     print()
 
     files = build_file_list()
@@ -240,25 +242,25 @@ def cmd_sync(target_str: str, commit: bool = False, force: bool = False) -> None
         print()
         for f in files:
             src = SOURCE_DIR / f
-            dst = target / f
+            dst = tgt_base / f
             if not dst.is_file():
-                print(f"  {GREEN}+ {f}{NC}")
+                print(f"  {GREEN}+ {SUBDIR}/{f}{NC}")
             elif sha256_file(src) != sha256_file(dst):
-                print(f"  {YELLOW}~ {f}{NC}")
+                print(f"  {YELLOW}~ {SUBDIR}/{f}{NC}")
             # skip unchanged files in preview
         print()
         info(f"Total: {len(files)} files in allowlist")
         return
 
     if not force:
-        check_target_modifications(target, files)
+        check_target_modifications(tgt_base, files)
 
     # Copy files
     copied = 0
     skipped = 0
     for f in files:
         src = SOURCE_DIR / f
-        dst = target / f
+        dst = tgt_base / f
 
         # Skip if identical
         if dst.is_file() and sha256_file(src) == sha256_file(dst):
@@ -267,7 +269,7 @@ def cmd_sync(target_str: str, commit: bool = False, force: bool = False) -> None
 
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, dst)
-        print(f"  {f}")
+        print(f"  {SUBDIR}/{f}")
         copied += 1
 
     # Delete files in target that are within allowlisted dirs but not in source
@@ -275,31 +277,29 @@ def cmd_sync(target_str: str, commit: bool = False, force: bool = False) -> None
     deleted = 0
     for item in ALLOWLIST:
         if item.endswith("/"):
-            tgt_dir = target / item
+            tgt_dir = tgt_base / item
             if tgt_dir.is_dir():
                 for full in tgt_dir.rglob("*"):
                     if full.is_file():
-                        rel = str(full.relative_to(target))
+                        rel = str(full.relative_to(tgt_base))
                         if rel not in source_set:
                             full.unlink()
-                            print(f"  {RED}deleted: {rel}{NC}")
+                            print(f"  {RED}deleted: {SUBDIR}/{rel}{NC}")
                             deleted += 1
 
     print()
-    save_state(target, files)
+    save_state(tgt_base, files)
     info(f"Sync complete — {copied} copied, {skipped} unchanged, {deleted} deleted ({len(files)} total)")
 
     print()
     warn("Reminder: Run 'npm run build' in the target to regenerate static assets.")
 
-    if (target / "manifest.yml").is_file():
-        warn("Reminder: Check that app.id in target's manifest.yml is correct for the enterprise app.")
-
 
 def cmd_diff(target_str: str) -> None:
     target = validate_target(target_str, "diff")
+    tgt_base = target / SUBDIR
 
-    header(f"Diff: excaliframe <-> {target}")
+    header(f"Diff: excaliframe <-> {tgt_base}")
     print()
 
     files = build_file_list()
@@ -311,24 +311,24 @@ def cmd_diff(target_str: str) -> None:
 
     for f in files:
         src = SOURCE_DIR / f
-        dst = target / f
+        dst = tgt_base / f
 
         if src.is_file() and not dst.is_file():
-            print(f"{GREEN}+ [source only] {f}{NC}")
+            print(f"{GREEN}+ [source only] {SUBDIR}/{f}{NC}")
             source_only += 1
         elif not src.is_file() and dst.is_file():
-            print(f"{RED}- [target only] {f}{NC}")
+            print(f"{RED}- [target only] {SUBDIR}/{f}{NC}")
             target_only += 1
         elif src.is_file() and dst.is_file():
             if sha256_file(src) != sha256_file(dst):
-                print(f"{YELLOW}~ [modified]    {f}{NC}")
+                print(f"{YELLOW}~ [modified]    {SUBDIR}/{f}{NC}")
                 # Show unified diff for text files
                 try:
                     src_lines = src.read_text().splitlines(keepends=True)
                     dst_lines = dst.read_text().splitlines(keepends=True)
                     diff = difflib.unified_diff(
                         src_lines, dst_lines,
-                        fromfile=f"source/{f}", tofile=f"target/{f}",
+                        fromfile=f"source/{f}", tofile=f"target/{SUBDIR}/{f}",
                     )
                     sys.stdout.writelines(diff)
                     print()
@@ -343,13 +343,13 @@ def cmd_diff(target_str: str) -> None:
     source_set = set(files)
     for item in ALLOWLIST:
         if item.endswith("/"):
-            tgt_dir = target / item
+            tgt_dir = tgt_base / item
             if tgt_dir.is_dir():
                 for full in tgt_dir.rglob("*"):
                     if full.is_file():
-                        rel = str(full.relative_to(target))
+                        rel = str(full.relative_to(tgt_base))
                         if rel not in source_set:
-                            print(f"{RED}- [target only] {rel}{NC}")
+                            print(f"{RED}- [target only] {SUBDIR}/{rel}{NC}")
                             target_only += 1
 
     print()
@@ -365,12 +365,13 @@ def cmd_diff(target_str: str) -> None:
 
 def cmd_status(target_str: str) -> None:
     target = validate_target(target_str, "status")
+    tgt_base = target / SUBDIR
 
     last_sync_path = STATE_DIR / "last-sync.json"
     if not STATE_DIR.is_dir() or not last_sync_path.is_file():
         die("No sync state found. Run 'make sync' first.")
 
-    header(f"Sync status: excaliframe <-> {target}")
+    header(f"Sync status: excaliframe <-> {tgt_base}")
     print()
 
     meta = json.loads(last_sync_path.read_text())
@@ -402,7 +403,7 @@ def cmd_status(target_str: str) -> None:
                 src_modified = True  # New file
 
         # Check target side
-        tgt_path = target / f
+        tgt_path = tgt_base / f
         if tgt_path.is_file():
             current_sha = sha256_file(tgt_path)
             old_sha = old_target.get(f)
@@ -440,11 +441,90 @@ def cmd_status(target_str: str) -> None:
         info("No changes since last sync.")
 
 
+def cmd_migrate(target_str: str) -> None:
+    """One-time migration: restructure a flat enterprise target into subdirectory layout."""
+    target = validate_target(target_str, "migrate")
+    subdir = target / SUBDIR
+
+    header(f"Migrating flat layout -> {SUBDIR}/ subdirectory")
+    print()
+
+    # Check if already migrated
+    if subdir.is_dir():
+        die(f"Target already has {SUBDIR}/ directory — migration may have already been done.")
+
+    # Move src/ and scripts/ into excaliframe/
+    subdir.mkdir(parents=True, exist_ok=True)
+
+    moved = []
+    for dirname in ["src", "scripts"]:
+        src_dir = target / dirname
+        if src_dir.is_dir():
+            dst_dir = subdir / dirname
+            shutil.move(str(src_dir), str(dst_dir))
+            info(f"  Moved {dirname}/ -> {SUBDIR}/{dirname}/")
+            moved.append(dirname)
+        else:
+            warn(f"  {dirname}/ not found in target, skipping")
+
+    if not moved:
+        # Clean up empty subdir
+        subdir.rmdir()
+        die("Nothing to move — target has no src/ or scripts/ directories")
+
+    print()
+
+    # Patch config files
+    patches = [
+        ("webpack.config.js", [
+            ("./src/", f"./{SUBDIR}/src/"),
+        ]),
+        ("tsconfig.json", [
+            ('"src/**/*"', f'"{SUBDIR}/src/**/*"'),
+            ('"./src"', f'"./{SUBDIR}/src"'),
+            ('["src/*"]', f'["{SUBDIR}/src/*"]'),
+        ]),
+        ("package.json", [
+            ("scripts/update-version.js", f"{SUBDIR}/scripts/update-version.js"),
+        ]),
+    ]
+
+    for filename, replacements in patches:
+        filepath = target / filename
+        if not filepath.is_file():
+            warn(f"  {filename} not found, skipping patches")
+            continue
+
+        content = filepath.read_text()
+        original = content
+        applied = []
+        for old, new in replacements:
+            if old in content:
+                content = content.replace(old, new)
+                applied.append((old, new))
+
+        if content != original:
+            filepath.write_text(content)
+            info(f"  Patched {filename}")
+            for old, new in applied:
+                print(f"    {old} -> {new}")
+        else:
+            warn(f"  {filename} — no matching patterns found")
+
+    print()
+    info("Migration complete!")
+    print()
+    warn("Next steps:")
+    warn("  1. Review changes in the target repo")
+    warn("  2. Run 'npm run build' to verify the build works")
+    warn("  3. Run 'make sync TARGET=...' to sync latest source")
+
+
 # ── Main ────────────────────────────────────────────────────────────────────
 
 def main() -> None:
     if len(sys.argv) < 2:
-        die("Usage: sync.py <sync|diff|status> <target> [--commit] [--force]")
+        die("Usage: sync.py <sync|diff|status|migrate> <target> [--commit] [--force]")
 
     mode = sys.argv[1]
     # Filter out flags to get positional args
@@ -459,8 +539,10 @@ def main() -> None:
         cmd_diff(target)
     elif mode == "status":
         cmd_status(target)
+    elif mode == "migrate":
+        cmd_migrate(target)
     else:
-        die(f"Unknown mode: {mode}. Use: sync, diff, status")
+        die(f"Unknown mode: {mode}. Use: sync, diff, status, migrate")
 
 
 if __name__ == "__main__":

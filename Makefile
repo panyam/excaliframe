@@ -1,4 +1,4 @@
-.PHONY: help install build dev type-check clean deploy install-app tunnel lint sync diff sync-status
+.PHONY: help install build dev type-check clean deploy install-app tunnel lint sync diff sync-status migrate
 
 # Default target
 .DEFAULT_GOAL := help
@@ -124,3 +124,6 @@ diff: ## Show diff between source and enterprise target
 
 sync-status: ## Show what changed since last sync
 	@python3 tools/sync.py status "$(TARGET)"
+
+migrate: ## One-time migration: restructure enterprise target into excaliframe/ subdirectory
+	@python3 tools/sync.py migrate "$(TARGET)"

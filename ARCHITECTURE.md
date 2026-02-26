@@ -217,36 +217,95 @@ See [SECURITY_ROADMAP.md](./SECURITY_ROADMAP.md) for the enterprise compliance p
 
 ---
 
-## Adding New Editors
+## Adding New Diagram Libraries
 
-The architecture supports new diagram types alongside Excalidraw:
+Excaliframe is the "uber wrapper" — a shell that dispatches to native diagram libraries (Excalidraw, Mermaid, etc.) based on the Confluence macro type.
 
-1. Create `src/<newtype>/` with editor and renderer components
-2. Add a new macro entry in `manifest.yml`
-3. Add webpack config entry in `webpack.config.js`
-4. Forge serves each as independent Custom UI resources
+### Shared Resources Model
 
-Example structure after adding Mermaid:
+The editor and renderer are Confluence-side concepts (edit view vs. page view), not tool-specific. A single editor bundle and a single renderer bundle serve all diagram types. The Forge macro key determines which library to load:
+
+```yaml
+# manifest.yml
+macro:
+  - key: excalidraw-macro     # User types /Excali...
+    resource: renderer
+    config:
+      resource: editor
+  - key: mermaid-macro         # User types /Mer...
+    resource: renderer
+    config:
+      resource: editor
+```
+
+At runtime, the editor/renderer reads the macro key and loads the appropriate native library:
+- `excalidraw-macro` → loads `@excalidraw/excalidraw`
+- `mermaid-macro` → loads `mermaid`
+
+Libraries can be lazy-loaded via dynamic `import()` so only the relevant library's chunks download.
+
+### Source Structure
+
+New libraries add source files under the existing `src/editor/` and `src/renderer/` directories (not separate top-level dirs):
+
 ```
 src/
-├── editor/              # Excalidraw editor
-├── renderer/            # Excalidraw renderer
-├── mermaid-editor/      # Mermaid editor
-└── mermaid-renderer/    # Mermaid renderer
+├── editor/
+│   ├── ExcalidrawEditor.tsx    # Excalidraw-specific editor
+│   ├── MermaidEditor.tsx       # Mermaid-specific editor (future)
+│   ├── index.tsx               # Shared entry — routes by macro key
+│   └── ...
+├── renderer/
+│   ├── ExcalidrawRenderer.tsx  # Excalidraw-specific renderer
+│   ├── MermaidRenderer.tsx     # Mermaid-specific renderer (future)
+│   ├── index.tsx               # Shared entry — routes by macro key
+│   └── ...
+└── types/
 ```
 
-Each editor type is fully independent — no shared runtime state.
+### What Stays the Same
+
+- Webpack config: still two entry points (editor, renderer)
+- Forge resources: still `static/editor/` and `static/renderer/`
+- Sync tool: picks up new source files automatically (entire `src/` is synced)
+- No new enterprise-side config changes needed for additional libraries
 
 ---
 
 ## Enterprise Distribution
 
-The `tools/sync.py` script enables syncing the plugin to enterprise forks:
+The `tools/sync.py` script syncs library source code (`src/`, `scripts/`) into an `excaliframe/` subdirectory within the enterprise target. This keeps enterprise config files (`package.json`, `webpack.config.js`, `tsconfig.json`, `.pipeline/`, `Makefile`) untouched by syncs.
+
+### Enterprise Target Layout
+
+```
+enterprise-repo/
+├── .pipeline/config.json         # Enterprise CI — untouched by sync
+├── package.json                  # Enterprise deps — untouched (paths patched once by migrate)
+├── webpack.config.js             # Reads from ./excaliframe/src/, outputs to static/
+├── tsconfig.json                 # Points to excaliframe/src/
+├── manifest.yml                  # Forge resource paths (static/editor, static/renderer)
+├── Makefile                      # Enterprise build targets — untouched
+├── excaliframe/                  # ← synced content lives here
+│   ├── src/
+│   │   ├── editor/
+│   │   ├── renderer/
+│   │   └── types/
+│   └── scripts/
+└── static/                       # Webpack build output (committed for Forge deploy)
+    ├── editor/
+    └── renderer/
+```
+
+### Commands
 
 ```bash
 make sync TARGET=/path/to/enterprise-fork          # Preview changes
 make sync TARGET=/path/to/enterprise-fork COMMIT=1  # Apply changes
 make diff TARGET=/path/to/enterprise-fork           # Show diff
+make migrate TARGET=/path/to/enterprise-fork        # One-time: restructure flat layout to subdir
 ```
 
-Uses an allowlist of plugin-relevant files and an ignorelist for generated files (`src/version.ts`).
+The `migrate` command is a one-time operation for existing enterprise repos that had the old flat layout (src/ at top level). It moves directories and patches config file paths.
+
+Only `src/` and `scripts/` are synced. Generated files (`src/version.ts`) are excluded via ignorelist.
