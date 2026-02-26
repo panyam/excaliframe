@@ -2,115 +2,251 @@
 
 ## Overview
 
-Excaliframe is a Confluence Cloud Connect app that embeds drawing editors (starting with Excalidraw) into Confluence pages. The architecture is designed for:
+Excaliframe has two independent components:
 
-- **Minimal attack surface**: Go backend with zero runtime dependencies
-- **Extensibility**: Namespaced structure allows adding new editors (e.g., Mermaid) without conflicts
-- **Cost efficiency**: Static assets served by CDN/GAE, Go server only handles dynamic routes
+1. **Confluence Plugin** — An Atlassian Forge app that embeds Excalidraw into Confluence pages as a native macro. TypeScript/React frontend, deployed to Atlassian's Forge platform.
+2. **Marketing Site** — A Go web application at [excaliframe.com](https://excaliframe.com) for landing pages, docs, and SEO. Deployed to Google App Engine.
+
+Design principles:
+- **Zero backend state**: No database, no user data storage — all diagram data lives in Confluence
+- **Small auditable surface**: ~620 lines of TypeScript for the entire plugin
+- **Extensibility**: Namespaced structure supports adding new editor types (e.g., Mermaid)
+- **Client-side processing**: All drawing operations run in the browser
+
+---
 
 ## System Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                     Confluence Cloud                             │
-│  ┌────────────────────────────────────────────────────────────┐ │
-│  │                    Confluence Page                          │ │
-│  │  ┌──────────────────────────────────────────────────────┐  │ │
-│  │  │              Excalidraw Macro (iframe)               │  │ │
-│  │  │         Loads /excalidraw/editor or /renderer        │  │ │
-│  │  └──────────────────────────────────────────────────────┘  │ │
-│  └────────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              │ HTTPS
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    Excaliframe Server                            │
-│                                                                  │
-│  Static (GAE/CDN)           │    Dynamic (Go Server)            │
-│  ─────────────────          │    ───────────────────            │
-│  /static/excalidraw/*.js    │    /confluence/atlassian-connect  │
-│  /images/*                  │    /confluence/lifecycle/*        │
-│                             │    /excalidraw/editor             │
-│                             │    /excalidraw/renderer           │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│                    Confluence Cloud                       │
+│                                                          │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │                 Confluence Page                      │  │
+│  │                                                      │  │
+│  │  ┌──────────────────────────────────────────────┐   │  │
+│  │  │           Excalidraw Macro (iframe)           │   │  │
+│  │  │                                               │   │  │
+│  │  │  View mode  → Renderer (PNG preview)          │   │  │
+│  │  │  Edit mode  → Editor (full Excalidraw canvas) │   │  │
+│  │  └──────────────────────────────────────────────┘   │  │
+│  │                        │                             │  │
+│  │            ┌───────────┴───────────┐                 │  │
+│  │            │  Macro Config Store   │                 │  │
+│  │            │  (drawing JSON +      │                 │  │
+│  │            │   PNG preview)        │                 │  │
+│  │            └───────────────────────┘                 │  │
+│  └────────────────────────────────────────────────────┘  │
+│                                                          │
+│  Forge hosts static assets (HTML/JS/CSS) on Atlassian    │
+│  infrastructure. No external server involved.            │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│              Marketing Site (separate)                    │
+│                                                          │
+│  excaliframe.com  →  Google App Engine (Go)              │
+│  Landing page, docs, privacy, terms, contact             │
+└─────────────────────────────────────────────────────────┘
 ```
+
+---
 
 ## Directory Structure
 
 ```
 excaliframe/
-├── main.go                     # Server entry point
-├── server/                     # Go handler packages
-│   ├── confluence/             # /confluence/* routes
-│   ├── excalidraw/             # /excalidraw/* routes
-│   └── middleware/             # HTTP middleware
-├── src/                        # Frontend source (TypeScript/React)
-│   ├── editor/                 # Excalidraw editor
-│   └── renderer/               # Excalidraw renderer
-└── dist/                       # Build output
-    ├── excalidraw/             # HTML pages (served by Go)
-    ├── static/excalidraw/      # JS bundles (served by GAE/CDN)
-    └── images/                 # Static images
+├── src/                            # Plugin frontend (TypeScript/React)
+│   ├── editor/
+│   │   ├── ExcalidrawEditor.tsx    # Full Excalidraw editor (~384 lines)
+│   │   ├── index.tsx               # React entry point
+│   │   ├── index.html              # HTML template
+│   │   └── styles.css
+│   ├── renderer/
+│   │   ├── ExcalidrawRenderer.tsx  # PNG preview viewer (~142 lines)
+│   │   ├── index.tsx               # React entry point
+│   │   ├── index.html              # HTML template
+│   │   └── styles.css
+│   ├── types/
+│   │   └── atlassian-connect.d.ts  # TypeScript type definitions
+│   └── version.ts                  # Auto-generated version info
+│
+├── static/                         # Webpack build output (Forge resources)
+│   ├── editor/                     # Editor bundle (served by Forge)
+│   └── renderer/                   # Renderer bundle (served by Forge)
+│
+├── site/                           # Marketing site (Go)
+│   ├── main.go                     # Server entry point
+│   ├── server/
+│   │   ├── app.go                  # App context and config
+│   │   └── views.go                # Page handlers and routes
+│   ├── templates/                  # HTML templates (goapplib/templar)
+│   ├── static/                     # CSS, images, robots.txt, sitemap
+│   ├── app.yaml                    # App Engine config
+│   └── Makefile                    # Site build/deploy
+│
+├── tools/
+│   └── sync.py                     # Enterprise distribution sync tool
+│
+├── manifest.yml                    # Forge app manifest
+├── package.json                    # npm dependencies
+├── webpack.config.js               # Webpack config (editor + renderer)
+├── tsconfig.json                   # TypeScript config
+└── Makefile                        # Build, deploy, install commands
 ```
 
-## Adding New Editors
+---
 
-The architecture supports adding new diagram types (e.g., Mermaid):
+## Confluence Plugin (Forge)
 
-1. **Frontend**: Create `src/mermaid/` with editor and renderer
-2. **Backend**: Create `server/mermaid/handlers.go` returning an `http.Handler`
-3. **Build**: Webpack outputs to `dist/mermaid/` and `dist/static/mermaid/`
-4. **Routes**: Mount handler in `main.go` at `/mermaid/`
+### Dual-Component Model
 
-Example structure after adding Mermaid:
+The plugin consists of two independent React apps, built as separate Webpack bundles:
+
+| Component | Purpose | Entry Point | Key File |
+|-----------|---------|-------------|----------|
+| **Editor** | Full Excalidraw canvas for creating/editing | `src/editor/index.tsx` | `ExcalidrawEditor.tsx` |
+| **Renderer** | PNG preview for viewing on pages | `src/renderer/index.tsx` | `ExcalidrawRenderer.tsx` |
+
+Configured in `manifest.yml`:
+- Macro `resource` → renderer (what users see on the page)
+- Macro `config.resource` → editor (opens in fullscreen dialog on edit)
+
+### Data Storage
+
+All data is stored in Confluence's macro config (no external storage):
+
+```typescript
+interface MacroConfig {
+  drawing: string;   // JSON stringified Excalidraw scene data
+  preview: string;   // Base64 PNG data URL for inline display
+}
 ```
-dist/
-├── excalidraw/
-│   ├── editor.html
-│   └── renderer.html
-├── mermaid/
-│   ├── editor.html
-│   └── renderer.html
-├── static/
-│   ├── excalidraw/*.js
-│   └── mermaid/*.js
-└── images/
+
+The editor reads/writes this config via `@forge/bridge`:
+- **Load**: `view.getContext()` → `context.extension.config`
+- **Save**: `view.submit({ config: macroConfig })` — saves and closes the editor
+
+### Data Flow
+
+1. **Insert**: User types `/Excalidraw` in the Confluence editor
+2. **View**: Confluence loads the **renderer** iframe, which displays the PNG preview
+3. **Edit**: User clicks edit → Confluence opens the **editor** iframe in a fullscreen dialog
+4. **Draw**: Excalidraw runs entirely client-side in the editor
+5. **Save**: Editor generates a PNG preview via `exportToCanvas()`, bundles it with the drawing JSON, and calls `view.submit()` to persist back to Confluence
+6. **Close**: `view.submit()` saves the config AND closes the editor panel
+
+### Key Editor Features
+
+- **Dirty state tracking** — warns on unsaved changes before closing
+- **ESC key handling** — closes editor (defers to Excalidraw when menus are open)
+- **Copy/Paste JSON** — export/import Excalidraw scenes via clipboard
+- **Dynamic loading** — Excalidraw loaded via `import()` for code splitting
+- **Version display** — auto-generated from `scripts/update-version.js`
+
+### Technology Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 18, TypeScript 5 |
+| Diagramming | @excalidraw/excalidraw 0.18 |
+| Confluence API | @forge/bridge 4, @forge/api 4 |
+| Bundler | Webpack 5 (multi-config: editor + renderer) |
+| Build | npm + Makefile |
+
+### Build & Deploy
+
+```bash
+make build          # Webpack builds editor + renderer to static/
+make deploy         # Build + forge deploy -e development
+make deploy-prod    # Build + forge deploy -e production
+make install-app    # forge install -e development -p Confluence
+make tunnel         # Build + forge tunnel (live dev testing)
 ```
 
-## Data Flow
+Webpack outputs to `static/editor/` and `static/renderer/`, which Forge serves as Custom UI resources. Excalidraw fonts are copied to the editor bundle only.
 
-1. **Insert**: User types `/Excalidraw` in Confluence editor
-2. **Edit**: Confluence opens `editor.html` in fullscreen dialog (iframe)
-3. **Draw**: User creates drawing (Excalidraw runs client-side)
-4. **Save**: Drawing JSON + PNG preview saved to macro body via `AP.confluence.saveMacro()`
-5. **View**: Page load renders `renderer.html` showing PNG preview
-6. **Re-edit**: Clicking edit loads JSON back into Excalidraw
+---
+
+## Marketing Site (Go)
+
+A separate Go web application for the public-facing website.
+
+### Stack
+
+- **Framework**: [goapplib](https://github.com/panyam/goapplib) with [templar](https://github.com/panyam/templar) templates
+- **Styling**: Tailwind CSS (CDN) + custom CSS
+- **Deployment**: Google App Engine (`go` runtime)
+- **URL**: https://excaliframe.com
+
+### Pages
+
+| Route | Page |
+|-------|------|
+| `/` | Landing page |
+| `/docs/` | Documentation |
+| `/privacy/` | Privacy policy |
+| `/terms/` | Terms of service |
+| `/contact/` | Contact (links to GitHub Issues) |
+
+### SEO
+
+- Canonical URL redirects (www → non-www, http → https)
+- Meta descriptions and Open Graph tags on all pages
+- `robots.txt` and `sitemap.xml`
+
+### Build & Deploy
+
+```bash
+cd site/
+make run            # Run locally
+make deploy         # Deploy to App Engine
+```
+
+---
 
 ## Security Model
 
-- **Stateless server**: No user data stored on server
-- **Data in Confluence**: All drawings stored in Confluence's content storage
-- **No external calls**: Excalidraw bundled; no runtime external dependencies
-- **JWT authentication**: Confluence Connect handles auth via JWT
+- **No server-side state**: Forge hosts static assets only; no database, no user data storage
+- **Data stays in Confluence**: All drawings stored in Confluence macro config, inheriting Confluence's permissions and encryption
+- **No external network calls**: Excalidraw is bundled (~400KB); no runtime fetches to third-party services
+- **Client-side only**: All drawing, rendering, and PNG generation happen in the browser
+- **Auditable**: `grep -r "fetch\|XMLHttpRequest\|sendBeacon\|WebSocket" src/` returns only `navigator.clipboard` usage (user-initiated copy/paste)
 
-See [SECURITY_ROADMAP.md](./SECURITY_ROADMAP.md) for enterprise compliance path.
+See [SECURITY_ROADMAP.md](./SECURITY_ROADMAP.md) for the enterprise compliance path.
 
-## Deployment
+---
 
-### Google App Engine (Recommended)
+## Adding New Editors
 
-- Runtime: `go124`
-- Static files served directly by GAE (no instance hours)
-- Auto-scales to zero when idle (free tier friendly)
+The architecture supports new diagram types alongside Excalidraw:
 
-### Docker
+1. Create `src/<newtype>/` with editor and renderer components
+2. Add a new macro entry in `manifest.yml`
+3. Add webpack config entry in `webpack.config.js`
+4. Forge serves each as independent Custom UI resources
 
-Multi-stage build produces ~15MB image:
-1. Node.js stage: builds frontend
-2. Go stage: builds server binary
-3. Alpine stage: final minimal image
+Example structure after adding Mermaid:
+```
+src/
+├── editor/              # Excalidraw editor
+├── renderer/            # Excalidraw renderer
+├── mermaid-editor/      # Mermaid editor
+└── mermaid-renderer/    # Mermaid renderer
+```
 
-### Self-hosted
+Each editor type is fully independent — no shared runtime state.
 
-Single binary + `dist/` folder. No runtime dependencies.
+---
+
+## Enterprise Distribution
+
+The `tools/sync.py` script enables syncing the plugin to enterprise forks:
+
+```bash
+make sync TARGET=/path/to/enterprise-fork          # Preview changes
+make sync TARGET=/path/to/enterprise-fork COMMIT=1  # Apply changes
+make diff TARGET=/path/to/enterprise-fork           # Show diff
+```
+
+Uses an allowlist of plugin-relevant files and an ignorelist for generated files (`src/version.ts`).
