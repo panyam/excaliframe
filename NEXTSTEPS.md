@@ -30,10 +30,19 @@ Immediate and near-term action items for Excaliframe.
 
 ## In Progress
 
-### Fix Playground Data Persistence Bug
-- After saving a drawing in the Excalidraw editor, returning to the listing/detail/edit pages shows empty data
-- Save appears to complete successfully but drawing data is not found on subsequent page loads
-- Likely issue in how `WebEditorHost.saveDrawing()` interacts with `PlaygroundStore` or how drawing data round-trips through IndexedDB
+### Fix False Positive "Unsaved Changes" Indicator
+- When loading an existing drawing, "Unsaved changes" appears immediately without user interaction
+- Root cause: Excalidraw mutates internal element properties (`version`, `versionNonce`, `updated`, `seed`) when loading elements into the scene
+- Attempted fix: fingerprint-based comparison excluding internal keys — partially implemented in `ExcalidrawEditor.tsx` but still triggers false positive
+- The `isDeleted` field may also be added by Excalidraw during init, causing fingerprint mismatch
+- Next step: debug what specific properties differ between stored and post-init fingerprints
+
+### Reorganize Playground Code into `site/`
+- The `site/` folder IS the web folder (like `lilbattle/web/`)
+- Move playground TS/TSX source into `site/` (e.g. `site/pages/playground/`)
+- Give `site/` its own `package.json`, `tsconfig.json`, `webpack.config.js`
+- Remove `webpack.playground.js` from project root
+- Shared core code (`src/core/`, `src/hosts/`) stays at root for Forge; site imports via path alias or local dependency
 
 ## Backlog
 
@@ -67,4 +76,5 @@ Immediate and near-term action items for Excaliframe.
 - [x] Multi-hostable architecture: extracted core components (`src/core/`) with host adapter interface
 - [x] Host adapters: Forge (`src/hosts/forge.ts`) and Web/localStorage (`src/hosts/web.ts`)
 - [x] Interactive playground on marketing site (`/playground/` → full Excalidraw editor with localStorage persistence)
-- [x] Multi-drawing playground with list/detail/edit pages and IndexedDB storage (WIP: data persistence bug)
+- [x] Multi-drawing playground with list/detail/edit pages and IndexedDB storage
+- [x] Fix playground data persistence bug (save spinner was blocking subsequent saves)

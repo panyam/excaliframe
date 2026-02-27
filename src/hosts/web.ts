@@ -5,6 +5,7 @@ export class WebEditorHost implements EditorHost {
   private drawingId: string;
   private store: PlaygroundStore;
   private title: string = 'Untitled Drawing';
+  private createdAt: string | undefined;
 
   constructor(drawingId: string, store: PlaygroundStore) {
     this.drawingId = drawingId;
@@ -15,10 +16,15 @@ export class WebEditorHost implements EditorHost {
     const drawing = await this.store.getById(this.drawingId);
     if (!drawing) return null;
     this.title = drawing.title;
+    this.createdAt = drawing.envelope.createdAt;
     return drawing.envelope;
   }
 
   async saveDrawing(envelope: DrawingEnvelope): Promise<void> {
+    // Preserve createdAt from the original drawing
+    if (this.createdAt && !envelope.createdAt) {
+      envelope.createdAt = this.createdAt;
+    }
     await this.store.save({
       id: this.drawingId,
       title: this.title,

@@ -23,6 +23,25 @@ interface Props {
   host: EditorHost;
 }
 
+// Keys that Excalidraw mutates internally on every scene update (version bumps,
+// random nonces, timestamps). Excluding these from comparison prevents false
+// positive "unsaved changes" when loading existing drawings.
+const INTERNAL_KEYS = new Set(['version', 'versionNonce', 'updated', 'seed']);
+
+/** Stable fingerprint of elements excluding Excalidraw's internal versioning fields. */
+function fingerprint(elements: readonly any[]): string {
+  const stable = elements
+    .filter((el: any) => !el.isDeleted)
+    .map((el: any) => {
+      const out: Record<string, any> = {};
+      for (const key of Object.keys(el)) {
+        if (!INTERNAL_KEYS.has(key)) out[key] = el[key];
+      }
+      return out;
+    });
+  return JSON.stringify(stable);
+}
+
 const ExcalidrawEditor: React.FC<Props> = ({ host }) => {
   const [ExcalidrawComponent, setExcalidrawComponent] = useState<any>(null);
   const [MainMenuComponent, setMainMenuComponent] = useState<any>(null);
@@ -35,7 +54,7 @@ const ExcalidrawEditor: React.FC<Props> = ({ host }) => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isDirty, setIsDirty] = useState<boolean>(false);
-  const initialElementsRef = useRef<string>('[]');
+  const initialFingerprintRef = useRef<string>('[]');
 
   // Dynamically load Excalidraw components
   useEffect(() => {
@@ -60,7 +79,7 @@ const ExcalidrawEditor: React.FC<Props> = ({ host }) => {
         console.log('Editor - Found existing drawing data');
         const drawingData: ExcalidrawDrawingData = JSON.parse(envelope.data);
         const elements = drawingData.elements || [];
-        initialElementsRef.current = JSON.stringify(elements);
+        initialFingerprintRef.current = fingerprint(elements);
         setInitialData({
           elements: elements,
           appState: {
@@ -132,7 +151,7 @@ const ExcalidrawEditor: React.FC<Props> = ({ host }) => {
       console.log('Editor - Save complete');
       setIsSaving(false);
       setIsDirty(false);
-      initialElementsRef.current = JSON.stringify([...elements]);
+      initialFingerprintRef.current = fingerprint(elements);
 
     } catch (error) {
       console.error('Editor - Error saving:', error);
@@ -150,12 +169,12 @@ const ExcalidrawEditor: React.FC<Props> = ({ host }) => {
     host.close();
   }, [isDirty, host]);
 
-  // Track changes to detect dirty state
+  // Track changes to detect dirty state.
+  // Uses fingerprint() to compare only user-visible properties, ignoring
+  // Excalidraw's internal versioning fields (version, versionNonce, updated, seed)
+  // that mutate on every scene update even without user interaction.
   const handleChange = useCallback((elements: readonly ExcalidrawElement[]): void => {
-    const activeElements = elements.filter((el: any) => !el.isDeleted);
-    const currentJson = JSON.stringify(activeElements);
-    const hasChanges = currentJson !== initialElementsRef.current;
-    setIsDirty(hasChanges);
+    setIsDirty(fingerprint(elements) !== initialFingerprintRef.current);
   }, []);
 
   // Handle ESC key
