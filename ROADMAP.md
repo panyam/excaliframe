@@ -59,8 +59,8 @@ Make Excaliframe the go-to lightweight diagramming toolkit for Confluence and th
 | Web/localStorage host adapter | Done |
 | Server-backed host adapter (API persistence) | Planned |
 | Playground Mermaid editor | Done |
-| Forge Mermaid macro | Planned |
-| Macro key dispatcher in editor/renderer entry points | Planned |
+| Forge Mermaid macro | Done |
+| Macro key dispatcher in editor/renderer entry points | Done |
 | Lazy-loaded library bundles (dynamic import per diagram type) | Done |
 | Playground tool chooser (tool selection modal) | Done |
 

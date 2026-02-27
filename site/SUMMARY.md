@@ -13,7 +13,7 @@ A simple Go web application built with [goapplib](https://github.com/panyam/goap
 - **Home** (`/`) - Landing page with feature highlights, screenshots, and installation link
 - **Playground List** (`/playground/`) - Multi-drawing list page with grid/table view toggle
 - **Playground Detail** (`/playground/{drawingId}/`) - Drawing preview with metadata and edit/delete buttons
-- **Playground Edit** (`/playground/{drawingId}/edit`) - Full-screen Excalidraw editor with inline-editable drawing title
+- **Playground Edit** (`/playground/{drawingId}/edit`) - Full-screen editor (Excalidraw or Mermaid) with inline-editable drawing title
 - **Documentation** (`/docs/`) - Installation guide, FAQ, and tips
 - **Privacy Policy** (`/privacy/`) - Privacy policy (no data collection, all data stays in Confluence)
 - **Terms of Service** (`/terms/`) - MIT license terms and disclaimers

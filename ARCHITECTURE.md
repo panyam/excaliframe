@@ -66,15 +66,19 @@ excaliframe/
 │   │   ├── ExcalidrawEditor.tsx    # Excalidraw editor (accepts EditorHost prop)
 │   │   ├── ExcalidrawRenderer.tsx  # Excalidraw renderer (accepts RendererHost prop)
 │   │   ├── MermaidEditor.tsx       # Mermaid split-pane editor (code + live preview)
+│   │   ├── mermaid.css             # Mermaid editor styles (shared by Forge + playground)
 │   │   └── DrawingTitle.tsx        # Inline-editable title (standalone, host-agnostic)
 │   ├── hosts/                      # Platform-specific host adapters
 │   │   ├── forge.ts                # ForgeEditorHost, ForgeRendererHost (@forge/bridge)
 │   │   ├── web.ts                  # WebEditorHost, WebRendererHost (IndexedDB via PlaygroundStore)
 │   │   └── playground-store.ts     # IndexedDB wrapper for multi-drawing storage
-│   ├── editor/                     # Forge editor entry point
-│   │   ├── index.tsx               # Wires core editor + Forge host
+│   ├── editor/                     # Forge editor entry point (dispatcher)
+│   │   ├── index.tsx               # Reads macro key, lazy-loads correct editor
+│   │   ├── excalidraw-boot.tsx     # Excalidraw async chunk wrapper
+│   │   ├── mermaid-boot.tsx        # Mermaid async chunk wrapper
+│   │   ├── excalidraw.css          # Excalidraw-specific styles
 │   │   ├── index.html              # HTML template
-│   │   └── styles.css
+│   │   └── styles.css              # Generic editor reset
 │   ├── renderer/                   # Forge renderer entry point
 │   │   ├── index.tsx               # Wires core renderer + Forge host
 │   │   ├── index.html              # HTML template
@@ -94,8 +98,7 @@ excaliframe/
 │   │   │   ├── index.tsx           # Reads envelope.tool, lazy-loads correct editor
 │   │   │   ├── excalidraw-boot.tsx # Excalidraw async chunk wrapper
 │   │   │   ├── mermaid-boot.tsx    # Mermaid async chunk wrapper
-│   │   │   ├── styles.css          # Shared editor reset
-│   │   │   └── mermaid.css         # Mermaid split-pane layout
+│   │   │   └── styles.css          # Shared editor reset
 │   │   ├── excalidraw/             # Excalidraw-specific styles (imported by boot)
 │   │   │   └── styles.css
 │   │   ├── listing/                # Drawing list page entry point
@@ -177,8 +180,8 @@ The plugin consists of two independent React apps, built as separate Webpack bun
 
 | Component | Purpose | Entry Point | Core Component |
 |-----------|---------|-------------|----------------|
-| **Editor** | Full Excalidraw canvas for creating/editing | `src/editor/index.tsx` | `src/core/ExcalidrawEditor.tsx` |
-| **Renderer** | PNG preview for viewing on pages | `src/renderer/index.tsx` | `src/core/ExcalidrawRenderer.tsx` |
+| **Editor** | Dispatcher — loads Excalidraw or Mermaid by macro key | `src/editor/index.tsx` | `src/core/ExcalidrawEditor.tsx` or `MermaidEditor.tsx` |
+| **Renderer** | Preview for viewing on pages (tool-agnostic) | `src/renderer/index.tsx` | `src/core/ExcalidrawRenderer.tsx` |
 
 Configured in `manifest.yml`:
 - Macro `resource` → renderer (what users see on the page)
@@ -200,9 +203,20 @@ The Forge host adapter reads/writes via `@forge/bridge`:
 - **Load**: `view.getContext()` → `context.extension.config` → `DrawingEnvelope`
 - **Save**: `DrawingEnvelope` → `view.submit({ config: macroConfig })` — saves and closes the editor
 
+### Editor Dispatcher
+
+The Forge editor entry point (`src/editor/index.tsx`) uses the same dispatcher pattern as the playground:
+
+1. Read `moduleKey` from `view.getContext()` (`extension.moduleKey`)
+2. Map macro key to tool: `'mermaid-macro'` → `'mermaid'`, default → `'excalidraw'`
+3. Dynamic `import()` of the matching boot module (`excalidraw-boot.tsx` or `mermaid-boot.tsx`)
+4. Create `ForgeEditorHost(tool)` and mount the editor
+
+Each boot module is a webpack async chunk that imports the tool's core editor + CSS. This means Mermaid users never download Excalidraw, and vice versa.
+
 ### Data Flow
 
-1. **Insert**: User types `/Excalidraw` in the Confluence editor
+1. **Insert**: User types `/Excalidraw` or `/Mermaid` in the Confluence editor
 2. **View**: Confluence loads the **renderer** iframe, which displays the PNG preview
 3. **Edit**: User clicks edit → Confluence opens the **editor** iframe in a fullscreen dialog
 4. **Draw**: Excalidraw runs entirely client-side in the editor
@@ -288,7 +302,9 @@ The playground is a multi-page experience for creating, browsing, and editing dr
 - `playground-detail` → `site/static/playground/detail/bundle.js` (small, jsx-dom)
 - `playground-editor` → `site/static/playground/editor/bundle.js` (dispatcher + async chunks)
 
-The editor bundle uses an **editor dispatcher** pattern: the entry point reads `envelope.tool` from IndexedDB, then dynamically imports the matching editor (Excalidraw or Mermaid) as a webpack async chunk. This means Mermaid users never download Excalidraw (~400KB), and vice versa. `splitChunks: { chunks: 'async' }` enables automatic code splitting.
+The editor bundle uses an **editor dispatcher** pattern: the entry point reads `envelope.tool` from IndexedDB, then dynamically imports the matching editor (Excalidraw or Mermaid) as a webpack async chunk. This means Mermaid users never download Excalidraw (~400KB), and vice versa. `splitChunks: { chunks: 'async' }` enables automatic code splitting. The same pattern is used by the Forge editor entry point (reads `moduleKey` from `view.getContext()` instead of IndexedDB).
+
+Mermaid CSS (`src/core/mermaid.css`) is shared between Forge and playground builds — the playground boot file imports via `@excaliframe/core/mermaid.css`.
 
 Module resolution uses `resolve.modules` to pin all packages to `site/node_modules/`, preventing dual-instance issues when `../src/` files import React or Excalidraw.
 

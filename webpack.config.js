@@ -31,7 +31,7 @@ const createConfig = (name, isDev) => {
     output: {
       path: path.resolve(__dirname, `static/${name}`),
       filename: 'bundle.js',
-      chunkFilename: '[id].js',
+      chunkFilename: '[name].js',
       assetModuleFilename: '[hash][ext]',
       clean: true,
       publicPath: './',
@@ -65,7 +65,7 @@ const createConfig = (name, isDev) => {
     plugins,
     devtool: isDev ? 'eval-source-map' : 'source-map',
     optimization: {
-      splitChunks: false,
+      splitChunks: name === 'editor' ? { chunks: 'async' } : false,
       runtimeChunk: false,
     },
     performance: {

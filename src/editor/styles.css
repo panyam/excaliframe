@@ -1,4 +1,4 @@
-/* Excalidraw editor styles */
+/* Generic editor reset */
 * {
   box-sizing: border-box;
 }
@@ -19,32 +19,4 @@ html, body {
 #root {
   width: 100%;
   height: 100%;
-}
-
-/* Ensure Excalidraw fills its container */
-.excalidraw-wrapper {
-  width: 100%;
-  height: 100%;
-}
-
-.excalidraw {
-  width: 100%;
-  height: 100%;
-}
-
-/* Hide Excalidraw's welcome screen if it appears */
-.excalidraw .welcome-screen-center,
-.excalidraw .WelcomeScreen,
-.excalidraw .welcome-screen-decor {
-  display: none !important;
-}
-
-/* Ensure the canvas takes full space */
-.excalidraw .layer-ui__wrapper {
-  height: 100% !important;
-}
-
-/* Force the canvas to be visible */
-.excalidraw canvas {
-  display: block !important;
 }

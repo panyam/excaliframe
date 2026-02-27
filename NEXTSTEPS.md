@@ -37,12 +37,6 @@ Immediate and near-term action items for Excaliframe.
 - The `isDeleted` field may also be added by Excalidraw during init, causing fingerprint mismatch
 - Next step: debug what specific properties differ between stored and post-init fingerprints
 
-### 4. Forge Mermaid Macro
-- Add Mermaid macro key to `manifest.yml`
-- Create `MermaidRenderer.tsx` in `src/core/`
-- Add macro key dispatcher in `src/editor/index.tsx` and `src/renderer/index.tsx`
-- Build and test in Confluence
-
 ## Backlog
 
 - **Security whitepaper** — formal architecture and trust model document
@@ -86,3 +80,7 @@ Immediate and near-term action items for Excaliframe.
 - [x] Editor dispatcher with dynamic imports — lazy-loads Excalidraw or Mermaid per drawing
 - [x] Tool selection modal — Excalidraw and Mermaid options for new drawings
 - [x] SVG preview for Mermaid drawings on listing and detail pages
+- [x] Forge Mermaid macro — `mermaid-macro` in manifest, editor dispatcher reads `moduleKey`, async code splitting
+- [x] Shared mermaid.css — moved from site-local to `src/core/mermaid.css` for Forge + playground reuse
+- [x] ForgeEditorHost/ForgeRendererHost accept `tool` param (default `'excalidraw'` for backward compat)
+- [x] Synced to enterprise Forge repo with `mermaid` dependency and webpack code splitting

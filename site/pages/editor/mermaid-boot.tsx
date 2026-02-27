@@ -1,3 +1,3 @@
 import MermaidEditor from '@excaliframe/core/MermaidEditor';
-import './mermaid.css';
+import '@excaliframe/core/mermaid.css';
 export default MermaidEditor;
