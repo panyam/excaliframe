@@ -9,11 +9,11 @@
                 Excaliframe
             </h1>
             <p class="text-xl md:text-2xl text-gray-600 dark:text-gray-300 mb-4">
-                Excalidraw for Confluence
+                Lightweight diagramming for Confluence and the web
             </p>
             <p class="text-lg text-gray-500 dark:text-gray-400 mb-8 max-w-2xl mx-auto">
-                Create beautiful hand-drawn diagrams directly in your Confluence pages.
-                Free, open source, and your data stays in Confluence.
+                Create Excalidraw sketches, Mermaid flowcharts, and more — directly in Confluence pages
+                or the browser playground. Free, open source, and your data never leaves your control.
             </p>
             <div class="flex flex-col sm:flex-row justify-center gap-4">
                 <a href="{{ .AtlassianURL }}" target="_blank" rel="noopener noreferrer"
@@ -45,12 +45,12 @@
                 <div class="text-center p-6">
                     <div class="w-16 h-16 mx-auto mb-4 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center">
                         <svg class="w-8 h-8 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/>
                         </svg>
                     </div>
-                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Hand-Drawn Style</h3>
+                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Multiple Diagram Types</h3>
                     <p class="text-gray-600 dark:text-gray-400">
-                        Create beautiful, sketch-like diagrams that look natural and approachable. Powered by Excalidraw.
+                        Excalidraw for hand-drawn sketches, Mermaid for code-to-diagram flowcharts — pick the right tool for the job.
                     </p>
                 </div>
 
@@ -61,9 +61,9 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                         </svg>
                     </div>
-                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Data Stays in Confluence</h3>
+                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Your Data, Your Control</h3>
                     <p class="text-gray-600 dark:text-gray-400">
-                        Your diagrams are stored directly in Confluence. No external servers, no data leaving your organization.
+                        Diagrams are stored in Confluence or your browser. No external servers, no data leaving your organization.
                     </p>
                 </div>
 
@@ -91,24 +91,24 @@
             </h2>
             <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div class="bg-white dark:bg-gray-700 rounded-lg shadow-md overflow-hidden">
-                    <img src="/static/images/insert.png" alt="Insert Excalidraw macro" class="w-full h-48 object-cover">
+                    <img src="/static/images/insert.png" alt="Insert diagram macro" class="w-full h-48 object-cover">
                     <div class="p-4">
-                        <h3 class="font-semibold text-gray-900 dark:text-white">Insert Macro</h3>
-                        <p class="text-sm text-gray-600 dark:text-gray-400">Easily insert an Excalidraw drawing into any Confluence page</p>
+                        <h3 class="font-semibold text-gray-900 dark:text-white">Insert a Diagram</h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Choose Excalidraw or Mermaid and start diagramming in seconds</p>
                     </div>
                 </div>
                 <div class="bg-white dark:bg-gray-700 rounded-lg shadow-md overflow-hidden">
-                    <img src="/static/images/editor.png" alt="Excalidraw editor" class="w-full h-48 object-cover">
+                    <img src="/static/images/editor.png" alt="Diagram editor" class="w-full h-48 object-cover">
                     <div class="p-4">
-                        <h3 class="font-semibold text-gray-900 dark:text-white">Full Editor</h3>
-                        <p class="text-sm text-gray-600 dark:text-gray-400">The complete Excalidraw editor with all features</p>
+                        <h3 class="font-semibold text-gray-900 dark:text-white">Native Editors</h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Full-featured editors for each diagram type, right in your browser</p>
                     </div>
                 </div>
                 <div class="bg-white dark:bg-gray-700 rounded-lg shadow-md overflow-hidden">
                     <img src="/static/images/renderer.png" alt="Rendered diagram" class="w-full h-48 object-cover">
                     <div class="p-4">
                         <h3 class="font-semibold text-gray-900 dark:text-white">Clean Rendering</h3>
-                        <p class="text-sm text-gray-600 dark:text-gray-400">Diagrams render beautifully in your pages</p>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Diagrams render beautifully inline with your content</p>
                     </div>
                 </div>
             </div>
@@ -122,12 +122,18 @@
                 Ready to Get Started?
             </h2>
             <p class="text-indigo-100 mb-8">
-                Install Excaliframe in your Confluence instance today. It's free!
+                Install in Confluence or try the playground — no setup required.
             </p>
-            <a href="{{ .AtlassianURL }}" target="_blank" rel="noopener noreferrer"
-               class="inline-flex items-center justify-center px-8 py-4 rounded-lg bg-white text-indigo-600 font-semibold hover:bg-gray-100 transition-colors">
-                Install Now
-            </a>
+            <div class="flex flex-col sm:flex-row justify-center gap-4">
+                <a href="{{ .AtlassianURL }}" target="_blank" rel="noopener noreferrer"
+                   class="inline-flex items-center justify-center px-8 py-4 rounded-lg bg-white text-indigo-600 font-semibold hover:bg-gray-100 transition-colors">
+                    Install for Confluence
+                </a>
+                <a href="/playground/"
+                   class="inline-flex items-center justify-center px-8 py-4 rounded-lg bg-indigo-500 text-white font-semibold hover:bg-indigo-400 transition-colors border border-indigo-400">
+                    Try the Playground
+                </a>
+            </div>
         </div>
     </section>
 </main>

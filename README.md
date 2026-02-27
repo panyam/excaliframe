@@ -1,6 +1,6 @@
 # Excaliframe
 
-A Confluence Cloud app that lets you create and edit [Excalidraw](https://excalidraw.com/) drawings directly in Confluence pages. Built on Atlassian Forge - all drawing data is stored within Confluence.
+A lightweight, extensible diagramming toolkit for Confluence and the web. Create [Excalidraw](https://excalidraw.com/) sketches, [Mermaid](https://mermaid.js.org/) flowcharts, and more — directly in Confluence pages or the browser-based playground. Built on Atlassian Forge with zero external data storage.
 
 ---
 
@@ -69,12 +69,14 @@ Once installed, users can:
 
 ## Features
 
-- **Full Excalidraw Editor** - Complete drawing capabilities including shapes, text, arrows, freehand drawing
-- **Inline Viewer** - Drawings display as PNG previews directly on Confluence pages
-- **Local Storage** - All data stored in Confluence's macro config (no external database)
-- **No External Dependencies** - Excalidraw is bundled; works offline
-- **Copy/Paste JSON** - Import/export drawings via the menu
-- **Free Tier Friendly** - Uses only Forge Custom UI (no compute/storage charges)
+- **Multiple Diagram Types** - Excalidraw (hand-drawn sketches) and Mermaid (code-to-diagram) with more planned
+- **Full Excalidraw Editor** - Shapes, text, arrows, freehand drawing — the complete Excalidraw canvas
+- **Mermaid Editor** - Split-pane code editor with live SVG preview, syntax error display
+- **Browser Playground** - Try everything at [excaliframe.com/playground/](https://excaliframe.com/playground/) with no install
+- **Inline Viewer** - Drawings display as previews directly on Confluence pages
+- **Local Storage** - All data stored in Confluence's macro config or browser IndexedDB (no external servers)
+- **Lazy Loading** - Each diagram type loads independently — Mermaid users never download Excalidraw, and vice versa
+- **Free & Open Source** - MIT license, uses only Forge Custom UI (no compute/storage charges)
 
 ---
 
@@ -85,8 +87,9 @@ excaliframe/
 ├── src/
 │   ├── core/            # Host-agnostic core components
 │   │   ├── types.ts     # DrawingEnvelope, EditorHost, RendererHost interfaces
-│   │   ├── ExcalidrawEditor.tsx   # Core editor (accepts host adapter)
-│   │   └── ExcalidrawRenderer.tsx # Core renderer (accepts host adapter)
+│   │   ├── ExcalidrawEditor.tsx   # Excalidraw editor (accepts host adapter)
+│   │   ├── ExcalidrawRenderer.tsx # Excalidraw renderer (accepts host adapter)
+│   │   └── MermaidEditor.tsx      # Mermaid split-pane editor
 │   ├── hosts/           # Platform-specific host adapters
 │   │   ├── forge.ts     # ForgeEditorHost / ForgeRendererHost
 │   │   ├── web.ts       # WebEditorHost / WebRendererHost (IndexedDB)
@@ -99,9 +102,9 @@ excaliframe/
 │   ├── tsconfig.json    # Site TS config with @excaliframe/* path alias
 │   ├── webpack.config.js # Builds 3 playground bundles
 │   ├── pages/           # Playground page source (imports ../src/ via alias)
+│   │   ├── editor/      # Editor dispatcher (dynamically loads Excalidraw or Mermaid)
 │   │   ├── listing/     # Drawing list (jsx-dom)
-│   │   ├── detail/      # Drawing preview (jsx-dom)
-│   │   └── excalidraw/  # Full editor (React + Excalidraw)
+│   │   └── detail/      # Drawing preview (jsx-dom)
 │   ├── server/          # Go web server
 │   ├── templates/       # HTML templates
 │   └── static/          # Built assets + playground bundles
@@ -119,7 +122,7 @@ The core editor/renderer are **host-agnostic** — they accept a host adapter vi
 
 ## Playground
 
-Try Excaliframe without installing anything at [excaliframe.com/playground/](https://excaliframe.com/playground/). Drawings are stored in your browser's IndexedDB.
+Try Excaliframe without installing anything at [excaliframe.com/playground/](https://excaliframe.com/playground/). Create Excalidraw sketches or Mermaid diagrams — all stored in your browser's IndexedDB.
 
 To run the playground locally:
 ```bash
@@ -271,9 +274,10 @@ forge login
 
 ## Tech Stack
 
-- **Frontend**: React 18, Excalidraw 0.18, TypeScript
-- **Platform**: Atlassian Forge (Custom UI)
-- **Build**: Webpack 5
+- **Frontend**: React 18, TypeScript
+- **Diagram engines**: Excalidraw 0.18, Mermaid 11
+- **Platform**: Atlassian Forge (Custom UI) + standalone web playground
+- **Build**: Webpack 5 with dynamic import code splitting
 - **API**: `@forge/bridge` for Confluence integration
 
 ---

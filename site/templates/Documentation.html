@@ -3,7 +3,7 @@
 {{ define "BodySection" }}
 <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
     <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">Documentation</h1>
-    <p class="text-gray-600 dark:text-gray-400 mb-8">Everything you need to get started with Excaliframe.</p>
+    <p class="text-gray-600 dark:text-gray-400 mb-8">Everything you need to get started with Excaliframe — Excalidraw sketches, Mermaid diagrams, and more.</p>
 
     <!-- Quick Start -->
     <section class="mb-12">
@@ -42,20 +42,21 @@
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6">
             <!-- Insert -->
             <div>
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Insert a Drawing</h3>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Insert a Diagram</h3>
                 <p class="text-gray-700 dark:text-gray-300 mb-3">
-                    Open any Confluence page in edit mode and type <code class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-indigo-600 dark:text-indigo-400">/Excalidraw</code> to insert a new drawing.
+                    Open any Confluence page in edit mode and type <code class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-indigo-600 dark:text-indigo-400">/Excalidraw</code> or <code class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-indigo-600 dark:text-indigo-400">/Mermaid</code> to insert a new diagram. In the playground, click "New Drawing" and pick your diagram type.
                 </p>
-                <img src="/static/images/insert.png" alt="Insert Excalidraw" class="rounded-lg border border-gray-200 dark:border-gray-700 max-w-full">
+                <img src="/static/images/insert.png" alt="Insert diagram" class="rounded-lg border border-gray-200 dark:border-gray-700 max-w-full">
             </div>
 
             <!-- Edit -->
             <div>
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Edit Your Diagram</h3>
                 <p class="text-gray-700 dark:text-gray-300 mb-3">
-                    The full Excalidraw editor opens with all drawing tools: shapes, arrows, text, freehand drawing, and more. Use the toolbar at the top to select tools.
+                    <strong>Excalidraw:</strong> Full drawing canvas with shapes, arrows, text, freehand drawing, and more.<br>
+                    <strong>Mermaid:</strong> Split-pane code editor — write Mermaid markup on the left, see the live-rendered diagram on the right.
                 </p>
-                <img src="/static/images/editor.png" alt="Excalidraw Editor" class="rounded-lg border border-gray-200 dark:border-gray-700 max-w-full">
+                <img src="/static/images/editor.png" alt="Diagram editor" class="rounded-lg border border-gray-200 dark:border-gray-700 max-w-full">
             </div>
 
             <!-- Save -->
@@ -133,7 +134,7 @@
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
                 <h3 class="font-semibold text-gray-900 dark:text-white mb-2">Can I export my diagrams?</h3>
                 <p class="text-gray-700 dark:text-gray-300">
-                    Yes, while editing you can use the Excalidraw menu to export as PNG, SVG, or the native Excalidraw format.
+                    Yes. Excalidraw drawings can be exported as PNG, SVG, or native format via the editor menu. Mermaid diagrams render as SVG and can be saved as images.
                 </p>
             </div>
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">

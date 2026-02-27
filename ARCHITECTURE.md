@@ -4,13 +4,17 @@
 
 Excaliframe has two independent components:
 
-1. **Confluence Plugin** — An Atlassian Forge app that embeds Excalidraw into Confluence pages as a native macro. TypeScript/React frontend, deployed to Atlassian's Forge platform.
-2. **Marketing Site** — A Go web application at [excaliframe.com](https://excaliframe.com) for landing pages, docs, and SEO. Deployed to Google App Engine.
+1. **Confluence Plugin** — An Atlassian Forge app that embeds diagram editors into Confluence pages as native macros. TypeScript/React frontend, deployed to Atlassian's Forge platform.
+2. **Marketing Site + Playground** — A Go web application at [excaliframe.com](https://excaliframe.com) for landing pages, docs, and the interactive playground (no install required). Deployed to Google App Engine.
+
+Supported diagram types:
+- **Excalidraw** — hand-drawn style whiteboard diagrams
+- **Mermaid** — code-to-diagram (flowcharts, sequence diagrams, etc.)
 
 Design principles:
-- **Zero backend state**: No database, no user data storage — all diagram data lives in Confluence
-- **Small auditable surface**: ~620 lines of TypeScript for the entire plugin
-- **Extensibility**: Namespaced structure supports adding new editor types (e.g., Mermaid)
+- **Zero backend state**: No database, no user data storage — all diagram data lives in Confluence (plugin) or IndexedDB (playground)
+- **Small auditable surface**: Thin core with tool-agnostic host adapters
+- **Multi-tool extensibility**: `DrawingEnvelope` pattern with dynamic imports — each diagram type loads independently
 - **Client-side processing**: All drawing operations run in the browser
 
 ---
@@ -59,8 +63,9 @@ excaliframe/
 ├── src/                            # Plugin frontend (TypeScript/React)
 │   ├── core/                       # Host-agnostic core components
 │   │   ├── types.ts                # DrawingEnvelope, EditorHost, RendererHost interfaces
-│   │   ├── ExcalidrawEditor.tsx    # Core Excalidraw editor (accepts EditorHost prop)
-│   │   ├── ExcalidrawRenderer.tsx  # Core renderer (accepts RendererHost prop)
+│   │   ├── ExcalidrawEditor.tsx    # Excalidraw editor (accepts EditorHost prop)
+│   │   ├── ExcalidrawRenderer.tsx  # Excalidraw renderer (accepts RendererHost prop)
+│   │   ├── MermaidEditor.tsx       # Mermaid split-pane editor (code + live preview)
 │   │   └── DrawingTitle.tsx        # Inline-editable title (standalone, host-agnostic)
 │   ├── hosts/                      # Platform-specific host adapters
 │   │   ├── forge.ts                # ForgeEditorHost, ForgeRendererHost (@forge/bridge)
@@ -85,8 +90,13 @@ excaliframe/
 │   ├── tsconfig.json               # Site TS config with @excaliframe/* path alias
 │   ├── webpack.config.js           # Builds playground bundles (3 entry points)
 │   ├── pages/                      # Playground frontend source (TypeScript/TSX)
-│   │   ├── excalidraw/             # Excalidraw editor entry point
-│   │   │   ├── index.tsx           # Wires core editor + web host (reads drawingId)
+│   │   ├── editor/                 # Editor dispatcher (dynamic import per tool)
+│   │   │   ├── index.tsx           # Reads envelope.tool, lazy-loads correct editor
+│   │   │   ├── excalidraw-boot.tsx # Excalidraw async chunk wrapper
+│   │   │   ├── mermaid-boot.tsx    # Mermaid async chunk wrapper
+│   │   │   ├── styles.css          # Shared editor reset
+│   │   │   └── mermaid.css         # Mermaid split-pane layout
+│   │   ├── excalidraw/             # Excalidraw-specific styles (imported by boot)
 │   │   │   └── styles.css
 │   │   ├── listing/                # Drawing list page entry point
 │   │   │   └── index.tsx           # jsx-dom, IndexedDB grid/table population
@@ -102,7 +112,7 @@ excaliframe/
 │   │   └── PlaygroundEditPage.html   # Full-screen editor
 │   ├── static/                     # CSS, images, robots.txt, sitemap
 │   │   └── playground/             # Playground build outputs (generated)
-│   │       ├── excalidraw/         # Excalidraw editor bundle
+│   │       ├── editor/             # Editor dispatcher bundle + async chunks
 │   │       ├── listing/            # List page bundle
 │   │       └── detail/             # Detail page bundle
 │   ├── app.yaml                    # App Engine config
@@ -213,7 +223,7 @@ The Forge host adapter reads/writes via `@forge/bridge`:
 | Layer | Technology |
 |-------|-----------|
 | Frontend | React 18, TypeScript 5 |
-| Diagramming | @excalidraw/excalidraw 0.18 |
+| Diagramming | @excalidraw/excalidraw 0.18, mermaid 11 |
 | Confluence API | @forge/bridge 4, @forge/api 4 |
 | Bundler | Webpack 5 (multi-config: editor + renderer) |
 | Build | npm + Makefile |
@@ -222,14 +232,14 @@ The Forge host adapter reads/writes via `@forge/bridge`:
 
 ```bash
 make build              # Webpack builds editor + renderer to static/
-make playground-build   # Webpack builds playground to site/static/playground/excalidraw/
+make playground-build   # Webpack builds playground to site/static/playground/editor/
 make deploy             # Build + forge deploy -e development
 make deploy-prod        # Build + forge deploy -e production
 make install-app        # forge install -e development -p Confluence
 make tunnel             # Build + forge tunnel (live dev testing)
 ```
 
-Webpack outputs to `static/editor/` and `static/renderer/`, which Forge serves as Custom UI resources. The playground builds separately from `site/` via its own `webpack.config.js` to `site/static/playground/{listing,detail,excalidraw}/`. Excalidraw fonts are copied to both the editor and playground bundles.
+Webpack outputs to `static/editor/` and `static/renderer/`, which Forge serves as Custom UI resources. The playground builds separately from `site/` via its own `webpack.config.js` to `site/static/playground/{listing,detail,editor}/`. Excalidraw fonts are copied to both the Forge editor and playground editor bundles.
 
 ---
 
@@ -276,19 +286,21 @@ The playground is a multi-page experience for creating, browsing, and editing dr
 **Webpack**: `site/webpack.config.js` produces three bundles:
 - `playground-listing` → `site/static/playground/listing/bundle.js` (small, jsx-dom)
 - `playground-detail` → `site/static/playground/detail/bundle.js` (small, jsx-dom)
-- `playground-excalidraw` → `site/static/playground/excalidraw/bundle.js` (large, React + Excalidraw)
+- `playground-editor` → `site/static/playground/editor/bundle.js` (dispatcher + async chunks)
+
+The editor bundle uses an **editor dispatcher** pattern: the entry point reads `envelope.tool` from IndexedDB, then dynamically imports the matching editor (Excalidraw or Mermaid) as a webpack async chunk. This means Mermaid users never download Excalidraw (~400KB), and vice versa. `splitChunks: { chunks: 'async' }` enables automatic code splitting.
 
 Module resolution uses `resolve.modules` to pin all packages to `site/node_modules/`, preventing dual-instance issues when `../src/` files import React or Excalidraw.
 
-**Tool selection**: New drawings show a tool selection modal. Currently only Excalidraw is available; Mermaid will be added later. The tool ID is stored in `DrawingEnvelope.tool`.
+**Tool selection**: New drawings show a tool selection modal with Excalidraw and Mermaid options. The tool ID is stored in `DrawingEnvelope.tool`.
 
-**Editor UI modes**: `ExcalidrawEditor` accepts a `showCancel` prop. In Forge mode (default, `showCancel=true`), a top toolbar shows Save/Cancel buttons. In web/playground mode (`showCancel=false`), there is no toolbar — Save is available via the Excalidraw hamburger menu and Cmd/Ctrl+S, with a floating dirty indicator.
+**Editor UI modes**: Both `ExcalidrawEditor` and `MermaidEditor` accept a `showCancel` prop. In Forge mode (default, `showCancel=true`), a top toolbar shows Save/Cancel buttons. In web/playground mode (`showCancel=false`), there is no toolbar — save is via Cmd/Ctrl+S with a floating dirty indicator.
 
 **Editable drawing title**: In the playground editor, users can click the drawing title in the site header (after "Excaliframe /") to rename it inline. The title persists immediately to IndexedDB via `WebEditorHost.setTitle()`, independently of the drawing save cycle.
 
 Architecture decisions for the title feature:
 - `DrawingTitle` component (`src/core/DrawingTitle.tsx`) is standalone and reusable — takes `initialTitle` + `onRename` callback, has no knowledge of hosts or editors
-- Title rendering happens at the page layer (`site/pages/excalidraw/index.tsx`), NOT inside `ExcalidrawEditor` — this keeps it tool-agnostic so Mermaid or any future editor can reuse it
+- Title rendering happens at the page layer (`site/pages/editor/index.tsx`), NOT inside the editor component — this keeps it tool-agnostic so any editor type reuses it
 - `PlaygroundEditPage.html` injects a `#drawing-title-slot` into the site header's logo area via inline script
 - Title is rendered into the slot via a separate React root (portal pattern), positioned after "Excaliframe /" on the left side of the header bar
 - `getTitle()` / `setTitle()` are optional on `EditorHost` — only `WebEditorHost` implements them (Forge drawings get their name from the Confluence page)
@@ -359,8 +371,8 @@ src/
 │   ├── DrawingTitle.tsx            # Inline-editable title (shared across all tools)
 │   ├── ExcalidrawEditor.tsx        # Excalidraw-specific editor
 │   ├── ExcalidrawRenderer.tsx      # Excalidraw-specific renderer
-│   ├── MermaidEditor.tsx           # Mermaid-specific editor (future)
-│   └── MermaidRenderer.tsx         # Mermaid-specific renderer (future)
+│   ├── MermaidEditor.tsx           # Mermaid split-pane editor (code + live SVG preview)
+│   └── MermaidRenderer.tsx         # Mermaid renderer (future — Forge macro)
 ├── hosts/
 │   ├── forge.ts                    # Forge adapter (shared by all tools)
 │   └── web.ts                      # Web adapter (shared by all tools)

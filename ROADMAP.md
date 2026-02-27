@@ -6,7 +6,7 @@ Long-term vision and milestones for Excaliframe.
 
 ## Vision
 
-Make Excaliframe the go-to lightweight diagramming tool inside Confluence — fast, secure, and extensible. Fill the gap between heavyweight formal diagramming tools and ad-hoc whiteboarding, with zero data leaving Confluence.
+Make Excaliframe the go-to lightweight diagramming toolkit for Confluence and the web — fast, secure, and extensible. Multiple diagram types (Excalidraw sketches, Mermaid flowcharts, and more) unified under one tool-agnostic architecture, with zero data leaving your control.
 
 ---
 
@@ -58,10 +58,11 @@ Make Excaliframe the go-to lightweight diagramming tool inside Confluence — fa
 | Forge host adapter | Done |
 | Web/localStorage host adapter | Done |
 | Server-backed host adapter (API persistence) | Planned |
-| Mermaid editor integration | Planned |
+| Playground Mermaid editor | Done |
+| Forge Mermaid macro | Planned |
 | Macro key dispatcher in editor/renderer entry points | Planned |
-| Lazy-loaded library bundles (dynamic import per diagram type) | Planned |
-| Playground tool chooser (tool selection modal) | In Progress |
+| Lazy-loaded library bundles (dynamic import per diagram type) | Done |
+| Playground tool chooser (tool selection modal) | Done |
 
 Architecture uses `DrawingEnvelope.tool` field to identify diagram type. Host adapters are shared across all tools — they store/retrieve envelopes without knowing tool-specific data formats. See ARCHITECTURE.md "Adding New Diagram Libraries".
 

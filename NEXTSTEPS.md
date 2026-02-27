@@ -37,6 +37,12 @@ Immediate and near-term action items for Excaliframe.
 - The `isDeleted` field may also be added by Excalidraw during init, causing fingerprint mismatch
 - Next step: debug what specific properties differ between stored and post-init fingerprints
 
+### 4. Forge Mermaid Macro
+- Add Mermaid macro key to `manifest.yml`
+- Create `MermaidRenderer.tsx` in `src/core/`
+- Add macro key dispatcher in `src/editor/index.tsx` and `src/renderer/index.tsx`
+- Build and test in Confluence
+
 ## Backlog
 
 - **Security whitepaper** — formal architecture and trust model document
@@ -44,7 +50,6 @@ Immediate and near-term action items for Excaliframe.
 - **Verification scripts** — automated code/dependency verification tooling
 - **Changelog with security notes** — flag security-relevant changes in releases
 - **Atlassian Cloud Fortified** — Atlassian's enterprise security certification
-- **Add Mermaid editor** — second diagram type using existing core/hosts architecture
 - **Playground enhancements** — export PNG button, sample drawings gallery, dark mode sync, title editing from list/detail pages
 - **Server-backed host adapter** — `src/hosts/server.ts` for multi-user persistence via backend API
 - **Formal vulnerability disclosure process** — security contact + CVE handling
@@ -77,3 +82,7 @@ Immediate and near-term action items for Excaliframe.
 - [x] `EditorHost` extended with optional `getTitle()` / `setTitle()` methods
 - [x] `DrawingTitle` component in `src/core/DrawingTitle.tsx` — standalone, reusable, host-agnostic
 - [x] Title rendered at page layer via portal into `#drawing-title-slot` (not inside ExcalidrawEditor)
+- [x] Playground Mermaid editor — split-pane code editor + live SVG preview
+- [x] Editor dispatcher with dynamic imports — lazy-loads Excalidraw or Mermaid per drawing
+- [x] Tool selection modal — Excalidraw and Mermaid options for new drawings
+- [x] SVG preview for Mermaid drawings on listing and detail pages

@@ -71,17 +71,17 @@ module.exports = (env, argv) => {
     performance: { hints: false },
   };
 
-  // --- Excalidraw bundle (React + Excalidraw, large ~400KB) ---
-  const excalidraw = {
-    name: 'playground-excalidraw',
-    entry: './pages/excalidraw/index.tsx',
+  // --- Editor dispatcher bundle (React, dynamically loads Excalidraw or Mermaid) ---
+  const editor = {
+    name: 'playground-editor',
+    entry: './pages/editor/index.tsx',
     output: {
-      path: path.resolve(__dirname, 'static/playground/excalidraw'),
+      path: path.resolve(__dirname, 'static/playground/editor'),
       filename: 'bundle.js',
-      chunkFilename: '[id].js',
+      chunkFilename: '[name].js',
       assetModuleFilename: '[hash][ext]',
       clean: true,
-      publicPath: '/static/playground/excalidraw/',
+      publicPath: '/static/playground/editor/',
     },
     module: { rules: sharedRules },
     resolve: {
@@ -104,9 +104,12 @@ module.exports = (env, argv) => {
       }),
     ],
     devtool: isDev ? 'eval-source-map' : 'source-map',
-    optimization: sharedOptimization,
+    optimization: {
+      ...sharedOptimization,
+      splitChunks: { chunks: 'async' },
+    },
     performance: { hints: false },
   };
 
-  return [listing, detail, excalidraw];
+  return [listing, detail, editor];
 };
