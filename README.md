@@ -83,29 +83,57 @@ Once installed, users can:
 ```
 excaliframe/
 ├── src/
-│   ├── editor/          # Excalidraw editor component
-│   │   ├── ExcalidrawEditor.tsx
-│   │   ├── index.tsx
-│   │   └── index.html
-│   ├── renderer/        # Drawing viewer component
-│   │   ├── ExcalidrawRenderer.tsx
-│   │   ├── index.tsx
-│   │   └── index.html
-│   └── version.ts       # Version info
-├── dist/forge/          # Build output (generated)
-│   ├── editor/          # Editor bundle
-│   └── renderer/        # Renderer bundle
+│   ├── core/            # Host-agnostic core components
+│   │   ├── types.ts     # DrawingEnvelope, EditorHost, RendererHost interfaces
+│   │   ├── ExcalidrawEditor.tsx   # Core editor (accepts host adapter)
+│   │   └── ExcalidrawRenderer.tsx # Core renderer (accepts host adapter)
+│   ├── hosts/           # Platform-specific host adapters
+│   │   ├── forge.ts     # ForgeEditorHost / ForgeRendererHost
+│   │   ├── web.ts       # WebEditorHost / WebRendererHost (IndexedDB)
+│   │   └── playground-store.ts  # IndexedDB wrapper for multi-drawing storage
+│   ├── editor/          # Forge editor entry point
+│   ├── renderer/        # Forge renderer entry point
+│   └── version.ts       # Auto-generated version info
+├── site/                # Marketing site + playground frontend
+│   ├── package.json     # Site's own deps (React, Excalidraw, jsx-dom, webpack)
+│   ├── tsconfig.json    # Site TS config with @excaliframe/* path alias
+│   ├── webpack.config.js # Builds 3 playground bundles
+│   ├── pages/           # Playground page source (imports ../src/ via alias)
+│   │   ├── listing/     # Drawing list (jsx-dom)
+│   │   ├── detail/      # Drawing preview (jsx-dom)
+│   │   └── excalidraw/  # Full editor (React + Excalidraw)
+│   ├── server/          # Go web server
+│   ├── templates/       # HTML templates
+│   └── static/          # Built assets + playground bundles
+├── static/              # Forge build output (editor + renderer)
+├── tools/               # Enterprise sync tooling
 ├── manifest.yml         # Forge app manifest
-├── webpack.config.js    # Build configuration
-├── package.json
+├── webpack.config.js    # Forge builds (editor + renderer)
+├── package.json         # Forge app deps
 └── Makefile
+```
+
+The core editor/renderer are **host-agnostic** — they accept a host adapter via props. This enables multiple deployments (Forge, web playground, future server-backed) from the same core code. See [ARCHITECTURE.md](./ARCHITECTURE.md) for details.
+
+---
+
+## Playground
+
+Try Excaliframe without installing anything at [excaliframe.com/playground/](https://excaliframe.com/playground/). Drawings are stored in your browser's IndexedDB.
+
+To run the playground locally:
+```bash
+cd site
+npm install
+npm run build         # or: npm run watch
+make run              # starts Go server at http://localhost:8080
 ```
 
 ---
 
 ## Development
 
-### Commands
+### Forge Plugin Commands
 
 | Command | Description |
 |---------|-------------|
@@ -115,6 +143,15 @@ excaliframe/
 | `make install-app` | Install app on a Confluence site |
 | `make logs` | View Forge app logs |
 | `make help` | Show all commands |
+
+### Site / Playground Commands
+
+| Command | Description |
+|---------|-------------|
+| `cd site && npm run build` | Build playground bundles |
+| `cd site && npm run watch` | Watch mode for playground |
+| `cd site && make run` | Run marketing site locally |
+| `cd site && make deploy` | Deploy to Google App Engine |
 
 ### Development Workflow
 
