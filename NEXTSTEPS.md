@@ -37,13 +37,6 @@ Immediate and near-term action items for Excaliframe.
 - The `isDeleted` field may also be added by Excalidraw during init, causing fingerprint mismatch
 - Next step: debug what specific properties differ between stored and post-init fingerprints
 
-### Reorganize Playground Code into `site/`
-- The `site/` folder IS the web folder (like `lilbattle/web/`)
-- Move playground TS/TSX source into `site/` (e.g. `site/pages/playground/`)
-- Give `site/` its own `package.json`, `tsconfig.json`, `webpack.config.js`
-- Remove `webpack.playground.js` from project root
-- Shared core code (`src/core/`, `src/hosts/`) stays at root for Forge; site imports via path alias or local dependency
-
 ## Backlog
 
 - **Security whitepaper** — formal architecture and trust model document
@@ -78,3 +71,5 @@ Immediate and near-term action items for Excaliframe.
 - [x] Interactive playground on marketing site (`/playground/` → full Excalidraw editor with localStorage persistence)
 - [x] Multi-drawing playground with list/detail/edit pages and IndexedDB storage
 - [x] Fix playground data persistence bug (save spinner was blocking subsequent saves)
+- [x] Reorganize playground code into `site/` — self-contained `package.json`, `tsconfig.json`, `webpack.config.js` with `@excaliframe/*` path alias
+- [x] Add `showCancel` prop to ExcalidrawEditor — web mode uses MainMenu + Cmd/Ctrl+S instead of top toolbar

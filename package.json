@@ -1,6 +1,6 @@
 {
   "name": "excaliframe",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Atlassian Forge app for Excalidraw drawings in Confluence",
   "scripts": {
     "update-version": "node scripts/update-version.js",
@@ -26,7 +26,7 @@
     "@forge/api": "^4.0.0",
     "@forge/bridge": "^4.0.0",
     "@forge/resolver": "^1.6.0",
-    "jsx-dom": "^8.1.6",
+
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },

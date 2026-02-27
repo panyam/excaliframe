@@ -1,8 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import ExcalidrawEditor from '../../src/core/ExcalidrawEditor';
-import { WebEditorHost } from '../../src/hosts/web';
-import { PlaygroundStore } from '../../src/hosts/playground-store';
+import ExcalidrawEditor from '@excaliframe/core/ExcalidrawEditor';
+import { WebEditorHost } from '@excaliframe/hosts/web';
+import { PlaygroundStore } from '@excaliframe/hosts/playground-store';
 import '@excalidraw/excalidraw/index.css';
 import './styles.css';
 
@@ -19,5 +19,5 @@ if (!drawingId) {
   const store = new PlaygroundStore();
   const host = new WebEditorHost(drawingId, store);
   const root = ReactDOM.createRoot(document.getElementById('playground-root')!);
-  root.render(<ExcalidrawEditor host={host} />);
+  root.render(<ExcalidrawEditor host={host} showCancel={false} />);
 }

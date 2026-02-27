@@ -24,6 +24,12 @@ module.exports = (env, argv) => {
 
   const sharedResolve = {
     extensions: ['.ts', '.tsx', '.js', '.jsx'],
+    // Resolve all packages from site/node_modules first, so ../src/ files
+    // don't pull a second copy from the root node_modules.
+    modules: [path.resolve(__dirname, 'node_modules'), 'node_modules'],
+    alias: {
+      '@excaliframe': path.resolve(__dirname, '../src'),
+    },
   };
 
   const sharedOptimization = {
@@ -34,9 +40,9 @@ module.exports = (env, argv) => {
   // --- Listing bundle (vanilla TS + jsx-dom, small) ---
   const listing = {
     name: 'playground-listing',
-    entry: './playground/listing/index.tsx',
+    entry: './pages/listing/index.tsx',
     output: {
-      path: path.resolve(__dirname, 'site/static/playground/listing'),
+      path: path.resolve(__dirname, 'static/playground/listing'),
       filename: 'bundle.js',
       clean: true,
       publicPath: '/static/playground/listing/',
@@ -51,9 +57,9 @@ module.exports = (env, argv) => {
   // --- Detail bundle (jsx-dom, small) ---
   const detail = {
     name: 'playground-detail',
-    entry: './playground/detail/index.tsx',
+    entry: './pages/detail/index.tsx',
     output: {
-      path: path.resolve(__dirname, 'site/static/playground/detail'),
+      path: path.resolve(__dirname, 'static/playground/detail'),
       filename: 'bundle.js',
       clean: true,
       publicPath: '/static/playground/detail/',
@@ -68,9 +74,9 @@ module.exports = (env, argv) => {
   // --- Excalidraw bundle (React + Excalidraw, large ~400KB) ---
   const excalidraw = {
     name: 'playground-excalidraw',
-    entry: './playground/excalidraw/index.tsx',
+    entry: './pages/excalidraw/index.tsx',
     output: {
-      path: path.resolve(__dirname, 'site/static/playground/excalidraw'),
+      path: path.resolve(__dirname, 'static/playground/excalidraw'),
       filename: 'bundle.js',
       chunkFilename: '[id].js',
       assetModuleFilename: '[hash][ext]',
@@ -81,6 +87,7 @@ module.exports = (env, argv) => {
     resolve: {
       ...sharedResolve,
       alias: {
+        ...sharedResolve.alias,
         'roughjs/bin/rough': require.resolve('roughjs/bin/rough'),
         'roughjs/bin/generator': require.resolve('roughjs/bin/generator'),
         'roughjs/bin/math': require.resolve('roughjs/bin/math'),

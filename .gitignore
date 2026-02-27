@@ -17,6 +17,7 @@ static/
 data/
 
 # Site build artifacts
+site/node_modules/
 site/locallinks/
 site/bin/
 site/excaliframe-site

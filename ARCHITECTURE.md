@@ -75,20 +75,22 @@ excaliframe/
 │   │   └── styles.css
 │   └── version.ts                  # Auto-generated version info
 │
-├── playground/                     # Standalone playground (not synced to enterprise)
-│   ├── excalidraw/                 # Excalidraw editor entry point
-│   │   ├── index.tsx               # Wires core editor + web host (reads drawingId)
-│   │   └── styles.css
-│   ├── listing/                    # Drawing list page entry point
-│   │   └── index.tsx               # jsx-dom, IndexedDB grid/table population
-│   └── detail/                     # Drawing detail/preview page entry point
-│       └── index.tsx               # jsx-dom, drawing preview + metadata
-│
 ├── static/                         # Webpack build output (Forge resources)
 │   ├── editor/                     # Editor bundle (served by Forge)
 │   └── renderer/                   # Renderer bundle (served by Forge)
 │
-├── site/                           # Marketing site (Go)
+├── site/                           # Marketing site (Go + playground frontend)
+│   ├── package.json                # Site's own npm deps (React, Excalidraw, jsx-dom, webpack)
+│   ├── tsconfig.json               # Site TS config with @excaliframe/* path alias
+│   ├── webpack.config.js           # Builds playground bundles (3 entry points)
+│   ├── pages/                      # Playground frontend source (TypeScript/TSX)
+│   │   ├── excalidraw/             # Excalidraw editor entry point
+│   │   │   ├── index.tsx           # Wires core editor + web host (reads drawingId)
+│   │   │   └── styles.css
+│   │   ├── listing/                # Drawing list page entry point
+│   │   │   └── index.tsx           # jsx-dom, IndexedDB grid/table population
+│   │   └── detail/                 # Drawing detail/preview page entry point
+│   │       └── index.tsx           # jsx-dom, drawing preview + metadata
 │   ├── main.go                     # Server entry point
 │   ├── server/
 │   │   ├── app.go                  # App context and config
@@ -109,10 +111,9 @@ excaliframe/
 │   └── sync.py                     # Enterprise distribution sync tool
 │
 ├── manifest.yml                    # Forge app manifest
-├── package.json                    # npm dependencies
+├── package.json                    # Forge app npm dependencies
 ├── webpack.config.js               # Webpack config (editor + renderer)
-├── webpack.playground.js           # Webpack config (playground: 3 entry points)
-├── tsconfig.json                   # TypeScript config
+├── tsconfig.json                   # TypeScript config (src/ only)
 └── Makefile                        # Build, deploy, install commands
 ```
 
@@ -222,7 +223,7 @@ make install-app        # forge install -e development -p Confluence
 make tunnel             # Build + forge tunnel (live dev testing)
 ```
 
-Webpack outputs to `static/editor/` and `static/renderer/`, which Forge serves as Custom UI resources. The playground builds separately via `webpack.playground.js` to `site/static/playground/excalidraw/`. Excalidraw fonts are copied to both the editor and playground bundles.
+Webpack outputs to `static/editor/` and `static/renderer/`, which Forge serves as Custom UI resources. The playground builds separately from `site/` via its own `webpack.config.js` to `site/static/playground/{listing,detail,excalidraw}/`. Excalidraw fonts are copied to both the editor and playground bundles.
 
 ---
 
@@ -264,12 +265,18 @@ The playground is a multi-page experience for creating, browsing, and editing dr
 
 **JSX without React**: The listing and detail pages use `jsx-dom` — a lightweight JSX-to-DOM library that compiles TSX to real DOM elements without React overhead. Only the Excalidraw editor page uses React.
 
-**Webpack**: `webpack.playground.js` produces three bundles:
+**Self-contained site/**: The `site/` directory has its own `package.json`, `tsconfig.json`, and `webpack.config.js`. Playground page source lives in `site/pages/` and imports shared core code via the `@excaliframe/*` path alias (mapped to `../src/*`). This means `site/` can eventually move to its own repo — only the alias config changes, no source code changes.
+
+**Webpack**: `site/webpack.config.js` produces three bundles:
 - `playground-listing` → `site/static/playground/listing/bundle.js` (small, jsx-dom)
 - `playground-detail` → `site/static/playground/detail/bundle.js` (small, jsx-dom)
 - `playground-excalidraw` → `site/static/playground/excalidraw/bundle.js` (large, React + Excalidraw)
 
+Module resolution uses `resolve.modules` to pin all packages to `site/node_modules/`, preventing dual-instance issues when `../src/` files import React or Excalidraw.
+
 **Tool selection**: New drawings show a tool selection modal. Currently only Excalidraw is available; Mermaid will be added later. The tool ID is stored in `DrawingEnvelope.tool`.
+
+**Editor UI modes**: `ExcalidrawEditor` accepts a `showCancel` prop. In Forge mode (default, `showCancel=true`), a top toolbar shows Save/Cancel buttons. In web/playground mode (`showCancel=false`), there is no toolbar — Save is available via the Excalidraw hamburger menu and Cmd/Ctrl+S, with a floating dirty indicator.
 
 ### SEO
 
@@ -396,4 +403,4 @@ make migrate TARGET=/path/to/enterprise-fork        # One-time: restructure flat
 
 The `migrate` command is a one-time operation for existing enterprise repos that had the old flat layout (src/ at top level). It moves directories and patches config file paths.
 
-Only `src/` and `scripts/` are synced. Generated files (`src/version.ts`) are excluded via ignorelist. The `playground/`, `site/`, and `tools/` directories are not synced — they are specific to the open-source repo.
+Only `src/` and `scripts/` are synced. Generated files (`src/version.ts`) are excluded via ignorelist. The `site/` and `tools/` directories are not synced — they are specific to the open-source repo.

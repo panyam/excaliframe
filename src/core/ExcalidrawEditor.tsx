@@ -21,6 +21,9 @@ interface ExcalidrawImperativeAPI {
 
 interface Props {
   host: EditorHost;
+  /** Show the Cancel button and top toolbar. Default true (Forge mode).
+   *  When false, Save is in the MainMenu + Cmd/Ctrl+S, no toolbar. */
+  showCancel?: boolean;
 }
 
 // Keys that Excalidraw mutates internally on every scene update (version bumps,
@@ -42,7 +45,7 @@ function fingerprint(elements: readonly any[]): string {
   return JSON.stringify(stable);
 }
 
-const ExcalidrawEditor: React.FC<Props> = ({ host }) => {
+const ExcalidrawEditor: React.FC<Props> = ({ host, showCancel = true }) => {
   const [ExcalidrawComponent, setExcalidrawComponent] = useState<any>(null);
   const [MainMenuComponent, setMainMenuComponent] = useState<any>(null);
   const excalidrawApiRef = useRef<ExcalidrawImperativeAPI | null>(null);
@@ -177,10 +180,18 @@ const ExcalidrawEditor: React.FC<Props> = ({ host }) => {
     setIsDirty(fingerprint(elements) !== initialFingerprintRef.current);
   }, []);
 
-  // Handle ESC key
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') {
+      // Cmd/Ctrl+S to save
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        saveDrawing();
+        return;
+      }
+
+      // ESC to cancel (only when toolbar is shown)
+      if (showCancel && e.key === 'Escape') {
         const appState = excalidrawApiRef.current?.getAppState();
         if (appState?.openMenu || appState?.openPopup || appState?.isResizing ||
             appState?.isRotating || appState?.draggingElement || appState?.editingElement) {
@@ -194,7 +205,7 @@ const ExcalidrawEditor: React.FC<Props> = ({ host }) => {
 
     window.addEventListener('keydown', handleKeyDown, true);
     return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [handleCancel]);
+  }, [handleCancel, saveDrawing, showCancel]);
 
   const handleCopyJson = useCallback(async (): Promise<void> => {
     if (!excalidrawApiRef.current) return;
@@ -284,107 +295,144 @@ const ExcalidrawEditor: React.FC<Props> = ({ host }) => {
     );
   }
 
-  return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#fff' }}>
-      {/* Toolbar */}
-      <div style={{
-        padding: '8px 16px',
-        backgroundColor: '#f4f5f7',
-        borderBottom: '1px solid #dfe1e6',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexShrink: 0,
-        zIndex: 10
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 500 }}>Excalidraw</h3>
-          <span style={{ fontSize: '11px', color: '#6b778c' }}>v{VERSION}</span>
-          {isDirty && (
-            <span style={{ fontSize: '11px', color: '#de350b', fontWeight: 500 }}>
-              • Unsaved changes
-            </span>
+  const excalidrawCanvas = (
+    <ExcalidrawComponent
+      excalidrawAPI={(api: ExcalidrawImperativeAPI) => {
+        excalidrawApiRef.current = api;
+      }}
+      initialData={initialData || {
+        elements: [],
+        appState: {
+          viewBackgroundColor: '#ffffff',
+          currentItemStrokeColor: '#000000',
+          currentItemBackgroundColor: 'transparent',
+        },
+      }}
+      onChange={handleChange}
+      theme="light"
+      UIOptions={{
+        canvasActions: {
+          loadScene: false,
+        },
+      }}
+    >
+      {MainMenuComponent && (
+        <MainMenuComponent>
+          {!showCancel && (
+            <MainMenuComponent.Item onSelect={saveDrawing}>
+              {isSaving ? 'Saving...' : isDirty ? 'Save *' : 'Save'}
+            </MainMenuComponent.Item>
           )}
-        </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button
-            onClick={handleCancel}
-            disabled={isSaving}
-            style={{
-              padding: '6px 12px',
-              backgroundColor: '#fff',
-              border: '1px solid #dfe1e6',
-              borderRadius: '3px',
-              cursor: isSaving ? 'not-allowed' : 'pointer',
-              fontSize: '14px'
-            }}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={saveDrawing}
-            disabled={isSaving}
-            style={{
-              padding: '6px 12px',
-              backgroundColor: isSaving ? '#84bef7' : '#0052cc',
-              color: 'white',
-              border: 'none',
-              borderRadius: '3px',
-              cursor: isSaving ? 'not-allowed' : 'pointer',
-              fontSize: '14px'
-            }}
-          >
-            {isSaving ? 'Saving...' : 'Save'}
-          </button>
-        </div>
-      </div>
+          {!showCancel && <MainMenuComponent.Separator />}
+          <MainMenuComponent.DefaultItems.LoadScene />
+          <MainMenuComponent.DefaultItems.SaveToActiveFile />
+          <MainMenuComponent.DefaultItems.Export />
+          <MainMenuComponent.DefaultItems.SaveAsImage />
+          <MainMenuComponent.Separator />
+          <MainMenuComponent.Item onSelect={handleCopyJson}>
+            Copy diagram JSON
+          </MainMenuComponent.Item>
+          <MainMenuComponent.Item onSelect={handlePasteJson}>
+            Paste diagram JSON
+          </MainMenuComponent.Item>
+          <MainMenuComponent.Separator />
+          <MainMenuComponent.DefaultItems.CommandPalette />
+          <MainMenuComponent.DefaultItems.Help />
+          <MainMenuComponent.Separator />
+          <MainMenuComponent.DefaultItems.ClearCanvas />
+          <MainMenuComponent.DefaultItems.ToggleTheme />
+          <MainMenuComponent.DefaultItems.ChangeCanvasBackground />
+        </MainMenuComponent>
+      )}
+    </ExcalidrawComponent>
+  );
 
-      {/* Excalidraw Canvas */}
-      <div style={{ flex: 1, width: '100%', height: '100%' }} className="excalidraw-wrapper">
-        <ExcalidrawComponent
-          excalidrawAPI={(api: ExcalidrawImperativeAPI) => {
-            excalidrawApiRef.current = api;
-          }}
-          initialData={initialData || {
-            elements: [],
-            appState: {
-              viewBackgroundColor: '#ffffff',
-              currentItemStrokeColor: '#000000',
-              currentItemBackgroundColor: 'transparent',
-            },
-          }}
-          onChange={handleChange}
-          theme="light"
-          UIOptions={{
-            canvasActions: {
-              loadScene: false,
-            },
-          }}
-        >
-          {MainMenuComponent && (
-            <MainMenuComponent>
-              <MainMenuComponent.DefaultItems.LoadScene />
-              <MainMenuComponent.DefaultItems.SaveToActiveFile />
-              <MainMenuComponent.DefaultItems.Export />
-              <MainMenuComponent.DefaultItems.SaveAsImage />
-              <MainMenuComponent.Separator />
-              <MainMenuComponent.Item onSelect={handleCopyJson}>
-                Copy diagram JSON
-              </MainMenuComponent.Item>
-              <MainMenuComponent.Item onSelect={handlePasteJson}>
-                Paste diagram JSON
-              </MainMenuComponent.Item>
-              <MainMenuComponent.Separator />
-              <MainMenuComponent.DefaultItems.CommandPalette />
-              <MainMenuComponent.DefaultItems.Help />
-              <MainMenuComponent.Separator />
-              <MainMenuComponent.DefaultItems.ClearCanvas />
-              <MainMenuComponent.DefaultItems.ToggleTheme />
-              <MainMenuComponent.DefaultItems.ChangeCanvasBackground />
-            </MainMenuComponent>
-          )}
-        </ExcalidrawComponent>
+  // Toolbar mode (Forge): top bar with Save + Cancel
+  if (showCancel) {
+    return (
+      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#fff' }}>
+        <div style={{
+          padding: '8px 16px',
+          backgroundColor: '#f4f5f7',
+          borderBottom: '1px solid #dfe1e6',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexShrink: 0,
+          zIndex: 10
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 500 }}>Excalidraw</h3>
+            <span style={{ fontSize: '11px', color: '#6b778c' }}>v{VERSION}</span>
+            {isDirty && (
+              <span style={{ fontSize: '11px', color: '#de350b', fontWeight: 500 }}>
+                • Unsaved changes
+              </span>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={handleCancel}
+              disabled={isSaving}
+              style={{
+                padding: '6px 12px',
+                backgroundColor: '#fff',
+                border: '1px solid #dfe1e6',
+                borderRadius: '3px',
+                cursor: isSaving ? 'not-allowed' : 'pointer',
+                fontSize: '14px'
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={saveDrawing}
+              disabled={isSaving}
+              style={{
+                padding: '6px 12px',
+                backgroundColor: isSaving ? '#84bef7' : '#0052cc',
+                color: 'white',
+                border: 'none',
+                borderRadius: '3px',
+                cursor: isSaving ? 'not-allowed' : 'pointer',
+                fontSize: '14px'
+              }}
+            >
+              {isSaving ? 'Saving...' : 'Save'}
+            </button>
+          </div>
+        </div>
+        <div style={{ flex: 1, width: '100%', height: '100%' }} className="excalidraw-wrapper">
+          {excalidrawCanvas}
+        </div>
       </div>
+    );
+  }
+
+  // No-toolbar mode (web/playground): Save in MainMenu + Cmd/Ctrl+S, floating dirty badge
+  return (
+    <div style={{ height: '100vh', width: '100%', position: 'relative', backgroundColor: '#fff' }}>
+      <div style={{ width: '100%', height: '100%' }} className="excalidraw-wrapper">
+        {excalidrawCanvas}
+      </div>
+      {isDirty && (
+        <div style={{
+          position: 'fixed',
+          bottom: '16px',
+          left: '16px',
+          padding: '6px 14px',
+          backgroundColor: 'rgba(222, 53, 11, 0.9)',
+          color: 'white',
+          borderRadius: '20px',
+          fontSize: '12px',
+          fontWeight: 500,
+          zIndex: 1000,
+          pointerEvents: 'none',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+        }}>
+          Unsaved changes — ⌘S to save
+        </div>
+      )}
     </div>
   );
 };

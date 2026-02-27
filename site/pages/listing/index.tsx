@@ -1,6 +1,6 @@
 /** @jsxImportSource jsx-dom */
 
-import { PlaygroundStore, StoredDrawing, generateId } from '../../src/hosts/playground-store';
+import { PlaygroundStore, StoredDrawing, generateId } from '@excaliframe/hosts/playground-store';
 
 // TODO: Consider wrapping/re-exporting jsx-dom from @panyam/tsappkit so all
 // goapplib projects share the same DOM JSX runtime without each needing a

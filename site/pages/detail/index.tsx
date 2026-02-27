@@ -1,6 +1,6 @@
 /** @jsxImportSource jsx-dom */
 
-import { PlaygroundStore, StoredDrawing } from '../../src/hosts/playground-store';
+import { PlaygroundStore, StoredDrawing } from '@excaliframe/hosts/playground-store';
 
 declare global {
   interface Window {

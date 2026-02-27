@@ -20,9 +20,9 @@ checklinks:
 	fi
 
 playground:
-	cd .. && npx webpack --config webpack.playground.js --mode production
+	npm run build
 
-deploy: checklinks playground-build
+deploy: checklinks playground
 	rm -Rf locallinks ; mkdir locallinks
 	gcloud app deploy --project excaliframe --verbosity=info
 
@@ -32,4 +32,4 @@ prodlogs:
 clean:
 	rm -Rf bin locallinks
 
-.PHONY: all run build resymlink checklinks playground-build deploy prodlogs clean
+.PHONY: all run build resymlink checklinks playground deploy prodlogs clean

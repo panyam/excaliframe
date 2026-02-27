@@ -53,6 +53,19 @@ Each page sets:
 - Custom styles in `static/css/style.css`
 - Dark mode support
 
+## Playground Frontend
+
+The `site/` directory is self-contained for frontend builds with its own `package.json`, `tsconfig.json`, and `webpack.config.js`. Playground page source lives in `site/pages/` and imports shared core code from `../src/` via the `@excaliframe/*` path alias.
+
+```bash
+cd site/
+npm install        # Install site-specific deps (React, Excalidraw, jsx-dom, webpack)
+npm run build      # Build playground bundles to static/playground/
+npm run watch      # Watch mode for development
+```
+
+The `@excaliframe/*` alias maps to `../src/*` in both `tsconfig.json` and `webpack.config.js`. If `site/` ever moves to its own repo, only the alias config changes — no source code changes needed.
+
 ## Development
 
 ```bash
