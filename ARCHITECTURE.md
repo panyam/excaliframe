@@ -63,7 +63,8 @@ excaliframe/
 │   │   └── ExcalidrawRenderer.tsx  # Core renderer (accepts RendererHost prop)
 │   ├── hosts/                      # Platform-specific host adapters
 │   │   ├── forge.ts                # ForgeEditorHost, ForgeRendererHost (@forge/bridge)
-│   │   └── web.ts                  # WebEditorHost, WebRendererHost (localStorage)
+│   │   ├── web.ts                  # WebEditorHost, WebRendererHost (IndexedDB via PlaygroundStore)
+│   │   └── playground-store.ts     # IndexedDB wrapper for multi-drawing storage
 │   ├── editor/                     # Forge editor entry point
 │   │   ├── index.tsx               # Wires core editor + Forge host
 │   │   ├── index.html              # HTML template
@@ -75,9 +76,13 @@ excaliframe/
 │   └── version.ts                  # Auto-generated version info
 │
 ├── playground/                     # Standalone playground (not synced to enterprise)
-│   └── excalidraw/
-│       ├── index.tsx               # Wires core editor + web host
-│       └── styles.css
+│   ├── excalidraw/                 # Excalidraw editor entry point
+│   │   ├── index.tsx               # Wires core editor + web host (reads drawingId)
+│   │   └── styles.css
+│   ├── listing/                    # Drawing list page entry point
+│   │   └── index.tsx               # jsx-dom, IndexedDB grid/table population
+│   └── detail/                     # Drawing detail/preview page entry point
+│       └── index.tsx               # jsx-dom, drawing preview + metadata
 │
 ├── static/                         # Webpack build output (Forge resources)
 │   ├── editor/                     # Editor bundle (served by Forge)
@@ -89,8 +94,14 @@ excaliframe/
 │   │   ├── app.go                  # App context and config
 │   │   └── views.go                # Page handlers and routes
 │   ├── templates/                  # HTML templates (goapplib/templar)
+│   │   ├── PlaygroundListPage.html   # Drawing list (extends EntityListing)
+│   │   ├── PlaygroundDetailPage.html # Drawing preview
+│   │   └── PlaygroundEditPage.html   # Full-screen editor
 │   ├── static/                     # CSS, images, robots.txt, sitemap
-│   │   └── playground/excalidraw/  # Playground build output (generated)
+│   │   └── playground/             # Playground build outputs (generated)
+│   │       ├── excalidraw/         # Excalidraw editor bundle
+│   │       ├── listing/            # List page bundle
+│   │       └── detail/             # Detail page bundle
 │   ├── app.yaml                    # App Engine config
 │   └── Makefile                    # Site build/deploy
 │
@@ -100,7 +111,7 @@ excaliframe/
 ├── manifest.yml                    # Forge app manifest
 ├── package.json                    # npm dependencies
 ├── webpack.config.js               # Webpack config (editor + renderer)
-├── webpack.playground.js           # Webpack config (playground)
+├── webpack.playground.js           # Webpack config (playground: 3 entry points)
 ├── tsconfig.json                   # TypeScript config
 └── Makefile                        # Build, deploy, install commands
 ```
@@ -116,7 +127,7 @@ The core Excalidraw editor and renderer are host-agnostic — they accept a host
 | Host | Adapter | Storage | Use Case |
 |------|---------|---------|----------|
 | **Forge** | `ForgeEditorHost` / `ForgeRendererHost` | Confluence macro config | Confluence plugin |
-| **Web** | `WebEditorHost` / `WebRendererHost` | localStorage | Playground on excaliframe.com |
+| **Web** | `WebEditorHost` / `WebRendererHost` | IndexedDB (via `PlaygroundStore`) | Playground on excaliframe.com |
 | **Server** | _(future)_ | Backend API | Multi-user hosted mode |
 
 #### Host Interface
@@ -239,7 +250,26 @@ A separate Go web application for the public-facing website.
 
 ### Playground
 
-The playground page (`/playground/`) embeds the same core Excalidraw editor used in the Confluence plugin, wired to a `WebEditorHost` that persists drawings to localStorage. Built via `webpack.playground.js` and output to `site/static/playground/excalidraw/`. The site's `deploy` target in `site/Makefile` automatically builds the playground first.
+The playground is a multi-page experience for creating, browsing, and editing drawings:
+
+| Route | Page | Description |
+|-------|------|-------------|
+| `/playground/` | `PlaygroundListPage` | Drawing list (grid/list view toggle) |
+| `/playground/{drawingId}/` | `PlaygroundDetailPage` | Preview + metadata + edit button |
+| `/playground/{drawingId}/edit` | `PlaygroundEditPage` | Full-screen Excalidraw editor |
+
+**Storage**: Drawings are stored in IndexedDB via `PlaygroundStore` (`src/hosts/playground-store.ts`). Each drawing is a `StoredDrawing` with `id`, `title`, and `envelope` (a `DrawingEnvelope`). Legacy localStorage data is auto-migrated on first access.
+
+**Client-side rendering**: Since drawings live in IndexedDB (not the server), the Go server renders page skeletons using goapplib's `EntityListingData` and `EntityListing.html` templates. Client JS populates the grid/table from IndexedDB on `DOMContentLoaded`.
+
+**JSX without React**: The listing and detail pages use `jsx-dom` — a lightweight JSX-to-DOM library that compiles TSX to real DOM elements without React overhead. Only the Excalidraw editor page uses React.
+
+**Webpack**: `webpack.playground.js` produces three bundles:
+- `playground-listing` → `site/static/playground/listing/bundle.js` (small, jsx-dom)
+- `playground-detail` → `site/static/playground/detail/bundle.js` (small, jsx-dom)
+- `playground-excalidraw` → `site/static/playground/excalidraw/bundle.js` (large, React + Excalidraw)
+
+**Tool selection**: New drawings show a tool selection modal. Currently only Excalidraw is available; Mermaid will be added later. The tool ID is stored in `DrawingEnvelope.tool`.
 
 ### SEO
 

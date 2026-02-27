@@ -28,6 +28,13 @@ Immediate and near-term action items for Excaliframe.
 
 ---
 
+## In Progress
+
+### Fix Playground Data Persistence Bug
+- After saving a drawing in the Excalidraw editor, returning to the listing/detail/edit pages shows empty data
+- Save appears to complete successfully but drawing data is not found on subsequent page loads
+- Likely issue in how `WebEditorHost.saveDrawing()` interacts with `PlaygroundStore` or how drawing data round-trips through IndexedDB
+
 ## Backlog
 
 - **Security whitepaper** — formal architecture and trust model document
@@ -38,8 +45,8 @@ Immediate and near-term action items for Excaliframe.
 - **Add Mermaid editor** — second diagram type using existing core/hosts architecture
 - **Playground enhancements** — export PNG button, sample drawings gallery, dark mode sync
 - **Server-backed host adapter** — `src/hosts/server.ts` for multi-user persistence via backend API
-- **Playground tool chooser** — `/playground/` as tool picker, `/playground/excalidraw/` and `/playground/mermaid/`
 - **Formal vulnerability disclosure process** — security contact + CVE handling
+- **Wrap jsx-dom in tsappkit** — consider re-exporting from `@panyam/tsappkit` for cross-project reuse
 
 ---
 
@@ -60,3 +67,4 @@ Immediate and near-term action items for Excaliframe.
 - [x] Multi-hostable architecture: extracted core components (`src/core/`) with host adapter interface
 - [x] Host adapters: Forge (`src/hosts/forge.ts`) and Web/localStorage (`src/hosts/web.ts`)
 - [x] Interactive playground on marketing site (`/playground/` → full Excalidraw editor with localStorage persistence)
+- [x] Multi-drawing playground with list/detail/edit pages and IndexedDB storage (WIP: data persistence bug)

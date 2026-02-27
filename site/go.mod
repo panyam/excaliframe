@@ -29,4 +29,4 @@ require (
 
 // replace github.com/panyam/oneauth v0.0.23 => ./locallinks/newstack/oneauth
 
-// replace github.com/panyam/goapplib v0.0.31 => ./locallinks/newstack/goapplib
+replace github.com/panyam/goapplib v0.0.31 => ./locallinks/newstack/goapplib/main

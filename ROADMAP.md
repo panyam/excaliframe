@@ -24,6 +24,7 @@ Make Excaliframe the go-to lightweight diagramming tool inside Confluence — fa
 | Update ARCHITECTURE.md for Forge | Done |
 | Multi-hostable architecture (core/hosts split) | Done |
 | Interactive playground on marketing site | Done |
+| Multi-drawing playground (list/detail/edit + IndexedDB) | In Progress |
 | GitHub Actions CI (build, lint, audit) | TODO |
 | Atlassian Marketplace submission | TODO |
 | SBOM generation on releases | TODO |
@@ -59,7 +60,7 @@ Make Excaliframe the go-to lightweight diagramming tool inside Confluence — fa
 | Mermaid editor integration | Planned |
 | Macro key dispatcher in editor/renderer entry points | Planned |
 | Lazy-loaded library bundles (dynamic import per diagram type) | Planned |
-| Playground tool chooser (`/playground/` routes to tools) | Planned |
+| Playground tool chooser (tool selection modal) | In Progress |
 
 Architecture uses `DrawingEnvelope.tool` field to identify diagram type. Host adapters are shared across all tools — they store/retrieve envelopes without knowing tool-specific data formats. See ARCHITECTURE.md "Adding New Diagram Libraries".
 

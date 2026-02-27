@@ -130,6 +130,9 @@ const ExcalidrawEditor: React.FC<Props> = ({ host }) => {
       console.log('Editor - Saving envelope, elements:', elements.length);
       await host.saveDrawing(envelope);
       console.log('Editor - Save complete');
+      setIsSaving(false);
+      setIsDirty(false);
+      initialElementsRef.current = JSON.stringify([...elements]);
 
     } catch (error) {
       console.error('Editor - Error saving:', error);

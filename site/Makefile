@@ -1,7 +1,7 @@
 
 NUM_LINKED_GOMODS=`cat go.mod | grep -v "^\/\/" | grep replace | wc -l | sed -e "s/ *//g"`
 
-all: run
+all: playground run
 
 run: resymlink
 	EXCALIFRAME_ENV=dev go run .
@@ -19,7 +19,7 @@ checklinks:
 		echo "You are trying to deploy with symlinks. Remove them first and make sure versions exist" && false ;	\
 	fi
 
-playground-build:
+playground:
 	cd .. && npx webpack --config webpack.playground.js --mode production
 
 deploy: checklinks playground-build

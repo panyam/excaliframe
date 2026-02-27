@@ -106,16 +106,82 @@ func (d *Documentation) Load(r *http.Request, w http.ResponseWriter, app *goal.A
 	return nil, false
 }
 
-// PlaygroundPage - interactive tool playground
-type PlaygroundPage struct {
-	goal.BasePage
-	Header Header
+// PlaygroundDrawing is a placeholder type for EntityListingData.
+// Actual drawing data lives in the browser's IndexedDB, not on the server.
+// Client JS populates the grid/table after page load.
+type PlaygroundDrawing struct {
+	Id   string
+	Name string
 }
 
-func (p *PlaygroundPage) Load(r *http.Request, w http.ResponseWriter, app *goal.App[*ExcaliframeApp]) (error, bool) {
-	p.Title = "Playground - Excaliframe"
+// PlaygroundListPage - drawing list page using EntityListing pattern
+type PlaygroundListPage struct {
+	goal.BasePage
+	Header      Header
+	ListingData *goal.EntityListingData[*PlaygroundDrawing]
+}
+
+func (p *PlaygroundListPage) Load(r *http.Request, w http.ResponseWriter, app *goal.App[*ExcaliframeApp]) (error, bool) {
+	p.Title = "My Drawings - Excaliframe"
 	p.MetaDescription = "Try Excalidraw right in your browser. No installation required. Draw diagrams, wireframes, and sketches with the same tool available in our Confluence plugin."
 	p.CanonicalUrl = app.Context.BaseURL + "/playground/"
+	p.DisableSplashScreen = true
+	p.Header.AppName = app.Context.AppName
+
+	// Configure EntityListingData - Items will be empty since data lives in IndexedDB.
+	// Client JS populates the grid after loading from IndexedDB.
+	p.ListingData = goal.NewEntityListingData[*PlaygroundDrawing]("My Drawings", "/playground/%s/").
+		WithCreate("#new-drawing", "New Drawing").
+		WithView("/playground/%s/").
+		WithEdit("/playground/%s/edit").
+		WithDelete("/playground/%s/delete")
+	p.ListingData.ViewModeStorageKey = "excaliframe:view-mode"
+	p.ListingData.GridContainerId = "drawings-grid"
+	p.ListingData.SearchInputId = "search-drawings"
+	p.ListingData.SearchPlaceholder = "Search drawings..."
+	p.ListingData.EmptyTitle = "No drawings yet"
+	p.ListingData.EmptyMessage = "Get started by creating your first drawing."
+	p.ListingData.ShowActions = true
+	p.ListingData.ShowEditButton = true
+	p.ListingData.EnableViewToggle = true
+	p.ListingData.SortOptions = nil // Client-side sort only
+
+	return nil, false
+}
+
+// PlaygroundDetailPage - drawing detail/edit page
+type PlaygroundDetailPage struct {
+	goal.BasePage
+	Header    Header
+	DrawingId string
+	Mode      string // "view" or "edit"
+}
+
+func (p *PlaygroundDetailPage) Load(r *http.Request, w http.ResponseWriter, app *goal.App[*ExcaliframeApp]) (error, bool) {
+	p.DrawingId = r.PathValue("drawingId")
+	if p.DrawingId == "" {
+		http.Redirect(w, r, "/playground/", http.StatusFound)
+		return nil, true
+	}
+	p.DisableSplashScreen = true
+	p.Header.AppName = app.Context.AppName
+	return nil, false
+}
+
+// PlaygroundEditPage - drawing edit page (full-screen editor)
+type PlaygroundEditPage struct {
+	goal.BasePage
+	Header    Header
+	DrawingId string
+}
+
+func (p *PlaygroundEditPage) Load(r *http.Request, w http.ResponseWriter, app *goal.App[*ExcaliframeApp]) (error, bool) {
+	p.DrawingId = r.PathValue("drawingId")
+	if p.DrawingId == "" {
+		http.Redirect(w, r, "/playground/", http.StatusFound)
+		return nil, true
+	}
+	p.Title = "Edit Drawing - Excaliframe"
 	p.DisableSplashScreen = true
 	p.CustomHeader = false
 	p.Header.AppName = app.Context.AppName
@@ -131,7 +197,9 @@ func SetupRoutes(app *goal.App[*ExcaliframeApp]) *http.ServeMux {
 	goal.Register[*TermsOfService](app, mux, "/terms/")
 	goal.Register[*ContactUs](app, mux, "/contact/")
 	goal.Register[*Documentation](app, mux, "/docs/")
-	goal.Register[*PlaygroundPage](app, mux, "/playground/")
+	goal.Register[*PlaygroundListPage](app, mux, "/playground/")
+	goal.Register[*PlaygroundDetailPage](app, mux, "/playground/{drawingId}/")
+	goal.Register[*PlaygroundEditPage](app, mux, "/playground/{drawingId}/edit")
 
 	// Serve robots.txt and sitemap.xml from root
 	mux.HandleFunc("/robots.txt", func(w http.ResponseWriter, r *http.Request) {

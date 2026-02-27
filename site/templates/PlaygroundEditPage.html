@@ -3,6 +3,7 @@
 {{ define "BodySection" }}
 <main class="flex flex-col" style="height: calc(100vh - 57px);">
     <script>
+        window.PLAYGROUND_DRAWING_ID = '{{ .DrawingId }}';
         // Must be set before Excalidraw loads to find bundled fonts
         window.EXCALIDRAW_ASSET_PATH = '/static/playground/excalidraw/';
     </script>
@@ -11,10 +12,8 @@
 </main>
 {{ end }}
 
-{{ define "PostBodySection" }}
-<script>
-// Sync site dark mode with Excalidraw theme
-// (The core editor uses theme="light" by default; this could be extended
-// to read from the site's theme toggle and pass it as a prop.)
-</script>
+{{ define "PostBodySection" }}{{ end }}
+
+{{ define "PlaygroundEditPage" }}
+{{ template "BasePage" . }}
 {{ end }}

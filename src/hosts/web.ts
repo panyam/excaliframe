@@ -1,35 +1,47 @@
 import { EditorHost, RendererHost, DrawingEnvelope } from '../core/types';
-
-const STORAGE_KEY = 'excaliframe:drawing';
+import { PlaygroundStore } from './playground-store';
 
 export class WebEditorHost implements EditorHost {
+  private drawingId: string;
+  private store: PlaygroundStore;
+  private title: string = 'Untitled Drawing';
+
+  constructor(drawingId: string, store: PlaygroundStore) {
+    this.drawingId = drawingId;
+    this.store = store;
+  }
+
   async loadDrawing(): Promise<DrawingEnvelope | null> {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return null;
-      return JSON.parse(raw) as DrawingEnvelope;
-    } catch {
-      return null;
-    }
+    const drawing = await this.store.getById(this.drawingId);
+    if (!drawing) return null;
+    this.title = drawing.title;
+    return drawing.envelope;
   }
 
   async saveDrawing(envelope: DrawingEnvelope): Promise<void> {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(envelope));
+    await this.store.save({
+      id: this.drawingId,
+      title: this.title,
+      envelope,
+    });
   }
 
   close(): void {
-    // No-op in standalone web mode
+    window.location.href = '/playground/';
   }
 }
 
 export class WebRendererHost implements RendererHost {
+  private drawingId: string;
+  private store: PlaygroundStore;
+
+  constructor(drawingId: string, store: PlaygroundStore) {
+    this.drawingId = drawingId;
+    this.store = store;
+  }
+
   async loadConfig(): Promise<DrawingEnvelope | null> {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return null;
-      return JSON.parse(raw) as DrawingEnvelope;
-    } catch {
-      return null;
-    }
+    const drawing = await this.store.getById(this.drawingId);
+    return drawing?.envelope ?? null;
   }
 }

@@ -23,11 +23,12 @@
   "license": "MIT",
   "dependencies": {
     "@excalidraw/excalidraw": "^0.18.0",
-    "@forge/bridge": "^4.0.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
     "@forge/api": "^4.0.0",
-    "@forge/resolver": "^1.6.0"
+    "@forge/bridge": "^4.0.0",
+    "@forge/resolver": "^1.6.0",
+    "jsx-dom": "^8.1.6",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
     "@forge/cli": "^10.0.0",
