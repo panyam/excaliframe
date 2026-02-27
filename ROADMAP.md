@@ -24,7 +24,8 @@ Make Excaliframe the go-to lightweight diagramming tool inside Confluence — fa
 | Update ARCHITECTURE.md for Forge | Done |
 | Multi-hostable architecture (core/hosts split) | Done |
 | Interactive playground on marketing site | Done |
-| Multi-drawing playground (list/detail/edit + IndexedDB) | In Progress |
+| Multi-drawing playground (list/detail/edit + IndexedDB) | Done |
+| Editable drawing title in playground editor | Done |
 | GitHub Actions CI (build, lint, audit) | TODO |
 | Atlassian Marketplace submission | TODO |
 | SBOM generation on releases | TODO |

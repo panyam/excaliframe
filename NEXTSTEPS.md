@@ -45,7 +45,7 @@ Immediate and near-term action items for Excaliframe.
 - **Changelog with security notes** — flag security-relevant changes in releases
 - **Atlassian Cloud Fortified** — Atlassian's enterprise security certification
 - **Add Mermaid editor** — second diagram type using existing core/hosts architecture
-- **Playground enhancements** — export PNG button, sample drawings gallery, dark mode sync
+- **Playground enhancements** — export PNG button, sample drawings gallery, dark mode sync, title editing from list/detail pages
 - **Server-backed host adapter** — `src/hosts/server.ts` for multi-user persistence via backend API
 - **Formal vulnerability disclosure process** — security contact + CVE handling
 - **Wrap jsx-dom in tsappkit** — consider re-exporting from `@panyam/tsappkit` for cross-project reuse
@@ -73,3 +73,7 @@ Immediate and near-term action items for Excaliframe.
 - [x] Fix playground data persistence bug (save spinner was blocking subsequent saves)
 - [x] Reorganize playground code into `site/` — self-contained `package.json`, `tsconfig.json`, `webpack.config.js` with `@excaliframe/*` path alias
 - [x] Add `showCancel` prop to ExcalidrawEditor — web mode uses MainMenu + Cmd/Ctrl+S instead of top toolbar
+- [x] Editable drawing title in playground editor — inline-editable in site header, persists to IndexedDB via `WebEditorHost.setTitle()`
+- [x] `EditorHost` extended with optional `getTitle()` / `setTitle()` methods
+- [x] `DrawingTitle` component in `src/core/DrawingTitle.tsx` — standalone, reusable, host-agnostic
+- [x] Title rendered at page layer via portal into `#drawing-title-slot` (not inside ExcalidrawEditor)

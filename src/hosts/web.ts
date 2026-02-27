@@ -35,6 +35,18 @@ export class WebEditorHost implements EditorHost {
   close(): void {
     window.location.href = '/playground/';
   }
+
+  getTitle(): string {
+    return this.title;
+  }
+
+  async setTitle(title: string): Promise<void> {
+    this.title = title;
+    const drawing = await this.store.getById(this.drawingId);
+    if (drawing) {
+      await this.store.save({ ...drawing, title });
+    }
+  }
 }
 
 export class WebRendererHost implements RendererHost {

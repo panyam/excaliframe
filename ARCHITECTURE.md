@@ -60,7 +60,8 @@ excaliframe/
 │   ├── core/                       # Host-agnostic core components
 │   │   ├── types.ts                # DrawingEnvelope, EditorHost, RendererHost interfaces
 │   │   ├── ExcalidrawEditor.tsx    # Core Excalidraw editor (accepts EditorHost prop)
-│   │   └── ExcalidrawRenderer.tsx  # Core renderer (accepts RendererHost prop)
+│   │   ├── ExcalidrawRenderer.tsx  # Core renderer (accepts RendererHost prop)
+│   │   └── DrawingTitle.tsx        # Inline-editable title (standalone, host-agnostic)
 │   ├── hosts/                      # Platform-specific host adapters
 │   │   ├── forge.ts                # ForgeEditorHost, ForgeRendererHost (@forge/bridge)
 │   │   ├── web.ts                  # WebEditorHost, WebRendererHost (IndexedDB via PlaygroundStore)
@@ -147,6 +148,8 @@ interface EditorHost {
   loadDrawing(): Promise<DrawingEnvelope | null>;
   saveDrawing(envelope: DrawingEnvelope): Promise<void>;
   close(): void;
+  getTitle?(): string;          // optional — return current drawing title
+  setTitle?(title: string): Promise<void>;  // optional — persist title change
 }
 
 interface RendererHost {
@@ -155,6 +158,8 @@ interface RendererHost {
 ```
 
 The `DrawingEnvelope` is tool-agnostic — hosts store/retrieve it without knowing whether the `data` field contains Excalidraw JSON, Mermaid markup, or anything else.
+
+**Title support** is optional on `EditorHost`. `WebEditorHost` implements `getTitle()` / `setTitle()` because playground drawings have user-editable titles stored in IndexedDB (independently of drawing save). `ForgeEditorHost` does not implement them — Forge drawings live in Confluence pages where the page title serves as the name.
 
 ### Dual-Component Model
 
@@ -201,6 +206,7 @@ The Forge host adapter reads/writes via `@forge/bridge`:
 - **Copy/Paste JSON** — export/import Excalidraw scenes via clipboard
 - **Dynamic loading** — Excalidraw loaded via `import()` for code splitting
 - **Version display** — auto-generated from `scripts/update-version.js`
+- **Editable drawing title** (playground only) — inline-editable title in the site header, persists to IndexedDB immediately
 
 ### Technology Stack
 
@@ -278,6 +284,15 @@ Module resolution uses `resolve.modules` to pin all packages to `site/node_modul
 
 **Editor UI modes**: `ExcalidrawEditor` accepts a `showCancel` prop. In Forge mode (default, `showCancel=true`), a top toolbar shows Save/Cancel buttons. In web/playground mode (`showCancel=false`), there is no toolbar — Save is available via the Excalidraw hamburger menu and Cmd/Ctrl+S, with a floating dirty indicator.
 
+**Editable drawing title**: In the playground editor, users can click the drawing title in the site header (after "Excaliframe /") to rename it inline. The title persists immediately to IndexedDB via `WebEditorHost.setTitle()`, independently of the drawing save cycle.
+
+Architecture decisions for the title feature:
+- `DrawingTitle` component (`src/core/DrawingTitle.tsx`) is standalone and reusable — takes `initialTitle` + `onRename` callback, has no knowledge of hosts or editors
+- Title rendering happens at the page layer (`site/pages/excalidraw/index.tsx`), NOT inside `ExcalidrawEditor` — this keeps it tool-agnostic so Mermaid or any future editor can reuse it
+- `PlaygroundEditPage.html` injects a `#drawing-title-slot` into the site header's logo area via inline script
+- Title is rendered into the slot via a separate React root (portal pattern), positioned after "Excaliframe /" on the left side of the header bar
+- `getTitle()` / `setTitle()` are optional on `EditorHost` — only `WebEditorHost` implements them (Forge drawings get their name from the Confluence page)
+
 ### SEO
 
 - Canonical URL redirects (www → non-www, http → https)
@@ -341,6 +356,7 @@ New libraries add core components under `src/core/` and are wired through the sa
 src/
 ├── core/
 │   ├── types.ts                    # DrawingEnvelope, EditorHost, RendererHost
+│   ├── DrawingTitle.tsx            # Inline-editable title (shared across all tools)
 │   ├── ExcalidrawEditor.tsx        # Excalidraw-specific editor
 │   ├── ExcalidrawRenderer.tsx      # Excalidraw-specific renderer
 │   ├── MermaidEditor.tsx           # Mermaid-specific editor (future)

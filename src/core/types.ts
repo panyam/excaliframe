@@ -19,6 +19,8 @@ export interface EditorHost {
   loadDrawing(): Promise<DrawingEnvelope | null>;
   saveDrawing(envelope: DrawingEnvelope): Promise<void>;
   close(): void;
+  getTitle?(): string;
+  setTitle?(title: string): Promise<void>;
 }
 
 // Host adapter for the renderer (load config for display)

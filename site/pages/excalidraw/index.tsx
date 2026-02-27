@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import ExcalidrawEditor from '@excaliframe/core/ExcalidrawEditor';
+import DrawingTitle from '@excaliframe/core/DrawingTitle';
 import { WebEditorHost } from '@excaliframe/hosts/web';
 import { PlaygroundStore } from '@excaliframe/hosts/playground-store';
 import '@excalidraw/excalidraw/index.css';
@@ -18,6 +19,22 @@ if (!drawingId) {
 } else {
   const store = new PlaygroundStore();
   const host = new WebEditorHost(drawingId, store);
-  const root = ReactDOM.createRoot(document.getElementById('playground-root')!);
-  root.render(<ExcalidrawEditor host={host} showCancel={false} />);
+
+  // Load drawing first so the host has the title, then render everything
+  host.loadDrawing().then(() => {
+    const root = ReactDOM.createRoot(document.getElementById('playground-root')!);
+    root.render(<ExcalidrawEditor host={host} showCancel={false} />);
+
+    // Render editable title into the header slot (injected by PlaygroundEditPage.html)
+    const titleSlot = document.getElementById('drawing-title-slot');
+    if (titleSlot) {
+      const titleRoot = ReactDOM.createRoot(titleSlot);
+      titleRoot.render(
+        <DrawingTitle
+          initialTitle={host.getTitle()}
+          onRename={(t) => host.setTitle(t)}
+        />
+      );
+    }
+  });
 }

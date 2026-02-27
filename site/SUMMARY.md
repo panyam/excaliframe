@@ -13,7 +13,7 @@ A simple Go web application built with [goapplib](https://github.com/panyam/goap
 - **Home** (`/`) - Landing page with feature highlights, screenshots, and installation link
 - **Playground List** (`/playground/`) - Multi-drawing list page with grid/table view toggle
 - **Playground Detail** (`/playground/{drawingId}/`) - Drawing preview with metadata and edit/delete buttons
-- **Playground Edit** (`/playground/{drawingId}/edit`) - Full-screen Excalidraw editor
+- **Playground Edit** (`/playground/{drawingId}/edit`) - Full-screen Excalidraw editor with inline-editable drawing title
 - **Documentation** (`/docs/`) - Installation guide, FAQ, and tips
 - **Privacy Policy** (`/privacy/`) - Privacy policy (no data collection, all data stays in Confluence)
 - **Terms of Service** (`/terms/`) - MIT license terms and disclaimers
@@ -65,6 +65,15 @@ npm run watch      # Watch mode for development
 ```
 
 The `@excaliframe/*` alias maps to `../src/*` in both `tsconfig.json` and `webpack.config.js`. If `site/` ever moves to its own repo, only the alias config changes — no source code changes needed.
+
+### Editable Drawing Title
+
+The playground editor page includes an inline-editable drawing title in the site header bar, positioned after "Excaliframe /". The implementation uses a portal pattern:
+
+1. `PlaygroundEditPage.html` injects a `#drawing-title-slot` element into the header's logo area via inline script
+2. `site/pages/excalidraw/index.tsx` renders the `DrawingTitle` component (from `src/core/DrawingTitle.tsx`) into the slot via a separate React root
+3. Title changes persist immediately to IndexedDB via `WebEditorHost.setTitle()`, independently of the drawing save cycle
+4. The `DrawingTitle` component is standalone and reusable — it accepts `initialTitle` + `onRename` callback and has no knowledge of hosts or editors
 
 ## Development
 
