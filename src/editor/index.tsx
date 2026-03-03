@@ -32,7 +32,7 @@ async function loadEditor(tool: string): Promise<EditorComponent> {
 
 (async () => {
   const context = await view.getContext();
-  const moduleKey = (context as any).extension?.moduleKey || '';
+  const moduleKey = (context as any).moduleKey || '';
   const tool = toolFromModuleKey(moduleKey);
 
   const host = new ForgeEditorHost(tool);
