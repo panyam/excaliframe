@@ -221,18 +221,12 @@ class PlaygroundListPage {
             {this.formatDate(d.envelope?.updatedAt)}
           </p>
 
-          <div className="flex gap-2">
-            <a
-              href={`/playground/${d.id}/`}
-              className="flex-1 inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              View
-            </a>
+          <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
             <a
               href={`/playground/${d.id}/edit`}
-              className="hidden sm:hidden sm:group-hover:inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              className="flex-1 inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
             >
-              {editIcon()}
+              Edit
             </a>
           </div>
         </div>
@@ -277,14 +271,8 @@ class PlaygroundListPage {
         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
           <div className="flex items-center justify-end gap-2">
             <a
-              href={`/playground/${d.id}/`}
-              className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
-            >
-              View
-            </a>
-            <a
               href={`/playground/${d.id}/edit`}
-              className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
             >
               Edit
             </a>

@@ -30,7 +30,7 @@ class PlaygroundDetailPage {
 
   async init(): Promise<void> {
     if (!this.drawingId) {
-      window.location.href = '/playground/';
+      window.location.href = '/';
       return;
     }
 
@@ -122,7 +122,7 @@ class PlaygroundDetailPage {
           This drawing may have been deleted or the link is invalid.
         </p>
         <a
-          href="/playground/"
+          href="/"
           className="mt-6 inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
         >
           Back to drawings
@@ -136,7 +136,7 @@ class PlaygroundDetailPage {
   private async deleteDrawing(d: StoredDrawing): Promise<void> {
     if (!confirm(`Delete "${d.title || 'this drawing'}"? This cannot be undone.`)) return;
     await this.store.delete(d.id);
-    window.location.href = '/playground/';
+    window.location.href = '/';
   }
 
   private hideLoading(): void {

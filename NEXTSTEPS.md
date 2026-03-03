@@ -84,3 +84,6 @@ Immediate and near-term action items for Excaliframe.
 - [x] Shared mermaid.css — moved from site-local to `src/core/mermaid.css` for Forge + playground reuse
 - [x] ForgeEditorHost/ForgeRendererHost accept `tool` param (default `'excalidraw'` for backward compat)
 - [x] Synced to enterprise Forge repo with `mermaid` dependency and webpack code splitting
+- [x] Make playground the landing page — drawing list at `/`, marketing page moved to `/about/`, old `/playground/` redirects to `/`
+- [x] Listing UX: removed redundant View button, Edit button shows on hover as full-width button
+- [x] Privacy policy updated to cover playground IndexedDB storage alongside Confluence

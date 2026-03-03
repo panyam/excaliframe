@@ -26,6 +26,7 @@ Make Excaliframe the go-to lightweight diagramming toolkit for Confluence and th
 | Interactive playground on marketing site | Done |
 | Multi-drawing playground (list/detail/edit + IndexedDB) | Done |
 | Editable drawing title in playground editor | Done |
+| Playground as landing page (drawing list at `/`) | Done |
 | GitHub Actions CI (build, lint, audit) | TODO |
 | Atlassian Marketplace submission | TODO |
 | SBOM generation on releases | TODO |

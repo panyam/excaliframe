@@ -15,7 +15,7 @@ declare global {
 
 const drawingId = window.PLAYGROUND_DRAWING_ID;
 if (!drawingId) {
-  window.location.href = '/playground/';
+  window.location.href = '/';
 } else {
   const store = new PlaygroundStore();
   const host = new WebEditorHost(drawingId, store);

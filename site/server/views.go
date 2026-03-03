@@ -17,7 +17,7 @@ func (h *Header) Load(r *http.Request, w http.ResponseWriter, app *goal.App[*Exc
 	return nil, false
 }
 
-// HomePage is the landing page
+// HomePage is the marketing/about page
 type HomePage struct {
 	goal.BasePage
 	Header       Header
@@ -28,7 +28,7 @@ type HomePage struct {
 func (p *HomePage) Load(r *http.Request, w http.ResponseWriter, app *goal.App[*ExcaliframeApp]) (error, bool) {
 	p.Title = "Excaliframe - Excalidraw for Confluence"
 	p.MetaDescription = "Excaliframe brings the power of Excalidraw to Confluence. Create beautiful hand-drawn diagrams, wireframes, and sketches directly in your Confluence pages."
-	p.CanonicalUrl = app.Context.BaseURL + "/"
+	p.CanonicalUrl = app.Context.BaseURL + "/about/"
 	p.DisableSplashScreen = true
 	p.Header.AppName = app.Context.AppName
 	p.GitHubURL = app.Context.GitHubURL
@@ -122,9 +122,9 @@ type PlaygroundListPage struct {
 }
 
 func (p *PlaygroundListPage) Load(r *http.Request, w http.ResponseWriter, app *goal.App[*ExcaliframeApp]) (error, bool) {
-	p.Title = "My Drawings - Excaliframe"
+	p.Title = "Excaliframe - Diagramming for Confluence and the Web"
 	p.MetaDescription = "Try Excalidraw right in your browser. No installation required. Draw diagrams, wireframes, and sketches with the same tool available in our Confluence plugin."
-	p.CanonicalUrl = app.Context.BaseURL + "/playground/"
+	p.CanonicalUrl = app.Context.BaseURL + "/"
 	p.DisableSplashScreen = true
 	p.Header.AppName = app.Context.AppName
 
@@ -160,7 +160,7 @@ type PlaygroundDetailPage struct {
 func (p *PlaygroundDetailPage) Load(r *http.Request, w http.ResponseWriter, app *goal.App[*ExcaliframeApp]) (error, bool) {
 	p.DrawingId = r.PathValue("drawingId")
 	if p.DrawingId == "" {
-		http.Redirect(w, r, "/playground/", http.StatusFound)
+		http.Redirect(w, r, "/", http.StatusFound)
 		return nil, true
 	}
 	p.DisableSplashScreen = true
@@ -178,7 +178,7 @@ type PlaygroundEditPage struct {
 func (p *PlaygroundEditPage) Load(r *http.Request, w http.ResponseWriter, app *goal.App[*ExcaliframeApp]) (error, bool) {
 	p.DrawingId = r.PathValue("drawingId")
 	if p.DrawingId == "" {
-		http.Redirect(w, r, "/playground/", http.StatusFound)
+		http.Redirect(w, r, "/", http.StatusFound)
 		return nil, true
 	}
 	p.Title = "Edit Drawing - Excaliframe"
@@ -192,12 +192,12 @@ func (p *PlaygroundEditPage) Load(r *http.Request, w http.ResponseWriter, app *g
 func SetupRoutes(app *goal.App[*ExcaliframeApp]) *http.ServeMux {
 	mux := http.NewServeMux()
 
-	goal.Register[*HomePage](app, mux, "/")
+	goal.Register[*PlaygroundListPage](app, mux, "/")
+	goal.Register[*HomePage](app, mux, "/about/")
 	goal.Register[*PrivacyPolicy](app, mux, "/privacy/")
 	goal.Register[*TermsOfService](app, mux, "/terms/")
 	goal.Register[*ContactUs](app, mux, "/contact/")
 	goal.Register[*Documentation](app, mux, "/docs/")
-	goal.Register[*PlaygroundListPage](app, mux, "/playground/")
 	goal.Register[*PlaygroundDetailPage](app, mux, "/playground/{drawingId}/")
 	goal.Register[*PlaygroundEditPage](app, mux, "/playground/{drawingId}/edit")
 
@@ -223,8 +223,15 @@ func SetupRoutes(app *goal.App[*ExcaliframeApp]) *http.ServeMux {
 	mux.HandleFunc("/docs", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/docs/", http.StatusMovedPermanently)
 	})
+	// Redirect old /playground/ URLs to root
+	mux.HandleFunc("/playground/", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/", http.StatusMovedPermanently)
+	})
 	mux.HandleFunc("/playground", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/playground/", http.StatusMovedPermanently)
+		http.Redirect(w, r, "/", http.StatusMovedPermanently)
+	})
+	mux.HandleFunc("/about", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/about/", http.StatusMovedPermanently)
 	})
 
 	return mux

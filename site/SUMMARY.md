@@ -10,12 +10,12 @@ A simple Go web application built with [goapplib](https://github.com/panyam/goap
 
 ## Pages
 
-- **Home** (`/`) - Landing page with feature highlights, screenshots, and installation link
-- **Playground List** (`/playground/`) - Multi-drawing list page with grid/table view toggle
+- **Home / Playground List** (`/`) - Landing page, drawing list with grid/table view toggle (the playground is the first thing users see)
+- **About** (`/about/`) - Marketing page with feature highlights, screenshots, and installation link
 - **Playground Detail** (`/playground/{drawingId}/`) - Drawing preview with metadata and edit/delete buttons
 - **Playground Edit** (`/playground/{drawingId}/edit`) - Full-screen editor (Excalidraw or Mermaid) with inline-editable drawing title
 - **Documentation** (`/docs/`) - Installation guide, FAQ, and tips
-- **Privacy Policy** (`/privacy/`) - Privacy policy (no data collection, all data stays in Confluence)
+- **Privacy Policy** (`/privacy/`) - Privacy policy (no data collection; Confluence data stays in Confluence, playground data stays in browser IndexedDB)
 - **Terms of Service** (`/terms/`) - MIT license terms and disclaimers
 - **Contact Us** (`/contact/`) - Links to GitHub Issues
 

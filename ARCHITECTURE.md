@@ -272,12 +272,14 @@ A separate Go web application for the public-facing website.
 
 | Route | Page |
 |-------|------|
-| `/` | Landing page |
-| `/playground/` | Interactive Excalidraw playground (no install required) |
+| `/` | Playground drawing list (landing page) |
+| `/about/` | Marketing/about page with feature highlights and install links |
 | `/docs/` | Documentation |
-| `/privacy/` | Privacy policy |
+| `/privacy/` | Privacy policy (covers both Confluence and playground data) |
 | `/terms/` | Terms of service |
 | `/contact/` | Contact (links to GitHub Issues) |
+
+The playground is the landing page — users can start creating drawings immediately without navigating away from the root URL. The old `/playground/` URL redirects to `/`.
 
 ### Playground
 
@@ -285,7 +287,7 @@ The playground is a multi-page experience for creating, browsing, and editing dr
 
 | Route | Page | Description |
 |-------|------|-------------|
-| `/playground/` | `PlaygroundListPage` | Drawing list (grid/list view toggle) |
+| `/` | `PlaygroundListPage` | Drawing list (landing page, grid/list view toggle) |
 | `/playground/{drawingId}/` | `PlaygroundDetailPage` | Preview + metadata + edit button |
 | `/playground/{drawingId}/edit` | `PlaygroundEditPage` | Full-screen Excalidraw editor |
 
