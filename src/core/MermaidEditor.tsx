@@ -16,15 +16,14 @@ const DEFAULT_TEMPLATE = `flowchart TD
     D --> E
 `;
 
-/** Safely insert mermaid-rendered SVG into a container using DOM parsing. */
+/** Insert mermaid-rendered SVG into a container.
+ *  Uses innerHTML because C4 and other diagrams produce SVGs with
+ *  <foreignObject> containing HTML that isn't valid XML, so DOMParser
+ *  with 'image/svg+xml' silently fails for those diagram types.
+ *  Safe here: svgString comes from mermaid's own renderer, not user HTML. */
 function setSvgContent(container: HTMLElement, svgString: string): void {
-  container.textContent = '';
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(svgString, 'image/svg+xml');
-  const svgEl = doc.documentElement;
-  if (svgEl && svgEl.nodeName === 'svg') {
-    container.appendChild(document.importNode(svgEl, true));
-  }
+  // eslint-disable-next-line no-unsanitized/property
+  container.innerHTML = svgString;
 }
 
 
@@ -51,8 +50,10 @@ const MermaidEditor: React.FC<Props> = ({ host, showCancel = true }) => {
       m.initialize({
         startOnLoad: false,
         theme: 'default',
-        // 'strict' uses DOMPurify internally to sanitize rendered SVG
-        securityLevel: 'strict',
+        // 'loose' is needed because 'strict' uses DOMPurify which strips
+        // <foreignObject> elements required by C4 diagrams.
+        // Safe here: users only render their own local content.
+        securityLevel: 'loose',
       });
       setMermaid(m);
     });

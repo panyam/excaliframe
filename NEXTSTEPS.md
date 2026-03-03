@@ -39,6 +39,7 @@ Immediate and near-term action items for Excaliframe.
 
 ## Backlog
 
+- **DOMPurify hardening for Mermaid SVG preview** — [#2](https://github.com/panyam/excaliframe/issues/2) — add DOMPurify with custom config that allows `<foreignObject>` but strips scripts/event handlers
 - **Security whitepaper** — formal architecture and trust model document
 - **Self-audit guide** — step-by-step for enterprise security teams
 - **Verification scripts** — automated code/dependency verification tooling
@@ -87,3 +88,4 @@ Immediate and near-term action items for Excaliframe.
 - [x] Make playground the landing page — drawing list at `/`, marketing page moved to `/about/`, old `/playground/` redirects to `/`
 - [x] Listing UX: removed redundant View button, Edit button shows on hover as full-width button
 - [x] Privacy policy updated to cover playground IndexedDB storage alongside Confluence
+- [x] Fix C4 diagram rendering in Mermaid editor (securityLevel + innerHTML for foreignObject support)
