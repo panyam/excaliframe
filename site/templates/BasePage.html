@@ -51,7 +51,7 @@
 {{ define "ExcaliframeHeaderSection" }}
     {{ if not .CustomHeader }}
     <!-- Header Block -->
-    <div class="print:hidden sticky left-0 top-0 z-20 border-b border-gray-200 dark:border-gray-700">
+    <div class="print:hidden sticky left-0 top-0 z-20 flex-shrink-0 border-b border-gray-200 dark:border-gray-700">
         {{ template "ExcaliframeHeader" .Header }}
     </div>
     {{ end }}

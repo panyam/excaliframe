@@ -214,7 +214,7 @@ const MermaidEditor: React.FC<Props> = ({ host, showCancel = true }) => {
     return (
       <div style={{
         display: 'flex', flexDirection: 'column', justifyContent: 'center',
-        alignItems: 'center', height: '100vh', backgroundColor: '#fff', gap: '16px',
+        alignItems: 'center', height: '100%', backgroundColor: '#fff', gap: '16px',
       }}>
         <div style={{
           width: '48px', height: '48px', border: '3px solid #f3f4f6',
@@ -252,7 +252,7 @@ const MermaidEditor: React.FC<Props> = ({ host, showCancel = true }) => {
   // Toolbar mode (Forge): top bar with Save + Cancel
   if (showCancel) {
     return (
-      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#fff' }}>
+      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: '#fff' }}>
         <div style={{
           padding: '8px 16px', backgroundColor: '#f4f5f7', borderBottom: '1px solid #dfe1e6',
           display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, zIndex: 10,
@@ -288,7 +288,7 @@ const MermaidEditor: React.FC<Props> = ({ host, showCancel = true }) => {
 
   // No-toolbar mode (playground): floating dirty badge
   return (
-    <div style={{ height: '100vh', width: '100%', position: 'relative', backgroundColor: '#fff' }}>
+    <div style={{ height: '100%', width: '100%', position: 'relative', backgroundColor: '#fff' }}>
       {editorPane}
       {isDirty && (
         <div style={{

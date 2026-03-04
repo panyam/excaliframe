@@ -270,7 +270,7 @@ const ExcalidrawEditor: React.FC<Props> = ({ host, showCancel = true }) => {
         flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
-        height: '100vh',
+        height: '100%',
         backgroundColor: '#fff',
         gap: '16px'
       }}>
@@ -350,7 +350,7 @@ const ExcalidrawEditor: React.FC<Props> = ({ host, showCancel = true }) => {
   // Toolbar mode (Forge): top bar with Save + Cancel
   if (showCancel) {
     return (
-      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#fff' }}>
+      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: '#fff' }}>
         <div style={{
           padding: '8px 16px',
           backgroundColor: '#f4f5f7',
@@ -411,7 +411,7 @@ const ExcalidrawEditor: React.FC<Props> = ({ host, showCancel = true }) => {
 
   // No-toolbar mode (web/playground): Save in MainMenu + Cmd/Ctrl+S, floating dirty badge
   return (
-    <div style={{ height: '100vh', width: '100%', position: 'relative', backgroundColor: '#fff' }}>
+    <div style={{ height: '100%', width: '100%', position: 'relative', backgroundColor: '#fff' }}>
       <div style={{ width: '100%', height: '100%' }} className="excalidraw-wrapper">
         {excalidrawCanvas}
       </div>

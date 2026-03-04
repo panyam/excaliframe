@@ -89,3 +89,6 @@ Immediate and near-term action items for Excaliframe.
 - [x] Listing UX: removed redundant View button, Edit button shows on hover as full-width button
 - [x] Privacy policy updated to cover playground IndexedDB storage alongside Confluence
 - [x] Fix C4 diagram rendering in Mermaid editor (securityLevel + innerHTML for foreignObject support)
+- [x] Fix BorderLayout for editor pages — header (North), main (Center), footer (South) properly fill viewport
+- [x] Change all editor `100vh` heights to `100%` so editors respect container bounds, not viewport
+- [x] Reduce footer height (py-8 → py-2) for compact editor layout
