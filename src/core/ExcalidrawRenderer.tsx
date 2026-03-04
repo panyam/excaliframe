@@ -94,6 +94,14 @@ const ExcalidrawRenderer: React.FC<Props> = ({ host }) => {
   }
 
   if (previewUrl) {
+    // SVG data URIs (Mermaid C4 diagrams) contain <foreignObject> that browsers
+    // strip in <img> tags. Render inline instead. Safe: SVG from mermaid's own
+    // renderer, stored in Confluence macro config (not user-supplied HTML).
+    const isSvgDataUri = previewUrl.startsWith('data:image/svg+xml;base64,');
+    const svgMarkup = isSvgDataUri
+      ? decodeURIComponent(escape(atob(previewUrl.slice('data:image/svg+xml;base64,'.length))))
+      : '';
+
     return (
       <div style={{
         width: '100%',
@@ -102,16 +110,14 @@ const ExcalidrawRenderer: React.FC<Props> = ({ host }) => {
         borderRadius: '3px',
         overflow: 'hidden'
       }}>
-        <img
-          src={previewUrl}
-          alt="Excalidraw drawing"
-          style={{
-            display: 'block',
-            maxWidth: '100%',
-            height: 'auto',
-            margin: '0 auto'
-          }}
-        />
+        {isSvgDataUri
+          ? <div dangerouslySetInnerHTML={{ __html: svgMarkup }} style={{ width: '100%' }} />
+          : <img
+              src={previewUrl}
+              alt="Drawing"
+              style={{ display: 'block', maxWidth: '100%', height: 'auto', margin: '0 auto' }}
+            />
+        }
       </div>
     );
   }

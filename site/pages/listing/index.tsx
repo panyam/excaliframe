@@ -200,7 +200,7 @@ class PlaygroundListPage {
         <a href={`/playground/${d.id}/`} className="block relative">
           <div className="aspect-video w-full bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-700 dark:to-gray-800 overflow-hidden">
             {previewSrc
-              ? <img src={previewSrc} alt={d.title} className="w-full h-full object-contain" loading="lazy" />
+              ? renderPreviewImg(previewSrc, d.title || 'Untitled', 'w-full h-full object-contain')
               : <div className="flex items-center justify-center h-full">{placeholderIcon('w-16 h-16 text-indigo-200 dark:text-gray-600')}</div>
             }
           </div>
@@ -251,7 +251,7 @@ class PlaygroundListPage {
           <div className="flex items-center">
             <div className="flex-shrink-0 h-12 w-12 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-gray-600 dark:to-gray-700 rounded-lg flex items-center justify-center overflow-hidden">
               {previewSrc
-                ? <img src={previewSrc} alt={d.title} className="h-12 w-12 rounded-lg object-cover" />
+                ? renderPreviewImg(previewSrc, d.title || 'Untitled', 'h-12 w-12 rounded-lg object-cover')
                 : placeholderIcon('w-6 h-6 text-indigo-500 dark:text-indigo-400')
               }
             </div>
@@ -367,6 +367,34 @@ class PlaygroundListPage {
 }
 
 // --- Shared TSX helper components ---
+
+/** Render a preview image. SVG data URIs are inserted via innerHTML to support
+ *  <foreignObject> elements (used by C4 and other complex Mermaid diagrams)
+ *  which browsers strip when rendering SVG through <img> tags.
+ *  Safe: SVG originates from mermaid's own renderer, stored in user's IndexedDB. */
+function renderPreviewImg(dataUri: string, alt: string, className: string): Node {
+  if (dataUri.startsWith('data:image/svg+xml;base64,')) {
+    const base64 = dataUri.slice('data:image/svg+xml;base64,'.length);
+    const svgString = decodeURIComponent(escape(atob(base64)));
+    const container = document.createElement('div');
+    container.className = className;
+    container.style.overflow = 'hidden';
+    // eslint-disable-next-line no-unsanitized/property
+    container.innerHTML = svgString;
+    const svg = container.querySelector('svg');
+    if (svg) {
+      svg.style.width = '100%';
+      svg.style.height = '100%';
+    }
+    return container;
+  }
+  const img = document.createElement('img');
+  img.src = dataUri;
+  img.alt = alt;
+  img.className = className;
+  img.loading = 'lazy';
+  return img;
+}
 
 function placeholderIcon(className: string) {
   return (

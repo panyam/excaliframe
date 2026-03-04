@@ -92,7 +92,7 @@ class PlaygroundDetailPage {
         {/* Preview card */}
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
           {previewSrc
-            ? <img src={previewSrc} alt={d.title} className="w-full max-h-[600px] object-contain bg-white dark:bg-gray-700 p-4" />
+            ? renderPreviewImg(previewSrc, d.title || 'Untitled', 'w-full max-h-[600px] object-contain bg-white dark:bg-gray-700 p-4')
             : (
               <div className="flex flex-col items-center justify-center py-24 text-gray-400 dark:text-gray-500">
                 <svg className="w-20 h-20 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -155,6 +155,30 @@ class PlaygroundDetailPage {
     if (isNaN(d.getTime())) return '';
     return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
   }
+}
+
+// Render a preview image. SVG data URIs use innerHTML for <foreignObject>
+// support (C4 diagrams). Safe: SVG from mermaid renderer, user's IndexedDB.
+function renderPreviewImg(dataUri: string, alt: string, className: string): Node {
+  if (dataUri.startsWith('data:image/svg+xml;base64,')) {
+    const base64 = dataUri.slice('data:image/svg+xml;base64,'.length);
+    const svgString = decodeURIComponent(escape(atob(base64)));
+    const container = document.createElement('div');
+    container.className = className;
+    container.style.overflow = 'hidden';
+    container.innerHTML = svgString; // eslint-disable-line no-unsanitized/property
+    const svg = container.querySelector('svg');
+    if (svg) {
+      svg.style.width = '100%';
+      svg.style.height = '100%';
+    }
+    return container;
+  }
+  const img = document.createElement('img');
+  img.src = dataUri;
+  img.alt = alt;
+  img.className = className;
+  return img;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
