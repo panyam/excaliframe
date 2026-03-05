@@ -53,7 +53,8 @@ func (h *ApiHandler) HandleListRooms(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]any{"rooms": []any{}})
 		return
 	}
-	json.NewEncoder(w).Encode(resp)
+	// Proto omitempty drops empty slices, so wrap to ensure "rooms" key is always present
+	json.NewEncoder(w).Encode(map[string]any{"rooms": resp.GetRooms()})
 }
 
 // HandleGetRoom returns info about a specific room.

@@ -28,6 +28,7 @@
     "@forge/api": "^4.0.0",
     "@forge/bridge": "^4.0.0",
     "@forge/resolver": "^1.6.0",
+    "@panyam/servicekit-client": "^0.0.4",
     "mermaid": "^11.12.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"

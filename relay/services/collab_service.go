@@ -21,6 +21,7 @@ type CollabRoom struct {
 // CollabClient represents a connected peer in a room.
 type CollabClient struct {
 	ClientId   string
+	SessionId  string
 	Username   string
 	Tool       string
 	ClientType string
@@ -42,56 +43,215 @@ func NewCollabService() *CollabService {
 
 // GetOrCreateRoom returns the room for sessionId, creating it if needed.
 func (s *CollabService) GetOrCreateRoom(sessionId string) *CollabRoom {
-	// stub
-	return nil
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	room, ok := s.rooms[sessionId]
+	if !ok {
+		room = NewCollabRoom(sessionId)
+		s.rooms[sessionId] = room
+	}
+	return room
+}
+
+// removeRoom removes an empty room. Caller must NOT hold s.mu.
+func (s *CollabService) removeRoom(sessionId string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if room, ok := s.rooms[sessionId]; ok && room.IsEmpty() {
+		delete(s.rooms, sessionId)
+	}
 }
 
 // HandleAction processes a single CollabAction from a client stream.
-// It dispatches to the appropriate internal handler based on the oneof action.
-// Returns the response event to send back to the caller (or nil if broadcast-only).
 func (s *CollabService) HandleAction(ctx context.Context, action *pb.CollabAction) (*pb.CollabEvent, error) {
-	// stub
-	return nil, fmt.Errorf("not implemented")
+	if action == nil {
+		return nil, fmt.Errorf("nil action")
+	}
+	switch action.Action.(type) {
+	case *pb.CollabAction_Join:
+		return s.handleJoin(ctx, action)
+	case *pb.CollabAction_Leave:
+		return s.handleLeave(ctx, action)
+	case *pb.CollabAction_Presence:
+		return s.handlePresence(ctx, action)
+	default:
+		return nil, fmt.Errorf("unknown or empty action type")
+	}
 }
 
-// GetRoom returns information about a room (proto RPC signature).
+// GetRoom returns information about a room.
 func (s *CollabService) GetRoom(ctx context.Context, req *pb.GetRoomRequest) (*pb.GetRoomResponse, error) {
-	// stub
-	return nil, fmt.Errorf("not implemented")
+	s.mu.RLock()
+	room, ok := s.rooms[req.GetSessionId()]
+	s.mu.RUnlock()
+	if !ok {
+		return nil, fmt.Errorf("room not found: %s", req.GetSessionId())
+	}
+	return &pb.GetRoomResponse{
+		SessionId: room.SessionId,
+		Peers:     room.GetPeerInfo(),
+		CreatedAt: room.Created.Unix(),
+	}, nil
 }
 
-// ListRooms returns all active rooms (proto RPC signature).
+// ListRooms returns all active rooms.
 func (s *CollabService) ListRooms(ctx context.Context, req *pb.ListRoomsRequest) (*pb.ListRoomsResponse, error) {
-	// stub
-	return nil, fmt.Errorf("not implemented")
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	rooms := make([]*pb.RoomSummary, 0, len(s.rooms))
+	for _, room := range s.rooms {
+		rooms = append(rooms, &pb.RoomSummary{
+			SessionId: room.SessionId,
+			PeerCount: int32(room.ClientCount()),
+			CreatedAt: room.Created.Unix(),
+		})
+	}
+	return &pb.ListRoomsResponse{Rooms: rooms}, nil
 }
 
-// ─── Internal helpers (called by HandleAction) ──────────────────
+// ─── Internal handlers ──────────────────────────
 
-// handleJoin processes a JoinRoom action. Returns the RoomJoined event for the caller
-// and broadcasts PeerJoined to existing clients.
 func (s *CollabService) handleJoin(ctx context.Context, action *pb.CollabAction) (*pb.CollabEvent, error) {
-	// stub
-	return nil, fmt.Errorf("not implemented")
+	join := action.GetJoin()
+	if join.GetUsername() == "" {
+		return nil, fmt.Errorf("username is required")
+	}
+
+	room := s.GetOrCreateRoom(join.GetSessionId())
+
+	// Snapshot existing peers BEFORE adding the new client
+	existingPeers := room.GetPeerInfo()
+
+	clientId := uuid.New().String()
+	client := &CollabClient{
+		ClientId:   clientId,
+		SessionId:  join.GetSessionId(),
+		Username:   join.GetUsername(),
+		Tool:       join.GetTool(),
+		ClientType: join.GetClientType(),
+		AvatarUrl:  join.GetAvatarUrl(),
+		IsActive:   true,
+		SendCh:     make(chan *pb.CollabEvent, 64),
+	}
+	room.AddClient(client)
+
+	// Broadcast PeerJoined to existing clients
+	room.BroadcastExcept(&pb.CollabEvent{
+		EventId:      uuid.New().String(),
+		FromClientId: clientId,
+		Event: &pb.CollabEvent_PeerJoined{
+			PeerJoined: &pb.PeerJoined{
+				Peer: &pb.PeerInfo{
+					ClientId:   clientId,
+					Username:   join.GetUsername(),
+					AvatarUrl:  join.GetAvatarUrl(),
+					ClientType: join.GetClientType(),
+					IsActive:   true,
+				},
+			},
+		},
+	}, clientId)
+
+	// Return RoomJoined to the joining client
+	return &pb.CollabEvent{
+		EventId: uuid.New().String(),
+		Event: &pb.CollabEvent_RoomJoined{
+			RoomJoined: &pb.RoomJoined{
+				ClientId:  clientId,
+				SessionId: join.GetSessionId(),
+				Peers:     existingPeers,
+			},
+		},
+	}, nil
 }
 
-// handleLeave processes a LeaveRoom action. Broadcasts PeerLeft to remaining clients.
 func (s *CollabService) handleLeave(ctx context.Context, action *pb.CollabAction) (*pb.CollabEvent, error) {
-	// stub
-	return nil, fmt.Errorf("not implemented")
+	clientId := action.GetClientId()
+
+	// Find the room this client is in
+	s.mu.RLock()
+	var room *CollabRoom
+	var sessionId string
+	for sid, r := range s.rooms {
+		r.mu.RLock()
+		if _, ok := r.Clients[clientId]; ok {
+			room = r
+			sessionId = sid
+		}
+		r.mu.RUnlock()
+		if room != nil {
+			break
+		}
+	}
+	s.mu.RUnlock()
+
+	if room == nil {
+		return nil, fmt.Errorf("client %s not found in any room", clientId)
+	}
+
+	room.RemoveClient(clientId)
+	remainingCount := room.ClientCount()
+
+	// Broadcast PeerLeft to remaining clients
+	room.BroadcastToAll(&pb.CollabEvent{
+		EventId:      uuid.New().String(),
+		FromClientId: clientId,
+		Event: &pb.CollabEvent_PeerLeft{
+			PeerLeft: &pb.PeerLeft{
+				ClientId:  clientId,
+				Reason:    action.GetLeave().GetReason(),
+				PeerCount: int32(remainingCount),
+			},
+		},
+	})
+
+	// Clean up empty rooms
+	if remainingCount == 0 {
+		s.removeRoom(sessionId)
+	}
+
+	return &pb.CollabEvent{
+		EventId: uuid.New().String(),
+		Event: &pb.CollabEvent_PeerLeft{
+			PeerLeft: &pb.PeerLeft{
+				ClientId:  clientId,
+				PeerCount: int32(remainingCount),
+			},
+		},
+	}, nil
 }
 
-// handlePresence processes a PresenceUpdate action. Broadcasts to room peers.
 func (s *CollabService) handlePresence(ctx context.Context, action *pb.CollabAction) (*pb.CollabEvent, error) {
-	// stub
-	return nil, fmt.Errorf("not implemented")
-}
+	clientId := action.GetClientId()
+	presence := action.GetPresence()
 
-// broadcastToRoom sends an event to all clients in a room except fromClientId.
-func (s *CollabService) broadcastToRoom(sessionId, fromClientId string, event *pb.CollabEvent) error {
-	// stub
-	return fmt.Errorf("not implemented")
-}
+	// Find the room this client is in
+	s.mu.RLock()
+	var room *CollabRoom
+	for _, r := range s.rooms {
+		r.mu.RLock()
+		if _, ok := r.Clients[clientId]; ok {
+			room = r
+		}
+		r.mu.RUnlock()
+		if room != nil {
+			break
+		}
+	}
+	s.mu.RUnlock()
 
-// ensure uuid import is used
-var _ = uuid.New
+	if room == nil {
+		return nil, fmt.Errorf("client %s not found in any room", clientId)
+	}
+
+	// Broadcast presence to everyone except sender
+	room.BroadcastExcept(&pb.CollabEvent{
+		EventId:      uuid.New().String(),
+		FromClientId: clientId,
+		Event: &pb.CollabEvent_Presence{
+			Presence: presence,
+		},
+	}, clientId)
+
+	return nil, nil
+}
