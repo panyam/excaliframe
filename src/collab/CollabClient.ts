@@ -1,7 +1,8 @@
-import type { CollabEvent, PeerInfo } from './types';
+import { GRPCWSClient } from '@panyam/servicekit-client';
+import type { PeerInfo } from './types';
 
 export interface CollabClientOptions {
-  onEvent?: (event: CollabEvent) => void;
+  onEvent?: (event: any) => void;
   onPeerJoined?: (peer: PeerInfo) => void;
   onPeerLeft?: (clientId: string) => void;
   onError?: (error: Error) => void;
@@ -12,11 +13,11 @@ export interface CollabClientOptions {
 
 /**
  * Framework-agnostic WebSocket client for the collab relay.
- * Uses @panyam/servicekit-client GRPCWSClient for envelope protocol handling.
- * Adds reconnect/retry logic on top.
+ * Uses @panyam/servicekit-client GRPCWSClient for envelope protocol
+ * and auto ping/pong. Adds reconnect with exponential backoff on top.
  */
 export class CollabClient {
-  private ws: WebSocket | null = null;
+  private grpc: GRPCWSClient | null = null;
   private _clientId: string = '';
   private _isConnected: boolean = false;
   private _isConnecting: boolean = false;
@@ -61,24 +62,24 @@ export class CollabClient {
       clearTimeout(this.retryTimer);
       this.retryTimer = null;
     }
-    if (!this.ws) return;
+    if (!this.grpc) return;
 
-    // Send LeaveRoom action before closing
+    // Send LeaveRoom before closing
     if (this._isConnected) {
-      this.sendEnvelope({
+      this.grpc.send({
         action: { case: 'leave', value: { reason: 'user disconnected' } },
       });
     }
 
-    this.ws.close(1000, 'user disconnected');
+    this.grpc.close();
     this.resetState();
   }
 
   send(action: Record<string, unknown>): void {
-    if (!this._isConnected || !this.ws) {
+    if (!this._isConnected || !this.grpc) {
       throw new Error('Not connected');
     }
-    this.sendEnvelope({
+    this.grpc.send({
       ...action,
       clientId: this._clientId,
       timestamp: Date.now(),
@@ -87,11 +88,25 @@ export class CollabClient {
 
   private openWebSocket(): void {
     const url = `${this._relayUrl}/ws/v1/${this._sessionId}/sync`;
-    this.ws = new WebSocket(url);
+    this.grpc = new GRPCWSClient();
 
-    this.ws.onopen = () => {
-      // Send JoinRoom action in servicekit envelope
-      this.sendEnvelope({
+    // GRPCWSClient.onMessage receives data already unwrapped from the
+    // servicekit envelope ({type:"data", data:...} → just the data).
+    this.grpc.onMessage = (data: any) => {
+      this.handleEvent(data);
+    };
+
+    this.grpc.onClose = () => {
+      this.handleConnectionClosed();
+    };
+
+    this.grpc.onError = (err: string) => {
+      this.options.onError?.(new Error(err));
+    };
+
+    // connect() is Promise-based — send JoinRoom once WS is open.
+    this.grpc.connect(url).then(() => {
+      this.grpc?.send({
         action: {
           case: 'join',
           value: {
@@ -102,41 +117,9 @@ export class CollabClient {
           },
         },
       });
-    };
-
-    this.ws.onmessage = (ev: MessageEvent) => {
-      try {
-        const envelope = JSON.parse(ev.data);
-        if (envelope.type === 'data' && envelope.data) {
-          this.handleEvent(envelope.data);
-        }
-      } catch {
-        // ignore malformed messages
-      }
-    };
-
-    this.ws.onerror = () => {
-      this.options.onError?.(new Error('WebSocket error'));
-    };
-
-    this.ws.onclose = () => {
-      const wasConnected = this._isConnected;
-      this._isConnected = false;
-      this._isConnecting = false;
-
-      if (wasConnected) {
-        this.options.onDisconnect?.();
-      }
-
-      // Attempt reconnect on unexpected close
-      if (!this.explicitDisconnect && this.retryCount < this.maxRetries) {
-        const delay = Math.pow(2, this.retryCount) * 1000;
-        this.retryCount++;
-        this.retryTimer = setTimeout(() => {
-          this.openWebSocket();
-        }, delay);
-      }
-    };
+    }).catch(() => {
+      // Error already dispatched via grpc.onError
+    });
   }
 
   private handleEvent(data: any): void {
@@ -165,16 +148,29 @@ export class CollabClient {
     }
   }
 
-  /** Send data wrapped in servicekit envelope */
-  private sendEnvelope(data: Record<string, unknown>): void {
-    if (!this.ws) return;
-    this.ws.send(JSON.stringify({ type: 'data', data }));
+  private handleConnectionClosed(): void {
+    const wasConnected = this._isConnected;
+    this._isConnected = false;
+    this._isConnecting = false;
+
+    if (wasConnected) {
+      this.options.onDisconnect?.();
+    }
+
+    // Reconnect on unexpected close
+    if (!this.explicitDisconnect && this.retryCount < this.maxRetries) {
+      const delay = Math.pow(2, this.retryCount) * 1000;
+      this.retryCount++;
+      this.retryTimer = setTimeout(() => {
+        this.openWebSocket();
+      }, delay);
+    }
   }
 
   private resetState(): void {
     this._isConnected = false;
     this._isConnecting = false;
     this._clientId = '';
-    this.ws = null;
+    this.grpc = null;
   }
 }

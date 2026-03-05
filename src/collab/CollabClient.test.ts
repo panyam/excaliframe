@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { CollabClient } from './CollabClient';
 
+// ─── Flush microtasks (GRPCWSClient.connect() is Promise-based) ──
+
+const flushPromises = () => new Promise(resolve => setTimeout(resolve, 0));
+
 // ─── Mock WebSocket ─────────────────────────────
+// GRPCWSClient → BaseWSClient → uses globalThis.WebSocket
 
 class MockWebSocket {
   static instances: MockWebSocket[] = [];
@@ -11,6 +16,7 @@ class MockWebSocket {
   static CLOSED = 3;
 
   url: string;
+  binaryType: string = 'arraybuffer';
   readyState: number = MockWebSocket.CONNECTING;
   onopen: ((ev: Event) => void) | null = null;
   onmessage: ((ev: MessageEvent) => void) | null = null;
@@ -36,6 +42,7 @@ class MockWebSocket {
   }
   simulateMessage(data: unknown) {
     // Servicekit envelope: {type: "data", data: <payload>}
+    // BaseWSClient parses this, GRPCWSClient unwraps the envelope
     this.onmessage?.(new MessageEvent('message', {
       data: JSON.stringify({ type: 'data', data }),
     }));
@@ -83,10 +90,11 @@ describe('CollabClient', () => {
       expect(client.isConnected).toBe(false);
     });
 
-    it('sends JoinRoom action (servicekit envelope) on WebSocket open', () => {
+    it('sends JoinRoom action (servicekit envelope) on WebSocket open', async () => {
       const client = new CollabClient();
       client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
       MockWebSocket.instances[0].simulateOpen();
+      await flushPromises(); // wait for connect Promise .then() to send JoinRoom
 
       expect(MockWebSocket.instances[0].sentMessages).toHaveLength(1);
       const envelope = JSON.parse(MockWebSocket.instances[0].sentMessages[0]);
@@ -99,12 +107,13 @@ describe('CollabClient', () => {
       expect(msg.action.value.clientType).toBe('browser');
     });
 
-    it('sets isConnected after receiving RoomJoined event', () => {
+    it('sets isConnected after receiving RoomJoined event', async () => {
       const onConnect = vi.fn();
       const client = new CollabClient({ onConnect });
       client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
       const ws = MockWebSocket.instances[0];
       ws.simulateOpen();
+      await flushPromises();
       ws.simulateMessage({
         event: { case: 'roomJoined', value: { clientId: 'client-123', sessionId: 'sess1', peers: [] } },
       });
@@ -115,12 +124,13 @@ describe('CollabClient', () => {
       expect(onConnect).toHaveBeenCalledWith('client-123');
     });
 
-    it('calls onPeerJoined callback when peer joins', () => {
+    it('calls onPeerJoined callback when peer joins', async () => {
       const onPeerJoined = vi.fn();
       const client = new CollabClient({ onPeerJoined });
       client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
       const ws = MockWebSocket.instances[0];
       ws.simulateOpen();
+      await flushPromises();
       ws.simulateMessage({
         event: { case: 'roomJoined', value: { clientId: 'c1', sessionId: 'sess1', peers: [] } },
       });
@@ -138,12 +148,13 @@ describe('CollabClient', () => {
       );
     });
 
-    it('calls onPeerLeft callback when peer leaves', () => {
+    it('calls onPeerLeft callback when peer leaves', async () => {
       const onPeerLeft = vi.fn();
       const client = new CollabClient({ onPeerLeft });
       client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
       const ws = MockWebSocket.instances[0];
       ws.simulateOpen();
+      await flushPromises();
       ws.simulateMessage({
         event: { case: 'roomJoined', value: { clientId: 'c1', sessionId: 'sess1', peers: [] } },
       });
@@ -154,12 +165,13 @@ describe('CollabClient', () => {
       expect(onPeerLeft).toHaveBeenCalledWith('c2');
     });
 
-    it('calls onEvent callback for all received events', () => {
+    it('calls onEvent callback for all received events', async () => {
       const onEvent = vi.fn();
       const client = new CollabClient({ onEvent });
       client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
       const ws = MockWebSocket.instances[0];
       ws.simulateOpen();
+      await flushPromises();
 
       ws.simulateMessage({ event: { case: 'roomJoined', value: { clientId: 'c1', sessionId: 's1', peers: [] } } });
       ws.simulateMessage({ event: { case: 'peerJoined', value: { peer: { clientId: 'c2' } } } });
@@ -176,12 +188,13 @@ describe('CollabClient', () => {
       expect(onError).toHaveBeenCalled();
     });
 
-    it('calls onDisconnect callback on WebSocket close', () => {
+    it('calls onDisconnect callback on WebSocket close', async () => {
       const onDisconnect = vi.fn();
       const client = new CollabClient({ onDisconnect });
       client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
       const ws = MockWebSocket.instances[0];
       ws.simulateOpen();
+      await flushPromises();
       ws.simulateMessage({
         event: { case: 'roomJoined', value: { clientId: 'c1', sessionId: 's1', peers: [] } },
       });
@@ -190,11 +203,12 @@ describe('CollabClient', () => {
       expect(onDisconnect).toHaveBeenCalled();
     });
 
-    it('throws if already connected', () => {
+    it('throws if already connected', async () => {
       const client = new CollabClient();
       client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
       const ws = MockWebSocket.instances[0];
       ws.simulateOpen();
+      await flushPromises();
       ws.simulateMessage({
         event: { case: 'roomJoined', value: { clientId: 'c1', sessionId: 's1', peers: [] } },
       });
@@ -206,11 +220,12 @@ describe('CollabClient', () => {
   });
 
   describe('disconnect', () => {
-    it('sends LeaveRoom action (servicekit envelope) before closing', () => {
+    it('sends LeaveRoom action (servicekit envelope) before closing', async () => {
       const client = new CollabClient();
       client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
       const ws = MockWebSocket.instances[0];
       ws.simulateOpen();
+      await flushPromises();
       ws.simulateMessage({
         event: { case: 'roomJoined', value: { clientId: 'c1', sessionId: 's1', peers: [] } },
       });
@@ -224,11 +239,12 @@ describe('CollabClient', () => {
       expect(envelope.data.action).toMatchObject({ case: 'leave' });
     });
 
-    it('closes WebSocket connection', () => {
+    it('closes WebSocket connection', async () => {
       const client = new CollabClient();
       client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
       const ws = MockWebSocket.instances[0];
       ws.simulateOpen();
+      await flushPromises();
       ws.simulateMessage({
         event: { case: 'roomJoined', value: { clientId: 'c1', sessionId: 's1', peers: [] } },
       });
@@ -237,11 +253,12 @@ describe('CollabClient', () => {
       expect(ws.readyState).toBe(MockWebSocket.CLOSED);
     });
 
-    it('resets state to disconnected', () => {
+    it('resets state to disconnected', async () => {
       const client = new CollabClient();
       client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
       const ws = MockWebSocket.instances[0];
       ws.simulateOpen();
+      await flushPromises();
       ws.simulateMessage({
         event: { case: 'roomJoined', value: { clientId: 'c1', sessionId: 's1', peers: [] } },
       });
@@ -258,11 +275,12 @@ describe('CollabClient', () => {
   });
 
   describe('send', () => {
-    it('serializes and sends over WebSocket in servicekit envelope', () => {
+    it('serializes and sends over WebSocket in servicekit envelope', async () => {
       const client = new CollabClient();
       client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
       const ws = MockWebSocket.instances[0];
       ws.simulateOpen();
+      await flushPromises();
       ws.simulateMessage({
         event: { case: 'roomJoined', value: { clientId: 'c1', sessionId: 's1', peers: [] } },
       });
@@ -287,85 +305,89 @@ describe('CollabClient', () => {
     beforeEach(() => { vi.useFakeTimers(); });
     afterEach(() => { vi.useRealTimers(); });
 
-    it('attempts reconnect after unexpected disconnect', () => {
+    it('attempts reconnect after unexpected disconnect', async () => {
       const client = new CollabClient();
       client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
       const ws = MockWebSocket.instances[0];
       ws.simulateOpen();
+      await vi.advanceTimersByTimeAsync(0); // flush connect Promise
       ws.simulateMessage({
         event: { case: 'roomJoined', value: { clientId: 'c1', sessionId: 's1', peers: [] } },
       });
 
       ws.simulateClose(1006);
-      vi.advanceTimersByTime(1000);
+      await vi.advanceTimersByTimeAsync(1000);
 
       expect(MockWebSocket.instances).toHaveLength(2);
     });
 
-    it('uses exponential backoff (1s, 2s, 4s)', () => {
+    it('uses exponential backoff (1s, 2s, 4s)', async () => {
       const client = new CollabClient();
       client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
       let ws = MockWebSocket.instances[0];
       ws.simulateOpen();
+      await vi.advanceTimersByTimeAsync(0);
       ws.simulateMessage({
         event: { case: 'roomJoined', value: { clientId: 'c1', sessionId: 's1', peers: [] } },
       });
 
       // First unexpected close
       ws.simulateClose(1006);
-      vi.advanceTimersByTime(1000); // 1s
+      await vi.advanceTimersByTimeAsync(1000); // 1s
       expect(MockWebSocket.instances).toHaveLength(2);
 
       // Second failure
       ws = MockWebSocket.instances[1];
       ws.simulateClose(1006);
-      vi.advanceTimersByTime(1000); // not enough
+      await vi.advanceTimersByTimeAsync(1000); // not enough
       expect(MockWebSocket.instances).toHaveLength(2);
-      vi.advanceTimersByTime(1000); // 2s total
+      await vi.advanceTimersByTimeAsync(1000); // 2s total
       expect(MockWebSocket.instances).toHaveLength(3);
 
       // Third failure
       ws = MockWebSocket.instances[2];
       ws.simulateClose(1006);
-      vi.advanceTimersByTime(3000); // not enough
+      await vi.advanceTimersByTimeAsync(3000); // not enough
       expect(MockWebSocket.instances).toHaveLength(3);
-      vi.advanceTimersByTime(1000); // 4s total
+      await vi.advanceTimersByTimeAsync(1000); // 4s total
       expect(MockWebSocket.instances).toHaveLength(4);
     });
 
-    it('stops reconnecting after maxRetries', () => {
+    it('stops reconnecting after maxRetries', async () => {
       const client = new CollabClient({ maxRetries: 2 });
       client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
       let ws = MockWebSocket.instances[0];
       ws.simulateOpen();
+      await vi.advanceTimersByTimeAsync(0);
       ws.simulateMessage({
         event: { case: 'roomJoined', value: { clientId: 'c1', sessionId: 's1', peers: [] } },
       });
 
       ws.simulateClose(1006);
-      vi.advanceTimersByTime(1000);
+      await vi.advanceTimersByTimeAsync(1000);
       expect(MockWebSocket.instances).toHaveLength(2);
 
       MockWebSocket.instances[1].simulateClose(1006);
-      vi.advanceTimersByTime(2000);
+      await vi.advanceTimersByTimeAsync(2000);
       expect(MockWebSocket.instances).toHaveLength(3);
 
       MockWebSocket.instances[2].simulateClose(1006);
-      vi.advanceTimersByTime(60000);
+      await vi.advanceTimersByTimeAsync(60000);
       expect(MockWebSocket.instances).toHaveLength(3); // no more retries
     });
 
-    it('does not reconnect after explicit disconnect', () => {
+    it('does not reconnect after explicit disconnect', async () => {
       const client = new CollabClient();
       client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
       const ws = MockWebSocket.instances[0];
       ws.simulateOpen();
+      await vi.advanceTimersByTimeAsync(0);
       ws.simulateMessage({
         event: { case: 'roomJoined', value: { clientId: 'c1', sessionId: 's1', peers: [] } },
       });
 
       client.disconnect();
-      vi.advanceTimersByTime(60000);
+      await vi.advanceTimersByTimeAsync(60000);
       expect(MockWebSocket.instances).toHaveLength(1);
     });
   });
