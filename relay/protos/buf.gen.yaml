@@ -1,0 +1,27 @@
+version: v2
+clean: true
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: github.com/user/excaliframe/relay/gen/go
+plugins:
+  # Go protobuf
+  - remote: buf.build/protocolbuffers/go
+    out: ../gen/go
+    opt: paths=source_relative
+
+  # Connect-RPC (Go)
+  - local: protoc-gen-connect-go
+    out: ../gen/go
+    opt: paths=source_relative
+
+  # gRPC (Go)
+  - local: protoc-gen-go-grpc
+    out: ../gen/go
+    opt: paths=source_relative,require_unimplemented_servers=false
+
+  # TypeScript (protobuf-es) → browser client
+  - local: protoc-gen-es
+    out: ../../src/collab/gen
+    opt: target=ts

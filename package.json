@@ -1,11 +1,13 @@
 {
   "name": "excaliframe",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "Atlassian Forge app for Excalidraw drawings in Confluence",
   "scripts": {
     "update-version": "node scripts/update-version.js",
     "build": "npm run update-version && webpack --mode production",
     "dev": "webpack --mode development --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "type-check": "tsc --noEmit",
     "forge:deploy": "npm run build && forge deploy",
     "forge:install": "forge install",
@@ -31,7 +33,12 @@
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
+    "@bufbuild/protobuf": "^2.11.0",
+    "@bufbuild/protoc-gen-es": "^2.11.0",
     "@forge/cli": "^10.0.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^20.5.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
@@ -39,9 +46,11 @@
     "css-loader": "^6.8.1",
     "eslint": "^8.57.0",
     "html-webpack-plugin": "^5.5.3",
+    "jsdom": "^28.1.0",
     "style-loader": "^3.3.3",
     "ts-loader": "^9.4.4",
     "typescript": "^5.1.6",
+    "vitest": "^4.0.18",
     "webpack": "^5.88.2",
     "webpack-cli": "^5.1.4"
   }

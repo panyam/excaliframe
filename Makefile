@@ -1,4 +1,4 @@
-.PHONY: help install build playground-build dev type-check clean deploy install-app tunnel lint sync diff sync-status migrate
+.PHONY: help install build playground-build dev type-check clean deploy install-app tunnel lint sync diff sync-status migrate test test-ts test-go proto
 
 # Default target
 .DEFAULT_GOAL := help
@@ -21,6 +21,18 @@ help: ## Display this help message
 	@echo ""
 	@echo "Available targets:"
 	@awk 'BEGIN {FS = ":.*##"; printf ""} /^[a-zA-Z_-]+:.*?##/ { printf "  $(GREEN)%-20s$(NC) %s\n", $$1, $$2 } /^##@/ { printf "\n$(YELLOW)%s$(NC)\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+
+##@ Testing
+
+test: test-ts test-go ## Run all tests across all projects
+
+test-ts: ## Run TypeScript tests (vitest)
+	@echo "$(GREEN)Running TypeScript tests...$(NC)"
+	npm run test
+
+test-go: ## Run Go relay server tests
+	@echo "$(GREEN)Running Go relay tests...$(NC)"
+	cd relay && go test ./...
 
 ##@ Setup
 
@@ -132,3 +144,10 @@ sync-status: ## Show what changed since last sync
 
 migrate: ## One-time migration: restructure enterprise target into excaliframe/ subdirectory
 	@python3 tools/sync.py migrate "$(TARGET)"
+
+##@ Proto Generation
+
+proto: ## Generate protobuf code (Go + TypeScript)
+	@echo "$(GREEN)Generating protobuf code...$(NC)"
+	cd relay/protos && make buf
+	@echo "$(GREEN)Proto generation complete$(NC)"

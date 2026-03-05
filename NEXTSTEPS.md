@@ -30,6 +30,16 @@ Immediate and near-term action items for Excaliframe.
 
 ## In Progress
 
+### Real-Time Collaboration — Part 1: Connection Infrastructure
+- Proto definitions created (`relay/protos/excaliframe/v1/`) — CollabAction/CollabEvent with oneof unions
+- Code generation working: Go (`relay/gen/go/`) + TypeScript (`src/collab/gen/`)
+- Test suite written (TDD): 63 TS tests (vitest), ~30 Go tests
+- Stubs in place for: CollabClient, useCollaboration, CollabPanel, CollabBadge, url-params, CollabService, Room
+- Relay server uses servicekit `grpcws.BidiStreamHandler` for WebSocket bidi streaming
+- `make test` runs all tests across TS + Go
+- **Next**: Implement Go relay service (make Go tests pass), then TS client/components (make TS tests pass), then wire editor integration
+- **Part 2** (element sync, cursors, text sync) layers on top after Part 1 is complete
+
 ### Fix False Positive "Unsaved Changes" Indicator
 - When loading an existing drawing, "Unsaved changes" appears immediately without user interaction
 - Root cause: Excalidraw mutates internal element properties (`version`, `versionNonce`, `updated`, `seed`) when loading elements into the scene

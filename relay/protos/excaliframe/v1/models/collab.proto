@@ -1,0 +1,148 @@
+syntax = "proto3";
+package excaliframe.v1.models;
+
+option go_package = "github.com/user/excaliframe/relay/gen/go/excaliframe/v1/models";
+
+// ─── Client → Server ────────────────────────────
+
+message CollabAction {
+  string action_id = 1;
+  string client_id = 2;
+  int64 timestamp = 3;
+
+  oneof action {
+    JoinRoom join = 10;
+    LeaveRoom leave = 11;
+    PresenceUpdate presence = 12;
+    // Part 2:
+    SceneUpdate scene_update = 13;
+    CursorUpdate cursor_update = 14;
+    TextUpdate text_update = 15;
+    SceneInitRequest scene_init_request = 16;
+  }
+}
+
+message JoinRoom {
+  string session_id = 1;
+  string username = 2;
+  string tool = 3;            // "excalidraw" | "mermaid"
+  string client_type = 4;     // "browser" | "api" | "cli"
+  string avatar_url = 5;
+}
+
+message LeaveRoom {
+  string reason = 1;
+}
+
+message PresenceUpdate {
+  bool is_active = 1;
+  string username = 2;
+}
+
+// Part 2 messages (defined now, implemented later):
+message SceneUpdate {
+  repeated ElementUpdate elements = 1;
+}
+
+message ElementUpdate {
+  string id = 1;
+  int32 version = 2;
+  int32 version_nonce = 3;
+  string data = 4;            // JSON-encoded full element
+  bool deleted = 5;
+}
+
+message CursorUpdate {
+  float x = 1;
+  float y = 2;
+  string tool = 3;
+  string button = 4;
+  map<string, bool> selected_element_ids = 5;
+}
+
+message TextUpdate {
+  string text = 1;
+  int32 version = 2;
+  int32 cursor_position = 3;
+}
+
+message SceneInitRequest {}
+
+// ─── Server → Client ────────────────────────────
+
+message CollabEvent {
+  string event_id = 1;
+  string from_client_id = 2;
+  int64 server_timestamp = 3;
+
+  oneof event {
+    RoomJoined room_joined = 10;
+    PeerJoined peer_joined = 11;
+    PeerLeft peer_left = 12;
+    PresenceUpdate presence = 13;
+    // Part 2:
+    SceneUpdate scene_update = 14;
+    CursorUpdate cursor_update = 15;
+    TextUpdate text_update = 16;
+    SceneInit scene_init = 17;
+    ErrorEvent error = 18;
+  }
+}
+
+message RoomJoined {
+  string client_id = 1;
+  string session_id = 2;
+  repeated PeerInfo peers = 3;
+}
+
+message PeerInfo {
+  string client_id = 1;
+  string username = 2;
+  string avatar_url = 3;
+  string client_type = 4;
+  bool is_active = 5;
+}
+
+message PeerJoined {
+  PeerInfo peer = 1;
+}
+
+message PeerLeft {
+  string client_id = 1;
+  string reason = 2;
+  int32 peer_count = 3;
+}
+
+message SceneInit {
+  repeated ElementUpdate elements = 1;
+  string background_color = 2;
+}
+
+message ErrorEvent {
+  string code = 1;
+  string message = 2;
+}
+
+// ─── Dashboard / Info ───────────────────────────
+
+message GetRoomRequest {
+  string session_id = 1;
+}
+
+message GetRoomResponse {
+  string session_id = 1;
+  repeated PeerInfo peers = 2;
+  int64 created_at = 3;
+}
+
+message ListRoomsRequest {}
+
+message ListRoomsResponse {
+  repeated RoomSummary rooms = 1;
+}
+
+message RoomSummary {
+  string session_id = 1;
+  int32 peer_count = 2;
+  int64 created_at = 3;
+}

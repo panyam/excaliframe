@@ -83,7 +83,24 @@ excaliframe/
 │   │   ├── index.tsx               # Wires core renderer + Forge host
 │   │   ├── index.html              # HTML template
 │   │   └── styles.css
+│   ├── collab/                      # Real-time collaboration client
+│   │   ├── gen/                     # Generated protobuf-es TypeScript types
+│   │   ├── CollabClient.ts          # Framework-agnostic WebSocket client
+│   │   ├── useCollaboration.ts      # React hook for connection state
+│   │   ├── CollabPanel.tsx          # Connection UI (relay URL, session, peers)
+│   │   ├── CollabBadge.tsx          # Compact connection status indicator
+│   │   ├── url-params.ts            # Parse/build collab URL parameters
+│   │   └── types.ts                 # Re-exports from generated proto types
 │   └── version.ts                  # Auto-generated version info
+│
+├── relay/                           # Collaboration relay server (Go)
+│   ├── protos/                      # Protobuf definitions (buf.yaml, buf.gen.yaml)
+│   │   └── excaliframe/v1/          # models/collab.proto, services/collab.proto
+│   ├── gen/go/                      # Generated Go protobuf + Connect-RPC + gRPC
+│   ├── services/                    # CollabService, Room management
+│   ├── web/server/                  # HTTP/WebSocket API (servicekit)
+│   ├── main.go                      # Entry point
+│   └── go.mod
 │
 ├── static/                         # Webpack build output (Forge resources)
 │   ├── editor/                     # Editor bundle (served by Forge)
@@ -336,6 +353,75 @@ cd site/
 make run            # Run locally
 make deploy         # Deploy to App Engine
 ```
+
+---
+
+## Real-Time Collaboration (Relay)
+
+Excaliframe supports optional real-time collaboration via an external relay server. The relay is a **stateless message router** — it can be hosted anywhere (excaliframe.com, user's server, localhost). This preserves the zero-backend philosophy: the relay holds no persistent state.
+
+### Architecture
+
+```
+┌─────────────────────┐     ┌─────────────────────┐
+│   Browser Tab A     │     │   Browser Tab B      │
+│                     │     │                      │
+│ CollabClient ←──────┼─WS──┼──→ CollabClient      │
+│ useCollaboration()  │     │  useCollaboration()  │
+│ CollabPanel/Badge   │     │  CollabPanel/Badge   │
+└─────────────────────┘     └──────────────────────┘
+          │                           │
+          └────────┐    ┌─────────────┘
+                   ▼    ▼
+          ┌─────────────────────┐
+          │    Relay Server     │
+          │  (Go + servicekit)  │
+          │                     │
+          │  Room → FanOut      │
+          │  WS bidi streaming  │
+          │  Connect-RPC unary  │
+          └─────────────────────┘
+```
+
+### Components
+
+| Layer | Component | Location | Description |
+|-------|-----------|----------|-------------|
+| **Proto** | Message types | `relay/protos/excaliframe/v1/` | CollabAction (client→server), CollabEvent (server→client), oneof discriminated unions |
+| **Relay** | CollabService | `relay/services/` | Room management, action dispatch, peer lifecycle |
+| **Relay** | WebSocket API | `relay/web/server/` | servicekit `grpcws.BidiStreamHandler` for WS bidi, Connect-RPC for unary |
+| **Client** | CollabClient | `src/collab/CollabClient.ts` | Framework-agnostic WebSocket client (no React dependency) |
+| **Client** | useCollaboration | `src/collab/useCollaboration.ts` | React hook wrapping CollabClient for state management |
+| **Client** | CollabPanel/Badge | `src/collab/CollabPanel.tsx`, `CollabBadge.tsx` | React UI for connection management and status |
+| **Client** | url-params | `src/collab/url-params.ts` | Parse/build `?relay=...&session=...&user=...` URLs |
+
+### Protocol
+
+Messages use protobuf definitions with JSON-over-WebSocket transport (servicekit envelope: `{type: "data", data: <payload>}`).
+
+- **CollabAction** (client→server): oneof `JoinRoom`, `LeaveRoom`, `PresenceUpdate`, `SceneUpdate`, `CursorUpdate`, `TextUpdate`
+- **CollabEvent** (server→client): oneof `RoomJoined`, `PeerJoined`, `PeerLeft`, `PresenceUpdate`, `SceneUpdate`, `CursorUpdate`, `TextUpdate`, `SceneInit`, `ErrorEvent`
+
+Generated code: Go in `relay/gen/go/`, TypeScript in `src/collab/gen/`.
+
+### Programmatic Control
+
+The relay isn't limited to browser-to-browser collaboration. Any client that speaks the CollabAction/CollabEvent protocol can join a session — CLI tools, coding agents, test harnesses, or backend services. This enables **programmatic control** of live drawings:
+
+- A CLI tool can push elements (rectangles, arrows, text) into a browser session via `SceneUpdate`
+- A coding agent can generate a diagram and inject it into a running editor
+- An automated pipeline can update a Mermaid diagram's text via `TextUpdate`
+
+The `client_type` field in `JoinRoom` distinguishes client kinds (`"browser"`, `"cli"`, `"api"`), allowing the UI to display programmatic peers differently. The `CollabClient` class is framework-agnostic (no React dependency), making it straightforward to use from Node.js, Deno, or any JavaScript runtime.
+
+### Editor Integration
+
+Editors accept an optional `collab` prop (`CollabProps: {relayUrl, sessionId, username}`). When provided, the connection UI renders. When absent, editors behave exactly as before. URL params (`?relay=...&session=...`) enable link-sharing for collaborative sessions.
+
+### Implementation Status
+
+- **Part 1** (connection infrastructure): Tests written (TDD), stubs in place — implementation in progress
+- **Part 2** (element sync, cursors, text): Planned — layers on top of Part 1
 
 ---
 
