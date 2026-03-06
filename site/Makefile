@@ -1,16 +1,13 @@
 
 NUM_LINKED_GOMODS=`cat go.mod | grep -v "^\/\/" | grep replace | wc -l | sed -e "s/ *//g"`
 
-all: parent playground run
+all: parent build run
 
 run: resymlink
 	EXCALIFRAME_ENV=dev go run .
 
 parent:
 	cd ../ && make build
-
-build: resymlink
-	go build -o bin/excaliframe-site .
 
 resymlink:
 	mkdir -p locallinks
@@ -22,13 +19,13 @@ checklinks:
 		echo "You are trying to deploy with symlinks. Remove them first and make sure versions exist" && false ;	\
 	fi
 
-playground:
+build:
 	npm run build:rspack
 
-playground-old:
+build-old:
 	npm run build
 
-deploy: checklinks playground
+deploy: checklinks build
 	rm -Rf locallinks ; mkdir locallinks
 	gcloud app deploy --project excaliframe --verbosity=info
 
@@ -38,4 +35,4 @@ prodlogs:
 clean:
 	rm -Rf bin locallinks
 
-.PHONY: all run build resymlink checklinks playground playground-old deploy prodlogs clean
+.PHONY: all run build resymlink checklinks build build-old deploy prodlogs clean

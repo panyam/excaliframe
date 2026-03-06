@@ -7,6 +7,14 @@ import (
 )
 
 // RelayApp is the HTTP application for the relay server.
+// It implements http.Handler so it can be used standalone or embedded
+// as a sub-handler in another server's mux:
+//
+//	// Standalone
+//	http.ListenAndServe(":8787", relayApp)
+//
+//	// Embedded in another mux
+//	mux.Handle("/relay/", http.StripPrefix("/relay", relayApp))
 type RelayApp struct {
 	Service *services.CollabService
 	mux     *http.ServeMux

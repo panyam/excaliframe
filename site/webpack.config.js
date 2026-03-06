@@ -24,6 +24,10 @@ module.exports = (env, argv) => {
 
   const sharedResolve = {
     extensions: ['.ts', '.tsx', '.js', '.jsx'],
+    // Prefer ESM ('module') over IIFE browser bundles ('browser') so that
+    // packages like @panyam/servicekit-client resolve to proper ES modules
+    // instead of their IIFE global-var build.
+    mainFields: ['module', 'main'],
     // Resolve all packages from site/node_modules first, so ../src/ files
     // don't pull a second copy from the root node_modules.
     modules: [path.resolve(__dirname, 'node_modules'), 'node_modules'],

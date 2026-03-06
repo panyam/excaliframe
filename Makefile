@@ -61,16 +61,6 @@ clean: ## Remove build artifacts
 	rm -rf dist/
 	@echo "$(GREEN)Clean complete$(NC)"
 
-playground-build: ## Build playground bundle for site (rspack)
-	@echo "$(GREEN)Building playground assets (rspack)...$(NC)"
-	cd site && npm run build:rspack
-	@echo "$(GREEN)Build output: site/static/playground/$(NC)"
-
-playground-build-old: ## Build playground bundle for site (webpack fallback)
-	@echo "$(GREEN)Building playground assets (webpack)...$(NC)"
-	cd site && npm run build
-	@echo "$(GREEN)Build output: site/static/playground/$(NC)"
-
 lint: ## Run lint checks
 	@echo "$(GREEN)Running lint checks...$(NC)"
 	npm run type-check

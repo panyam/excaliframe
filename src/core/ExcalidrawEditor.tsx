@@ -449,11 +449,7 @@ const ExcalidrawEditor: React.FC<Props> = ({ host, showCancel = true, collabConf
         display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px',
       }}>
         {showCollabPanel && (
-          <div style={{
-            backgroundColor: 'rgba(255,255,255,0.95)', borderRadius: '8px',
-            padding: '12px', boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
-            minWidth: '280px',
-          }}>
+          <div className="bg-white/95 dark:bg-gray-800/95 rounded-lg p-3 shadow-lg min-w-[280px]">
             <CollabPanel state={collabState} actions={collabActions} tool="excalidraw"
             drawingId={collabConfig?.drawingId ?? ''} onClose={() => setShowCollabPanel(false)} />
           </div>
