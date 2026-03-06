@@ -63,9 +63,11 @@ excaliframe/
 ├── src/                            # Plugin frontend (TypeScript/React)
 │   ├── core/                       # Host-agnostic core components
 │   │   ├── types.ts                # DrawingEnvelope, EditorHost, RendererHost interfaces
-│   │   ├── ExcalidrawEditor.tsx    # Excalidraw editor (accepts EditorHost prop)
+│   │   ├── EditorHandle.ts         # EditorHandle + EditorStateCallbacks interfaces
+│   │   ├── EditorChrome.tsx        # Chrome wrapper (collab, autosave, shortcuts, layout)
+│   │   ├── ExcalidrawEditor.tsx    # Excalidraw editor (forwardRef, pure content)
 │   │   ├── ExcalidrawRenderer.tsx  # Excalidraw renderer (accepts RendererHost prop)
-│   │   ├── MermaidEditor.tsx       # Mermaid split-pane editor (code + live preview)
+│   │   ├── MermaidEditor.tsx       # Mermaid split-pane editor (forwardRef, pure content)
 │   │   ├── mermaid.css             # Mermaid editor styles (shared by Forge + playground)
 │   │   └── DrawingTitle.tsx        # Inline-editable title (standalone, host-agnostic)
 │   ├── hosts/                      # Platform-specific host adapters
@@ -342,7 +344,7 @@ Module resolution uses `resolve.modules` to pin all packages to `site/node_modul
 
 **Tool selection**: New drawings show a tool selection modal with Excalidraw and Mermaid options. The tool ID is stored in `DrawingEnvelope.tool`.
 
-**Editor UI modes**: Both `ExcalidrawEditor` and `MermaidEditor` accept a `showCancel` prop. In Forge mode (default, `showCancel=true`), a top toolbar shows Save/Cancel buttons. In web/playground mode (`showCancel=false`), there is no toolbar — save is via Cmd/Ctrl+S with a floating dirty indicator.
+**Editor UI modes**: The `EditorChrome` wrapper component (`src/core/EditorChrome.tsx`) owns all "chrome" concerns — collab hooks, auto-save, keyboard shortcuts, dirty badges, and layout. It accepts a `showCancel` prop: in Forge mode (`showCancel=true`), a top toolbar shows Save/Cancel buttons; in web/playground mode (`showCancel=false`), there is no toolbar — save is via Cmd/Ctrl+S with a floating dirty indicator. Editors (`ExcalidrawEditor`, `MermaidEditor`) are pure content components that expose an `EditorHandle` imperative interface (`save()`, `canClose()`) via `forwardRef` and communicate state changes via `EditorStateCallbacks` props.
 
 **Editable drawing title**: In the playground editor, users can click the drawing title in the site header (after "Excaliframe /") to rename it inline. The title persists immediately to IndexedDB via `WebEditorHost.setTitle()`, independently of the drawing save cycle.
 
@@ -525,9 +527,11 @@ src/
 ├── core/
 │   ├── types.ts                    # DrawingEnvelope, EditorHost, RendererHost
 │   ├── DrawingTitle.tsx            # Inline-editable title (shared across all tools)
-│   ├── ExcalidrawEditor.tsx        # Excalidraw-specific editor
+│   ├── EditorHandle.ts             # EditorHandle + EditorStateCallbacks interfaces
+│   ├── EditorChrome.tsx            # Chrome wrapper (collab, autosave, shortcuts, layout)
+│   ├── ExcalidrawEditor.tsx        # Excalidraw editor (forwardRef, pure content)
 │   ├── ExcalidrawRenderer.tsx      # Excalidraw-specific renderer
-│   ├── MermaidEditor.tsx           # Mermaid split-pane editor (code + live SVG preview)
+│   ├── MermaidEditor.tsx           # Mermaid split-pane editor (forwardRef, pure content)
 │   └── MermaidRenderer.tsx         # Mermaid renderer (future — Forge macro)
 ├── hosts/
 │   ├── forge.ts                    # Forge adapter (shared by all tools)

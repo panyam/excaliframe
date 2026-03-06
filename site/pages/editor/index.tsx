@@ -2,11 +2,14 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import DrawingTitle from '@excaliframe/core/DrawingTitle';
 import { EditorHost } from '@excaliframe/core/types';
+import EditorChrome from '@excaliframe/core/EditorChrome';
 import { WebEditorHost } from '@excaliframe/hosts/web';
 import { PlaygroundStore } from '@excaliframe/hosts/playground-store';
 import { parseConnectParam } from '@excaliframe/collab/url-params';
 import { getBrowserId } from '@excaliframe/collab/browserId';
 import { CollabConfig } from '@excaliframe/collab/types';
+import type { EditorHandle, EditorStateCallbacks } from '@excaliframe/core/EditorHandle';
+import type { SyncActions } from '@excaliframe/collab/sync/SyncAdapter';
 import './styles.css';
 
 declare global {
@@ -16,7 +19,14 @@ declare global {
   }
 }
 
-type EditorComponent = React.FC<{ host: EditorHost; showCancel?: boolean; collabConfig?: CollabConfig }>;
+type EditorComponent = React.ForwardRefExoticComponent<
+  {
+    host: EditorHost;
+    syncActions: SyncActions | null;
+    stateCallbacks: EditorStateCallbacks;
+    autoSave?: { enabled: boolean; setEnabled: (v: boolean) => void };
+  } & React.RefAttributes<EditorHandle>
+>;
 
 /** Dynamically import the correct editor based on drawing tool. */
 async function loadEditor(tool: string): Promise<EditorComponent> {
@@ -77,7 +87,7 @@ if (!drawingId) {
 
   // Load drawing first to get the tool type, then dynamically import the editor
   host.loadDrawing().then(async (envelope) => {
-    const tool = envelope?.tool || params.get('tool') || 'excalidraw';
+    const tool = (envelope?.tool || params.get('tool') || 'excalidraw') as 'excalidraw' | 'mermaid';
     const Editor = await loadEditor(tool);
 
     const collabConfig: CollabConfig = {
@@ -102,7 +112,12 @@ if (!drawingId) {
     }
 
     const root = ReactDOM.createRoot(document.getElementById('playground-root')!);
-    root.render(<Editor host={host} showCancel={false} collabConfig={collabConfig} />);
+    root.render(
+      <EditorChrome host={host} tool={tool} showCancel={false} collabConfig={collabConfig}>
+        {(props) => <Editor ref={props.ref} host={host} syncActions={props.syncActions}
+          stateCallbacks={props.stateCallbacks} autoSave={props.autoSave} />}
+      </EditorChrome>
+    );
 
     // Render editable title into the header slot (injected by PlaygroundEditPage.html)
     const titleSlot = document.getElementById('drawing-title-slot');

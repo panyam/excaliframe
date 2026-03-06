@@ -1,23 +1,13 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useImperativeHandle, forwardRef } from 'react';
 import { EditorHost, DrawingEnvelope } from './types';
-import { useAutoSave } from './useAutoSave';
-import AutoSaveToggle from './AutoSaveToggle';
-import { CollabConfig } from '../collab/types';
-import { useCollaboration } from '../collab/useCollaboration';
-import { useSync } from '../collab/sync/useSync';
 import { MermaidSyncAdapter } from '../collab/adapters/MermaidSyncAdapter';
-import type { SyncActions, SyncConnection } from '../collab/sync/SyncAdapter';
-import SharePanel from '../collab/SharePanel';
-import CollabBadge from '../collab/CollabBadge';
-import { resolveRelayUrl } from '../collab/url-params';
+import type { SyncActions } from '../collab/sync/SyncAdapter';
+import type { EditorHandle, EditorStateCallbacks } from './EditorHandle';
 
-interface Props {
+export interface MermaidEditorProps {
   host: EditorHost;
-  /** Show the Cancel button and top toolbar. Default true (Forge mode).
-   *  When false, floating dirty badge (playground). */
-  showCancel?: boolean;
-  /** Optional collab config — opt-in collaboration via dialog. */
-  collabConfig?: CollabConfig;
+  syncActions: SyncActions | null;
+  stateCallbacks: EditorStateCallbacks;
 }
 
 const DEFAULT_TEMPLATE = `flowchart TD
@@ -38,8 +28,8 @@ function setSvgContent(container: HTMLElement, svgString: string): void {
   container.innerHTML = svgString;
 }
 
-
-const MermaidEditor: React.FC<Props> = ({ host, showCancel = true, collabConfig }) => {
+const MermaidEditor = forwardRef<EditorHandle, MermaidEditorProps>(
+  ({ host, syncActions, stateCallbacks }, ref) => {
   const [code, setCode] = useState('');
   const [initialCode, setInitialCode] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -62,6 +52,15 @@ const MermaidEditor: React.FC<Props> = ({ host, showCancel = true, collabConfig 
   const codeRef = useRef(code);
   codeRef.current = code;
 
+  // Notify chrome of dirty changes
+  const prevDirtyRef = useRef(false);
+  useEffect(() => {
+    if (isDirty !== prevDirtyRef.current) {
+      prevDirtyRef.current = isDirty;
+      stateCallbacks.onDirtyChange(isDirty);
+    }
+  }, [isDirty, stateCallbacks]);
+
   // Load mermaid library
   useEffect(() => {
     import('mermaid').then((mod) => {
@@ -69,9 +68,6 @@ const MermaidEditor: React.FC<Props> = ({ host, showCancel = true, collabConfig 
       m.initialize({
         startOnLoad: false,
         theme: 'default',
-        // 'loose' is needed because 'strict' uses DOMPurify which strips
-        // <foreignObject> elements required by C4 diagrams.
-        // Safe here: users only render their own local content.
         securityLevel: 'loose',
       });
       setMermaid(m);
@@ -109,7 +105,6 @@ const MermaidEditor: React.FC<Props> = ({ host, showCancel = true, collabConfig 
         setError(null);
       } catch (e: any) {
         setError(e.message || 'Invalid Mermaid syntax');
-        // Keep last valid SVG visible
       }
     }, 300);
     return () => {
@@ -120,10 +115,8 @@ const MermaidEditor: React.FC<Props> = ({ host, showCancel = true, collabConfig 
   const saveDrawing = useCallback(async () => {
     if (isSaving) return;
     setIsSaving(true);
+    stateCallbacks.onSavingChange(true);
     try {
-      // Store SVG as data URI preview. PNG conversion via canvas doesn't work
-      // for mermaid SVGs because they contain <foreignObject> elements that
-      // browsers block when rendering SVG as an Image src.
       let preview = '';
       if (lastValidSvg.current) {
         preview = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(lastValidSvg.current)));
@@ -140,85 +133,33 @@ const MermaidEditor: React.FC<Props> = ({ host, showCancel = true, collabConfig 
       await host.saveDrawing(envelope);
       setInitialCode(code);
       setIsSaving(false);
+      stateCallbacks.onSavingChange(false);
+      stateCallbacks.onDirtyChange(false);
     } catch (err) {
       console.error('MermaidEditor - Error saving:', err);
       alert('Failed to save drawing. Please try again.');
       setIsSaving(false);
+      stateCallbacks.onSavingChange(false);
     }
-  }, [code, isSaving, host]);
+  }, [code, isSaving, host, stateCallbacks]);
 
-  const { autoSaveEnabled, setAutoSaveEnabled, autoSaveStatus } = useAutoSave({
-    isDirty,
-    isSaving,
-    canAutoSave: !showCancel,
-    onSave: saveDrawing,
-  });
-
-  // Collaboration — ref-based bridge so useSync and useCollaboration don't know about each other
-  const syncAdapterRef = useRef<MermaidSyncAdapter | null>(null);
-  const syncActionsRef = useRef<SyncActions | null>(null);
-
-  const onCollabEvent = useCallback((event: any) => {
-    syncActionsRef.current?.handleEvent(event);
-  }, []);
-  const [collabState, collabActions] = useCollaboration('mermaid', onCollabEvent);
+  // Imperative handle for EditorChrome
+  useImperativeHandle(ref, () => ({
+    save: saveDrawing,
+  }), [saveDrawing]);
 
   // Sync adapter — created once after drawing is loaded
-  const [syncAdapter, setSyncAdapter] = useState<MermaidSyncAdapter | null>(null);
+  const syncAdapterRef = useRef<MermaidSyncAdapter | null>(null);
+  const syncActionsRef = useRef<SyncActions | null>(null);
+  syncActionsRef.current = syncActions;
+
   useEffect(() => {
     if (!isLoading && !syncAdapterRef.current) {
       const adapter = new MermaidSyncAdapter(() => codeRef.current, setCode);
       syncAdapterRef.current = adapter;
-      setSyncAdapter(adapter);
+      stateCallbacks.onSyncAdapterReady(adapter);
     }
-  }, [isLoading]);
-
-  const syncConnection = useMemo<SyncConnection>(() => ({
-    isConnected: collabState.isConnected,
-    clientId: collabState.clientId,
-    isOwner: collabState.isOwner,
-    peers: collabState.peers,
-    send: collabActions.send,
-  }), [collabState.isConnected, collabState.clientId, collabState.isOwner, collabState.peers, collabActions.send]);
-
-  const [, syncActions] = useSync(syncAdapter, syncConnection);
-  syncActionsRef.current = syncActions;
-
-  const [showCollabPanel, setShowCollabPanel] = useState(!!collabConfig?.initialRelayUrl);
-
-  // Auto-connect as follower when collabConfig.autoJoin is set
-  useEffect(() => {
-    if (collabConfig?.autoJoin && !collabState.isConnected && !collabState.isConnecting) {
-      const relayUrl = collabConfig.autoJoinRelayUrl || '/relay';
-      const sessionId = collabConfig.autoJoinSessionId || '';
-      collabActions.connect(resolveRelayUrl(relayUrl), sessionId, '', false, collabConfig.drawingId);
-    }
-  }, [collabConfig?.autoJoin]);
-
-  const handleCancel = useCallback(() => {
-    if (isDirty) {
-      if (!window.confirm('You have unsaved changes. Are you sure you want to close?')) {
-        return;
-      }
-    }
-    host.close();
-  }, [isDirty, host]);
-
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
-        e.preventDefault();
-        saveDrawing();
-      }
-      if (showCancel && e.key === 'Escape') {
-        e.preventDefault();
-        handleCancel();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown, true);
-    return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [handleCancel, saveDrawing, showCancel]);
+  }, [isLoading, stateCallbacks]);
 
   // Handle Tab key in textarea (insert spaces instead of changing focus)
   const handleTextareaKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -230,7 +171,6 @@ const MermaidEditor: React.FC<Props> = ({ host, showCancel = true, collabConfig 
       const val = ta.value;
       const newVal = val.substring(0, start) + '    ' + val.substring(end);
       setCode(newVal);
-      // Restore cursor after React re-render
       requestAnimationFrame(() => {
         ta.selectionStart = ta.selectionEnd = start + 4;
       });
@@ -264,9 +204,7 @@ const MermaidEditor: React.FC<Props> = ({ host, showCancel = true, collabConfig 
         isDragging = false;
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
-        // Persist split position
         const rect = container.getBoundingClientRect();
-        // leftWidth is stale in this closure, so read from DOM
         const codePane = container.querySelector('.mermaid-editor__code') as HTMLElement;
         if (codePane) {
           const pct = (codePane.offsetWidth / rect.width) * 100;
@@ -296,7 +234,7 @@ const MermaidEditor: React.FC<Props> = ({ host, showCancel = true, collabConfig 
     );
   }
 
-  const editorPane = (
+  return (
     <div className="mermaid-editor" ref={containerRef}>
       <div className="mermaid-editor__code" style={{ width: `calc(${leftWidth}% - 3px)` }}>
         <textarea
@@ -321,91 +259,7 @@ const MermaidEditor: React.FC<Props> = ({ host, showCancel = true, collabConfig 
       </div>
     </div>
   );
+});
 
-  // Toolbar mode (Forge): top bar with Save + Cancel
-  if (showCancel) {
-    return (
-      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: '#fff' }}>
-        <div style={{
-          padding: '8px 16px', backgroundColor: '#f4f5f7', borderBottom: '1px solid #dfe1e6',
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, zIndex: 10,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 500 }}>Mermaid</h3>
-            {isDirty && (
-              <span style={{ fontSize: '11px', color: '#de350b', fontWeight: 500 }}>
-                • Unsaved changes
-              </span>
-            )}
-            <CollabBadge state={collabState} onClick={() => setShowCollabPanel(!showCollabPanel)} />
-          </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button onClick={handleCancel} disabled={isSaving}
-              style={{ padding: '6px 12px', backgroundColor: '#fff', border: '1px solid #dfe1e6',
-                borderRadius: '3px', cursor: isSaving ? 'not-allowed' : 'pointer', fontSize: '14px' }}>
-              Cancel
-            </button>
-            <button onClick={saveDrawing} disabled={isSaving}
-              style={{ padding: '6px 12px', backgroundColor: isSaving ? '#84bef7' : '#0052cc',
-                color: 'white', border: 'none', borderRadius: '3px',
-                cursor: isSaving ? 'not-allowed' : 'pointer', fontSize: '14px' }}>
-              {isSaving ? 'Saving...' : 'Save'}
-            </button>
-          </div>
-        </div>
-        {showCollabPanel && (
-          <SharePanel state={collabState} actions={collabActions} tool="mermaid"
-            drawingId={collabConfig?.drawingId ?? ''} onClose={() => setShowCollabPanel(false)} />
-        )}
-        <div style={{ flex: 1, overflow: 'hidden' }}>
-          {editorPane}
-        </div>
-      </div>
-    );
-  }
-
-  // No-toolbar mode (playground): floating dirty badge + auto-save toggle
-  return (
-    <div className="h-full w-full relative bg-white dark:bg-gray-900">
-      {editorPane}
-      <div className="fixed bottom-4 right-4 z-[1000] flex flex-col items-end gap-2">
-        {showCollabPanel && (
-          <div className="bg-white/95 dark:bg-gray-800/95 rounded-lg p-3 shadow-lg min-w-[280px]">
-            <SharePanel state={collabState} actions={collabActions} tool="mermaid"
-            drawingId={collabConfig?.drawingId ?? ''} onClose={() => setShowCollabPanel(false)} />
-          </div>
-        )}
-        <CollabBadge state={collabState} onClick={() => setShowCollabPanel(!showCollabPanel)} />
-      </div>
-      {(() => {
-        let badgeText: string | null = null;
-        let badgeBg = 'rgba(222, 53, 11, 0.9)';
-
-        if (autoSaveStatus === 'saved') {
-          badgeText = 'Saved';
-          badgeBg = 'rgba(0, 135, 90, 0.9)';
-        } else if (autoSaveStatus === 'saving') {
-          badgeText = 'Saving\u2026';
-          badgeBg = 'rgba(0, 82, 204, 0.9)';
-        } else if (isDirty && autoSaveEnabled) {
-          badgeText = 'Auto-saving\u2026';
-          badgeBg = 'rgba(255, 171, 0, 0.9)';
-        } else if (isDirty) {
-          badgeText = 'Unsaved changes \u2014 \u2318S to save';
-        }
-
-        return badgeText ? (
-          <div className="fixed bottom-4 left-4 px-3.5 py-1.5 text-white rounded-full text-xs font-medium z-[1000] pointer-events-none shadow-md"
-            style={{ backgroundColor: badgeBg }}>
-            {badgeText}
-          </div>
-        ) : null;
-      })()}
-      <div className="fixed bottom-4 right-[70px] z-[1000] bg-white/90 dark:bg-gray-800/90 rounded-lg px-2.5 py-1 shadow-md">
-        <AutoSaveToggle enabled={autoSaveEnabled} onChange={setAutoSaveEnabled} />
-      </div>
-    </div>
-  );
-};
-
+MermaidEditor.displayName = 'MermaidEditor';
 export default MermaidEditor;

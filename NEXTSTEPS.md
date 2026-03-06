@@ -106,3 +106,4 @@ Immediate and near-term action items for Excaliframe.
 - [x] Collab Part 2 — sync engine: ExcalidrawSyncAdapter, MermaidSyncAdapter, useSync hook, SceneInit, debounced outgoing, element reconciliation
 - [x] Collab Part 3 — share-based UX: SharePanel, owner lifecycle, join codes, auto-connect, browserId
 - [x] Collab Part 4 — cursor tracking: Excalidraw native collaborator rendering, peer colors (8-color palette), throttled broadcasts (50ms), colored peer dots in SharePanel, room validation
+- [x] EditorChrome refactor — extracted all chrome concerns (collab hooks, autosave, keyboard shortcuts, dirty badges, layout branches) into `EditorChrome` wrapper. Editors are now pure `forwardRef` content components with `EditorHandle` imperative interface.
