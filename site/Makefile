@@ -1,10 +1,13 @@
 
 NUM_LINKED_GOMODS=`cat go.mod | grep -v "^\/\/" | grep replace | wc -l | sed -e "s/ *//g"`
 
-all: playground run
+all: parent playground run
 
 run: resymlink
 	EXCALIFRAME_ENV=dev go run .
+
+parent:
+	cd ../ && make build
 
 build: resymlink
 	go build -o bin/excaliframe-site .
@@ -20,6 +23,9 @@ checklinks:
 	fi
 
 playground:
+	npm run build:rspack
+
+playground-old:
 	npm run build
 
 deploy: checklinks playground
@@ -32,4 +38,4 @@ prodlogs:
 clean:
 	rm -Rf bin locallinks
 
-.PHONY: all run build resymlink checklinks playground deploy prodlogs clean
+.PHONY: all run build resymlink checklinks playground playground-old deploy prodlogs clean

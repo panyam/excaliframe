@@ -1,4 +1,4 @@
-.PHONY: help install build playground-build dev type-check clean deploy install-app tunnel lint sync diff sync-status migrate test test-ts test-go proto
+.PHONY: help install build build-old playground-build playground-build-old dev dev-old type-check clean deploy install-app tunnel lint sync diff sync-status migrate test test-ts test-go proto
 
 # Default target
 .DEFAULT_GOAL := help
@@ -42,8 +42,13 @@ install: ## Install npm dependencies
 
 ##@ Build
 
-build: ## Build frontend assets for Forge
-	@echo "$(GREEN)Building frontend assets...$(NC)"
+build: ## Build frontend assets for Forge (rspack)
+	@echo "$(GREEN)Building frontend assets (rspack)...$(NC)"
+	npm run build:rspack
+	@echo "$(GREEN)Build output: dist/forge/$(NC)"
+
+build-old: ## Build frontend assets for Forge (webpack fallback)
+	@echo "$(GREEN)Building frontend assets (webpack)...$(NC)"
 	npm run build
 	@echo "$(GREEN)Build output: dist/forge/$(NC)"
 
@@ -56,10 +61,15 @@ clean: ## Remove build artifacts
 	rm -rf dist/
 	@echo "$(GREEN)Clean complete$(NC)"
 
-playground-build: ## Build playground bundle for site
-	@echo "$(GREEN)Building playground assets...$(NC)"
-	npx webpack --config webpack.playground.js --mode production
-	@echo "$(GREEN)Build output: site/static/playground/excalidraw/$(NC)"
+playground-build: ## Build playground bundle for site (rspack)
+	@echo "$(GREEN)Building playground assets (rspack)...$(NC)"
+	cd site && npm run build:rspack
+	@echo "$(GREEN)Build output: site/static/playground/$(NC)"
+
+playground-build-old: ## Build playground bundle for site (webpack fallback)
+	@echo "$(GREEN)Building playground assets (webpack)...$(NC)"
+	cd site && npm run build
+	@echo "$(GREEN)Build output: site/static/playground/$(NC)"
 
 lint: ## Run lint checks
 	@echo "$(GREEN)Running lint checks...$(NC)"
@@ -67,8 +77,13 @@ lint: ## Run lint checks
 
 ##@ Development
 
-dev: ## Watch mode - rebuild on file changes
-	@echo "$(GREEN)Starting watch mode...$(NC)"
+dev: ## Watch mode - rebuild on file changes (rspack)
+	@echo "$(GREEN)Starting watch mode (rspack)...$(NC)"
+	@echo "$(YELLOW)Run 'make tunnel' in another terminal for live testing$(NC)"
+	npm run dev:rspack
+
+dev-old: ## Watch mode - rebuild on file changes (webpack fallback)
+	@echo "$(GREEN)Starting watch mode (webpack)...$(NC)"
 	@echo "$(YELLOW)Run 'make tunnel' in another terminal for live testing$(NC)"
 	npm run dev
 

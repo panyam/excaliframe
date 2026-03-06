@@ -109,7 +109,8 @@ excaliframe/
 ├── site/                           # Marketing site (Go + playground frontend)
 │   ├── package.json                # Site's own npm deps (React, Excalidraw, jsx-dom, webpack)
 │   ├── tsconfig.json               # Site TS config with @excaliframe/* path alias
-│   ├── webpack.config.js           # Builds playground bundles (3 entry points)
+│   ├── rspack.config.js            # Builds playground bundles (3 entry points) — default
+│   ├── webpack.config.js           # Builds playground bundles (3 entry points) — fallback
 │   ├── pages/                      # Playground frontend source (TypeScript/TSX)
 │   │   ├── editor/                 # Editor dispatcher (dynamic import per tool)
 │   │   │   ├── index.tsx           # Reads envelope.tool, lazy-loads correct editor
@@ -143,7 +144,8 @@ excaliframe/
 │
 ├── manifest.yml                    # Forge app manifest
 ├── package.json                    # Forge app npm dependencies
-├── webpack.config.js               # Webpack config (editor + renderer)
+├── rspack.config.js                # Rspack config (editor + renderer) — default bundler
+├── webpack.config.js               # Webpack config (editor + renderer) — fallback
 ├── tsconfig.json                   # TypeScript config (src/ only)
 └── Makefile                        # Build, deploy, install commands
 ```
@@ -256,21 +258,25 @@ Each boot module is a webpack async chunk that imports the tool's core editor + 
 | Frontend | React 18, TypeScript 5 |
 | Diagramming | @excalidraw/excalidraw 0.18, mermaid 11 |
 | Confluence API | @forge/bridge 4, @forge/api 4 |
-| Bundler | Webpack 5 (multi-config: editor + renderer) |
+| Bundler | Rspack (default), Webpack 5 (fallback) — multi-config: editor + renderer |
 | Build | npm + Makefile |
 
 ### Build & Deploy
 
 ```bash
-make build              # Webpack builds editor + renderer to static/
-make playground-build   # Webpack builds playground to site/static/playground/editor/
+make build              # Rspack builds editor + renderer to static/
+make build-old          # Webpack fallback (same output)
+make playground-build   # Rspack builds playground to site/static/playground/
+make playground-build-old # Webpack fallback
 make deploy             # Build + forge deploy -e development
 make deploy-prod        # Build + forge deploy -e production
 make install-app        # forge install -e development -p Confluence
 make tunnel             # Build + forge tunnel (live dev testing)
 ```
 
-Webpack outputs to `static/editor/` and `static/renderer/`, which Forge serves as Custom UI resources. The playground builds separately from `site/` via its own `webpack.config.js` to `site/static/playground/{listing,detail,editor}/`. Excalidraw fonts are copied to both the Forge editor and playground editor bundles.
+**Bundler**: Rspack is the default bundler (5-10x faster than Webpack). Webpack configs are kept intact as `-old` fallback targets. Both use identical output paths and config structure — `rspack.config.js` mirrors `webpack.config.js` with built-in plugin replacements (`HtmlRspackPlugin`, `CopyRspackPlugin`, `builtin:swc-loader`).
+
+Build outputs to `static/editor/` and `static/renderer/`, which Forge serves as Custom UI resources. The playground builds separately from `site/` via its own `rspack.config.js` to `site/static/playground/{listing,detail,editor}/`. Excalidraw fonts are copied to both the Forge editor and playground editor bundles.
 
 ---
 
@@ -316,7 +322,7 @@ The playground is a multi-page experience for creating, browsing, and editing dr
 
 **Self-contained site/**: The `site/` directory has its own `package.json`, `tsconfig.json`, and `webpack.config.js`. Playground page source lives in `site/pages/` and imports shared core code via the `@excaliframe/*` path alias (mapped to `../src/*`). This means `site/` can eventually move to its own repo — only the alias config changes, no source code changes.
 
-**Webpack**: `site/webpack.config.js` produces three bundles:
+**Bundler**: `site/rspack.config.js` (default) or `site/webpack.config.js` (fallback) produces three bundles:
 - `playground-listing` → `site/static/playground/listing/bundle.js` (small, jsx-dom)
 - `playground-detail` → `site/static/playground/detail/bundle.js` (small, jsx-dom)
 - `playground-editor` → `site/static/playground/editor/bundle.js` (dispatcher + async chunks)
@@ -490,7 +496,7 @@ Host adapters are shared across all diagram types — they store/retrieve `Drawi
 
 ### What Stays the Same
 
-- Webpack config: still two entry points (editor, renderer) for Forge
+- Bundler config: still two entry points (editor, renderer) for Forge (rspack.config.js + webpack.config.js)
 - Forge resources: still `static/editor/` and `static/renderer/`
 - Sync tool: picks up new source files automatically (entire `src/` is synced)
 - No new enterprise-side config changes needed for additional libraries

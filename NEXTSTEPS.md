@@ -103,3 +103,4 @@ Immediate and near-term action items for Excaliframe.
 - [x] Change all editor `100vh` heights to `100%` so editors respect container bounds, not viewport
 - [x] Reduce footer height (py-8 → py-2) for compact editor layout
 - [x] Fix C4 Mermaid preview on listing/detail pages — render SVG via innerHTML instead of `<img>` to preserve `<foreignObject>` (web + Forge)
+- [x] Rspack migration — parallel rspack configs for root + site, 5-10x faster builds, webpack kept as `-old` fallback targets
