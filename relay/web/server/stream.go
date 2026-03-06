@@ -41,13 +41,34 @@ func (s *CollabBidiStream) Send(action *pb.CollabAction) error {
 		return err
 	}
 
-	// Store session/client info after join (use response sessionId — may be relay-generated)
+	// Store session/client info after join and start forwarding broadcast events
 	if action.GetJoin() != nil && resp != nil {
 		if rj := resp.GetRoomJoined(); rj != nil {
 			s.mu.Lock()
 			s.sessionId = rj.GetSessionId()
 			s.clientId = rj.GetClientId()
 			s.mu.Unlock()
+
+			// Bridge: forward events from the service client's SendCh to the stream's sendCh
+			if clientCh := s.service.GetClientSendCh(rj.GetSessionId(), rj.GetClientId()); clientCh != nil {
+				go func() {
+					for {
+						select {
+						case event, ok := <-clientCh:
+							if !ok {
+								return
+							}
+							select {
+							case s.sendCh <- event:
+							case <-s.ctx.Done():
+								return
+							}
+						case <-s.ctx.Done():
+							return
+						}
+					}
+				}()
+			}
 		}
 	}
 

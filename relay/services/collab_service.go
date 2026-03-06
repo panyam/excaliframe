@@ -100,6 +100,23 @@ func (s *CollabService) FindSessionByHint(hint string) string {
 	return s.hintIndex[hint]
 }
 
+// GetClientSendCh returns the broadcast channel for a client in a room.
+// Returns nil if the room or client is not found.
+func (s *CollabService) GetClientSendCh(sessionId, clientId string) chan *pb.CollabEvent {
+	s.mu.RLock()
+	room, ok := s.rooms[sessionId]
+	s.mu.RUnlock()
+	if !ok {
+		return nil
+	}
+	room.mu.RLock()
+	defer room.mu.RUnlock()
+	if c, ok := room.Clients[clientId]; ok {
+		return c.SendCh
+	}
+	return nil
+}
+
 // HandleAction processes a single CollabAction from a client stream.
 func (s *CollabService) HandleAction(ctx context.Context, action *pb.CollabAction) (*pb.CollabEvent, error) {
 	if action == nil {
