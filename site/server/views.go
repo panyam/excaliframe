@@ -192,23 +192,18 @@ func (p *PlaygroundEditPage) Load(r *http.Request, w http.ResponseWriter, app *g
 	return nil, false
 }
 
-// decodeJoinCode decodes a join code of the form base64url(relayUrl):sessionId.
-// Returns the relay URL, session ID, and whether decoding succeeded.
-func decodeJoinCode(code string) (relayUrl, sessionId string, ok bool) {
-	colonIdx := strings.Index(code, ":")
-	if colonIdx < 0 {
-		return "", "", false
+// decodeJoinCode decodes a join code of the form base64url(relayUrl):sessionId:drawingId.
+// Returns the relay URL, session ID, drawing ID, and whether decoding succeeded.
+func decodeJoinCode(code string) (relayUrl, sessionId, drawingId string, ok bool) {
+	parts := strings.SplitN(code, ":", 3)
+	if len(parts) < 3 || parts[1] == "" || parts[2] == "" {
+		return "", "", "", false
 	}
-	b64 := code[:colonIdx]
-	sessionId = code[colonIdx+1:]
-	if sessionId == "" {
-		return "", "", false
-	}
-	decoded, err := base64.RawURLEncoding.DecodeString(b64)
+	decoded, err := base64.RawURLEncoding.DecodeString(parts[0])
 	if err != nil {
-		return "", "", false
+		return "", "", "", false
 	}
-	return string(decoded), sessionId, true
+	return string(decoded), parts[1], parts[2], true
 }
 
 // SetupRoutes registers all page routes
@@ -249,13 +244,13 @@ func SetupRoutes(app *goal.App[*ExcaliframeApp]) *http.ServeMux {
 	// Cross-origin join: /join/{code} decodes a join code and redirects to the editor
 	mux.HandleFunc("/join/{code}", func(w http.ResponseWriter, r *http.Request) {
 		code := r.PathValue("code")
-		relayUrl, sessionId, ok := decodeJoinCode(code)
+		relayUrl, sessionId, drawingId, ok := decodeJoinCode(code)
 		if !ok {
 			http.Error(w, "Invalid join code", http.StatusBadRequest)
 			return
 		}
 		target := fmt.Sprintf("/playground/%s/edit?autoJoin=1&relay=%s&session=%s",
-			url.PathEscape(sessionId),
+			url.PathEscape(drawingId),
 			url.QueryEscape(relayUrl),
 			url.QueryEscape(sessionId))
 		http.Redirect(w, r, target, http.StatusFound)

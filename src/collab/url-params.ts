@@ -36,28 +36,32 @@ export function buildConnectUrl(pageUrl: string, relayUrl: string): string {
 }
 
 /**
- * Encode a join code: base64url(relayWsUrl):sessionId
+ * Encode a join code: base64url(relayWsUrl):sessionId:drawingId
  * Used for cross-origin sharing via /join/<code> URLs.
  */
-export function encodeJoinCode(relayUrl: string, sessionId: string): string {
+export function encodeJoinCode(relayUrl: string, sessionId: string, drawingId: string): string {
   const encoded = btoa(relayUrl).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  return `${encoded}:${sessionId}`;
+  return `${encoded}:${sessionId}:${drawingId}`;
 }
 
 /**
- * Decode a join code back to relay URL and session ID.
+ * Decode a join code back to relay URL, session ID, and drawing ID.
  * Returns null if the code is malformed.
  */
-export function decodeJoinCode(code: string): { relayUrl: string; sessionId: string } | null {
-  const colonIdx = code.indexOf(':');
-  if (colonIdx < 0) return null;
-  const b64 = code.substring(0, colonIdx);
-  const sessionId = code.substring(colonIdx + 1);
-  if (!sessionId) return null;
+export function decodeJoinCode(code: string): { relayUrl: string; sessionId: string; drawingId: string } | null {
+  const firstColon = code.indexOf(':');
+  if (firstColon < 0) return null;
+  const b64 = code.substring(0, firstColon);
+  const rest = code.substring(firstColon + 1);
+  const secondColon = rest.indexOf(':');
+  if (secondColon < 0) return null;
+  const sessionId = rest.substring(0, secondColon);
+  const drawingId = rest.substring(secondColon + 1);
+  if (!sessionId || !drawingId) return null;
   try {
     const padded = b64.replace(/-/g, '+').replace(/_/g, '/');
     const relayUrl = atob(padded);
-    return { relayUrl, sessionId };
+    return { relayUrl, sessionId, drawingId };
   } catch {
     return null;
   }
