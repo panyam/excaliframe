@@ -39,6 +39,7 @@ export class CollabClient {
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
   private explicitDisconnect: boolean = false;
   private maxRetries: number;
+  private boundBeforeUnload: (() => void) | null = null;
 
   constructor(options: CollabClientOptions = {}) {
     this.options = options;
@@ -67,11 +68,19 @@ export class CollabClient {
     this.explicitDisconnect = false;
     this.retryCount = 0;
 
+    // Ensure cleanup on page unload (refresh, tab close, navigation)
+    this.boundBeforeUnload = () => this.disconnect();
+    window.addEventListener('beforeunload', this.boundBeforeUnload);
+
     this.openWebSocket();
   }
 
   disconnect(): void {
     this.explicitDisconnect = true;
+    if (this.boundBeforeUnload) {
+      window.removeEventListener('beforeunload', this.boundBeforeUnload);
+      this.boundBeforeUnload = null;
+    }
     if (this.retryTimer) {
       clearTimeout(this.retryTimer);
       this.retryTimer = null;

@@ -133,18 +133,16 @@ const SharePanel: React.FC<SharePanelProps> = ({
 
       <div className="mb-3">
         <label className="block text-xs font-medium mb-1">Relay Server:</label>
-        {servers.map((srv, i) => (
-          <label key={srv.url} className="flex items-center gap-1.5 mb-1 text-sm cursor-pointer">
-            <input type="radio" name="relay-server" checked={selectedServer === i}
-              onChange={() => setSelectedServer(i)} className="accent-indigo-500" />
-            {srv.label} <span className="text-xs text-gray-400 dark:text-gray-500">({srv.url})</span>
-          </label>
-        ))}
-        <label className="flex items-center gap-1.5 mb-1 text-sm cursor-pointer">
-          <input type="radio" name="relay-server" checked={selectedServer === servers.length}
-            onChange={() => setSelectedServer(servers.length)} className="accent-indigo-500" />
-          Custom:
-        </label>
+        <select
+          value={selectedServer}
+          onChange={e => setSelectedServer(Number(e.target.value))}
+          className="w-full px-2.5 py-1.5 text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+        >
+          {servers.map((srv, i) => (
+            <option key={srv.url} value={i}>{srv.label}</option>
+          ))}
+          <option value={servers.length}>Custom...</option>
+        </select>
         {selectedServer === servers.length && (
           <input
             placeholder="ws://..."

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { CollabClient } from './CollabClient';
 import { getBrowserId } from './browserId';
 import type { PeerInfo } from './types';
@@ -127,6 +127,13 @@ export function useCollaboration(
 
   const send = useCallback((action: Record<string, unknown>) => {
     clientRef.current?.send(action);
+  }, []);
+
+  // Disconnect on unmount (page refresh, navigation, etc.)
+  useEffect(() => {
+    return () => {
+      clientRef.current?.disconnect();
+    };
   }, []);
 
   return [state, { connect, disconnect, send }];

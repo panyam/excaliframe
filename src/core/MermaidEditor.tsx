@@ -51,7 +51,10 @@ const MermaidEditor: React.FC<Props> = ({ host, showCancel = true, collabConfig 
   const lastValidSvg = useRef<string>('');
   const dividerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [leftWidth, setLeftWidth] = useState(50); // percentage
+  const [leftWidth, setLeftWidth] = useState(() => {
+    const saved = localStorage.getItem('excaliframe:mermaidSplitPct');
+    return saved ? Number(saved) : 50;
+  });
 
   const isDirty = code !== initialCode;
 
@@ -261,6 +264,14 @@ const MermaidEditor: React.FC<Props> = ({ host, showCancel = true, collabConfig 
         isDragging = false;
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
+        // Persist split position
+        const rect = container.getBoundingClientRect();
+        // leftWidth is stale in this closure, so read from DOM
+        const codePane = container.querySelector('.mermaid-editor__code') as HTMLElement;
+        if (codePane) {
+          const pct = (codePane.offsetWidth / rect.width) * 100;
+          localStorage.setItem('excaliframe:mermaidSplitPct', String(Math.round(pct)));
+        }
       }
     };
 
@@ -287,7 +298,7 @@ const MermaidEditor: React.FC<Props> = ({ host, showCancel = true, collabConfig 
 
   const editorPane = (
     <div className="mermaid-editor" ref={containerRef}>
-      <div className="mermaid-editor__code" style={{ width: `${leftWidth}%` }}>
+      <div className="mermaid-editor__code" style={{ width: `calc(${leftWidth}% - 3px)` }}>
         <textarea
           value={code}
           onChange={(e) => {
@@ -302,7 +313,7 @@ const MermaidEditor: React.FC<Props> = ({ host, showCancel = true, collabConfig 
         />
       </div>
       <div className="mermaid-editor__divider" ref={dividerRef} />
-      <div className="mermaid-editor__preview" style={{ width: `${100 - leftWidth}%` }}>
+      <div className="mermaid-editor__preview" style={{ width: `calc(${100 - leftWidth}% - 3px)` }}>
         <div ref={previewRef} className="mermaid-editor__preview-content" />
         {error && (
           <div className="mermaid-editor__error">{error}</div>
