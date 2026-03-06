@@ -416,9 +416,7 @@ const ExcalidrawEditor: React.FC<Props> = ({ host, showCancel = true, collabConf
                 • Unsaved changes
               </span>
             )}
-            {!collabConfig?.autoJoin && (
-              <CollabBadge state={collabState} onClick={() => setShowCollabPanel(!showCollabPanel)} />
-            )}
+            <CollabBadge state={collabState} onClick={() => setShowCollabPanel(!showCollabPanel)} />
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
@@ -452,7 +450,7 @@ const ExcalidrawEditor: React.FC<Props> = ({ host, showCancel = true, collabConf
             </button>
           </div>
         </div>
-        {showCollabPanel && !collabConfig?.autoJoin && (
+        {showCollabPanel && (
           <SharePanel state={collabState} actions={collabActions} tool="excalidraw"
             drawingId={collabConfig?.drawingId ?? ''} onClose={() => setShowCollabPanel(false)} />
         )}
@@ -469,17 +467,15 @@ const ExcalidrawEditor: React.FC<Props> = ({ host, showCancel = true, collabConf
       <div className="w-full h-full excalidraw-wrapper">
         {excalidrawCanvas}
       </div>
-      {!collabConfig?.autoJoin && (
-        <div className="fixed bottom-4 right-4 z-[1000] flex flex-col items-end gap-2">
-          {showCollabPanel && (
-            <div className="bg-white/95 dark:bg-gray-800/95 rounded-lg p-3 shadow-lg min-w-[280px]">
-              <SharePanel state={collabState} actions={collabActions} tool="excalidraw"
-              drawingId={collabConfig?.drawingId ?? ''} onClose={() => setShowCollabPanel(false)} />
-            </div>
-          )}
-          <CollabBadge state={collabState} onClick={() => setShowCollabPanel(!showCollabPanel)} />
-        </div>
-      )}
+      <div className="fixed bottom-4 right-4 z-[1000] flex flex-col items-end gap-2">
+        {showCollabPanel && (
+          <div className="bg-white/95 dark:bg-gray-800/95 rounded-lg p-3 shadow-lg min-w-[280px]">
+            <SharePanel state={collabState} actions={collabActions} tool="excalidraw"
+            drawingId={collabConfig?.drawingId ?? ''} onClose={() => setShowCollabPanel(false)} />
+          </div>
+        )}
+        <CollabBadge state={collabState} onClick={() => setShowCollabPanel(!showCollabPanel)} />
+      </div>
       {(() => {
         let badgeText: string | null = null;
         let badgeBg = 'rgba(222, 53, 11, 0.9)';

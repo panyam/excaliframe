@@ -326,9 +326,7 @@ const MermaidEditor: React.FC<Props> = ({ host, showCancel = true, collabConfig 
                 • Unsaved changes
               </span>
             )}
-            {!collabConfig?.autoJoin && (
-              <CollabBadge state={collabState} onClick={() => setShowCollabPanel(!showCollabPanel)} />
-            )}
+            <CollabBadge state={collabState} onClick={() => setShowCollabPanel(!showCollabPanel)} />
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button onClick={handleCancel} disabled={isSaving}
@@ -344,7 +342,7 @@ const MermaidEditor: React.FC<Props> = ({ host, showCancel = true, collabConfig 
             </button>
           </div>
         </div>
-        {showCollabPanel && !collabConfig?.autoJoin && (
+        {showCollabPanel && (
           <SharePanel state={collabState} actions={collabActions} tool="mermaid"
             drawingId={collabConfig?.drawingId ?? ''} onClose={() => setShowCollabPanel(false)} />
         )}
@@ -359,17 +357,15 @@ const MermaidEditor: React.FC<Props> = ({ host, showCancel = true, collabConfig 
   return (
     <div className="h-full w-full relative bg-white dark:bg-gray-900">
       {editorPane}
-      {!collabConfig?.autoJoin && (
-        <div className="fixed bottom-4 right-4 z-[1000] flex flex-col items-end gap-2">
-          {showCollabPanel && (
-            <div className="bg-white/95 dark:bg-gray-800/95 rounded-lg p-3 shadow-lg min-w-[280px]">
-              <SharePanel state={collabState} actions={collabActions} tool="mermaid"
-              drawingId={collabConfig?.drawingId ?? ''} onClose={() => setShowCollabPanel(false)} />
-            </div>
-          )}
-          <CollabBadge state={collabState} onClick={() => setShowCollabPanel(!showCollabPanel)} />
-        </div>
-      )}
+      <div className="fixed bottom-4 right-4 z-[1000] flex flex-col items-end gap-2">
+        {showCollabPanel && (
+          <div className="bg-white/95 dark:bg-gray-800/95 rounded-lg p-3 shadow-lg min-w-[280px]">
+            <SharePanel state={collabState} actions={collabActions} tool="mermaid"
+            drawingId={collabConfig?.drawingId ?? ''} onClose={() => setShowCollabPanel(false)} />
+          </div>
+        )}
+        <CollabBadge state={collabState} onClick={() => setShowCollabPanel(!showCollabPanel)} />
+      </div>
       {(() => {
         let badgeText: string | null = null;
         let badgeBg = 'rgba(222, 53, 11, 0.9)';
