@@ -82,10 +82,12 @@ Architecture uses `DrawingEnvelope.tool` field to identify diagram type. Host ad
 | React hooks + UI (useCollaboration, CollabPanel, CollabBadge) | In Progress |
 | Test suite (TDD — 63 TS + ~30 Go tests) | Done |
 | `make test` unified test runner | Done |
-| Editor integration (optional `collab` prop, URL params) | Planned |
-| Element sync (Excalidraw scene diffing/merging) | Planned |
-| Cursor broadcasting (Excalidraw collaborators) | Planned |
-| Text sync (Mermaid LWW) | Planned |
+| Editor integration (optional `collab` prop, URL params) | Done |
+| Element sync (Excalidraw scene diffing/merging) | Done |
+| Cursor broadcasting (Excalidraw collaborators) | Done |
+| Cursor tracking — Mermaid (text selection cursors) | Planned — [#9](https://github.com/panyam/excaliframe/issues/9) |
+| Text sync (Mermaid LWW) | Done |
+| Peer colors and labels (session-local, 8-color palette) | Done |
 | Programmatic control (CLI/agent → live drawing via relay) | Planned |
 
 The relay is stateless — no database, no persistent storage. It routes messages between peers in real-time. Any client (browser, CLI, agent) that speaks the protocol can join sessions.

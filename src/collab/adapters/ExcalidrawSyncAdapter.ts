@@ -1,14 +1,29 @@
 import { hashElementsVersion, reconcileElements } from '@excalidraw/excalidraw';
 import type { SyncAdapter, OutgoingUpdate, CursorData, PeerCursor } from '../sync/SyncAdapter';
+import { getPeerColor, getPeerLabel } from '../peerColors';
 
 // Excalidraw types — mirrors ExcalidrawEditor.tsx local definitions.
 // Using `any` to avoid deep coupling to Excalidraw's internal branded types
 // which change between versions.
 type ExcalidrawElement = any;
+interface Collaborator {
+  pointer?: { x: number; y: number; tool?: string };
+  button?: string;
+  username?: string;
+  color?: { background: string; stroke: string };
+  selectedElementIds?: Record<string, boolean>;
+  socketId?: string;
+  id?: string;
+}
+
 interface ExcalidrawImperativeAPI {
   getSceneElements: () => readonly ExcalidrawElement[];
   getAppState: () => Record<string, any>;
-  updateScene: (scene: { elements?: readonly ExcalidrawElement[]; appState?: Record<string, any> }) => void;
+  updateScene: (scene: {
+    elements?: readonly ExcalidrawElement[];
+    appState?: Record<string, any>;
+    collaborators?: Map<string, Collaborator>;
+  }) => void;
 }
 
 /** Version snapshot stored per element — avoids holding mutable references. */
@@ -24,6 +39,14 @@ export class ExcalidrawSyncAdapter implements SyncAdapter {
   isApplyingRemote = false;
 
   private api: ExcalidrawImperativeAPI;
+  /** Current local pointer state (set via onPointerUpdate). */
+  private localPointer: { x: number; y: number; tool: string; button: string } | null = null;
+  /** Remote peer cursors for Excalidraw's collaborator rendering. */
+  private remoteCursors: Map<string, Collaborator> = new Map();
+  /** Stable index per clientId for deterministic color assignment. */
+  private peerIndex: Map<string, number> = new Map();
+  private nextPeerIndex = 0;
+
   /** Hash of element versionNonces at last sync point. */
   private lastSyncedHash: number = 0;
   /** Version snapshots at last sync, keyed by element id.
@@ -151,8 +174,47 @@ export class ExcalidrawSyncAdapter implements SyncAdapter {
     );
   }
 
-  // Cursor sync — deferred to Part 3 (stub implementations)
-  getCursorData(): CursorData | null { return null; }
-  applyRemoteCursor(_peer: PeerCursor): void {}
-  removePeerCursor(_clientId: string): void {}
+  /** Store local pointer state from Excalidraw's onPointerUpdate callback. */
+  setLocalPointer(pointer: { x: number; y: number; tool: string }, button: string): void {
+    this.localPointer = { x: pointer.x, y: pointer.y, tool: pointer.tool, button };
+  }
+
+  private ensurePeerIndex(clientId: string): number {
+    let idx = this.peerIndex.get(clientId);
+    if (idx === undefined) {
+      idx = this.nextPeerIndex++;
+      this.peerIndex.set(clientId, idx);
+    }
+    return idx;
+  }
+
+  getCursorData(): CursorData | null {
+    if (!this.localPointer) return null;
+    return {
+      x: this.localPointer.x,
+      y: this.localPointer.y,
+      tool: this.localPointer.tool,
+      button: this.localPointer.button,
+    };
+  }
+
+  applyRemoteCursor(peer: PeerCursor): void {
+    const idx = this.ensurePeerIndex(peer.clientId);
+    const color = getPeerColor(idx);
+    const collaborator: Collaborator = {
+      pointer: { x: peer.x, y: peer.y, tool: peer.tool },
+      button: peer.button,
+      username: peer.username || getPeerLabel(idx),
+      color,
+      selectedElementIds: peer.selectedElementIds,
+      id: peer.clientId,
+    };
+    this.remoteCursors.set(peer.clientId, collaborator);
+    this.api.updateScene({ collaborators: new Map(this.remoteCursors) });
+  }
+
+  removePeerCursor(clientId: string): void {
+    this.remoteCursors.delete(clientId);
+    this.api.updateScene({ collaborators: new Map(this.remoteCursors) });
+  }
 }

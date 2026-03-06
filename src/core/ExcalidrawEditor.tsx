@@ -24,7 +24,7 @@ interface ExcalidrawImperativeAPI {
   getSceneElements: () => readonly ExcalidrawElement[];
   getAppState: () => AppState;
   getFiles: () => BinaryFiles;
-  updateScene: (scene: { elements?: readonly ExcalidrawElement[]; appState?: Partial<AppState> }) => void;
+  updateScene: (scene: { elements?: readonly ExcalidrawElement[]; appState?: Partial<AppState>; collaborators?: Map<string, any> }) => void;
   addFiles: (files: any[]) => void;
 }
 
@@ -360,6 +360,10 @@ const ExcalidrawEditor: React.FC<Props> = ({ host, showCancel = true, collabConf
         },
       }}
       onChange={handleChange}
+      onPointerUpdate={(payload: any) => {
+        syncAdapterRef.current?.setLocalPointer(payload.pointer, payload.button);
+        syncActionsRef.current?.notifyCursorMove();
+      }}
       theme="light"
       UIOptions={{
         canvasActions: {

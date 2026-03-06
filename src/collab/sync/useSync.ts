@@ -117,9 +117,10 @@ export function useSync(
       console.log('[SYNC] handleEvent: textUpdate from %s', event.fromClientId);
       adapter.applyRemote(event.fromClientId ?? '', event.textUpdate);
     } else if (event.cursorUpdate && event.fromClientId) {
+      const peer = connection.peers.get(event.fromClientId) as { username?: string } | undefined;
       adapter.applyRemoteCursor({
         clientId: event.fromClientId,
-        username: '',
+        username: peer?.username || event.fromClientId.slice(0, 6),
         x: event.cursorUpdate.x,
         y: event.cursorUpdate.y,
         tool: event.cursorUpdate.tool,

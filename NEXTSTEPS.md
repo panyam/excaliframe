@@ -30,12 +30,11 @@ Immediate and near-term action items for Excaliframe.
 
 ## In Progress
 
-### Real-Time Collaboration — Part 3 (Share-Based Collab)
-- PR #8: Share button, owner lifecycle, join codes, same-origin auto-connect, cross-origin join page
-- Parts 1-2 complete: relay, transport, peer tracking, real-time sync (109 TS tests passing)
-- Part 3 adds: owner-initiated sharing, ownership transfer, session kill, auto-connect
-- Fixed: Excalidraw in-place mutation sync bug (store version snapshots, not element refs)
-- Remaining: smart reconnect (currently disabled), cursor rendering, binary file sync
+### Real-Time Collaboration — Remaining Work
+- Parts 1-3 complete: relay, transport, peer tracking, real-time sync, share UX, cursor tracking (125 TS tests passing)
+- Cursor tracking for Excalidraw: done (native collaborator rendering, colored peer labels, throttled broadcasts)
+- Mermaid cursor tracking: deferred — see [#9](https://github.com/panyam/excaliframe/issues/9)
+- Remaining: smart reconnect (currently disabled), binary file sync
 
 ### Fix False Positive "Unsaved Changes" Indicator
 - When loading an existing drawing, "Unsaved changes" appears immediately without user interaction
@@ -105,4 +104,5 @@ Immediate and near-term action items for Excaliframe.
 - [x] Collab Part 1.5 — embed relay in site server (`/relay/`), opt-in collab UI (dialog with relay server list, people icon badge, peer count), `?connect=` param, session ID = drawing ID, localStorage persistence
 - [x] Tailwind dark mode for editor chrome — CollabPanel, CollabBadge, AutoSaveToggle, loading spinners, status badges, popover containers all use Tailwind with `dark:` variants
 - [x] Collab Part 2 — sync engine: ExcalidrawSyncAdapter, MermaidSyncAdapter, useSync hook, SceneInit, debounced outgoing, element reconciliation
-- [x] Collab Part 3 (in progress) — share-based UX: SharePanel, owner lifecycle, join codes, auto-connect, browserId, room validation
+- [x] Collab Part 3 — share-based UX: SharePanel, owner lifecycle, join codes, auto-connect, browserId
+- [x] Collab Part 4 — cursor tracking: Excalidraw native collaborator rendering, peer colors (8-color palette), throttled broadcasts (50ms), colored peer dots in SharePanel, room validation

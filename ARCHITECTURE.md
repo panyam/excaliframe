@@ -85,10 +85,17 @@ excaliframe/
 │   │   └── styles.css
 │   ├── collab/                      # Real-time collaboration client
 │   │   ├── gen/                     # Generated protobuf-es TypeScript types
+│   │   ├── adapters/                # Tool-specific sync adapters
+│   │   │   ├── ExcalidrawSyncAdapter.ts  # Excalidraw diff/merge/cursor impl
+│   │   │   └── MermaidSyncAdapter.ts     # Mermaid text sync adapter
+│   │   ├── sync/                    # Tool-agnostic sync orchestration
+│   │   │   ├── SyncAdapter.ts       # SyncAdapter interface, CursorData, PeerCursor types
+│   │   │   └── useSync.ts           # Debounced outgoing, throttled cursors, event routing
 │   │   ├── CollabClient.ts          # Framework-agnostic WebSocket client
 │   │   ├── useCollaboration.ts      # React hook for connection state
-│   │   ├── CollabPanel.tsx          # Opt-in dialog (relay server list, peers)
+│   │   ├── SharePanel.tsx           # Share dialog (relay servers, peer list with colored dots)
 │   │   ├── CollabBadge.tsx          # People icon badge with peer count
+│   │   ├── peerColors.ts            # 8-color palette, getPeerColor(), getPeerLabel()
 │   │   ├── url-params.ts            # parseConnectParam, buildConnectUrl, resolveRelayUrl
 │   │   └── types.ts                 # CollabConfig, RelayServerOption, proto re-exports
 │   └── version.ts                  # Auto-generated version info
@@ -399,6 +406,7 @@ Excaliframe supports optional real-time collaboration via an external relay serv
 | **Client** | CollabClient | `src/collab/CollabClient.ts` | Framework-agnostic WebSocket client (no React dependency) |
 | **Client** | useCollaboration | `src/collab/useCollaboration.ts` | React hook wrapping CollabClient for state management |
 | **Client** | CollabPanel/Badge | `src/collab/CollabPanel.tsx`, `CollabBadge.tsx` | Opt-in dialog UI with relay server list and peer status icon |
+| **Client** | peerColors | `src/collab/peerColors.ts` | 8-color palette for peer identification (cursors, dots) |
 | **Client** | url-params | `src/collab/url-params.ts` | `parseConnectParam` / `buildConnectUrl` / `resolveRelayUrl` |
 
 ### Embedded Relay
@@ -443,10 +451,29 @@ Connection is **opt-in**. Editors accept an optional `collabConfig` prop (`Colla
 - **Session ID**: Defaults to drawing ID — everyone editing the same drawing shares a room
 - **localStorage**: Persists username and custom relay URLs across sessions
 
+### Cursor Tracking
+
+Cursor tracking uses Excalidraw's native collaborator rendering. No custom UI is needed — Excalidraw renders colored cursors with labels natively via `updateScene({ collaborators })`.
+
+**Flow:**
+1. `onPointerUpdate` prop on `<Excalidraw>` fires on every pointer move → `{pointer: {x, y, tool}, button}`
+2. `ExcalidrawSyncAdapter.setLocalPointer()` stores the position
+3. `useSync.notifyCursorMove()` throttles at 50ms, calls `getCursorData()` → sends `CursorUpdate` proto
+4. Remote peer receives `CursorUpdate` → `applyRemoteCursor()` builds `Collaborator` object with color/label → `updateScene({ collaborators })`
+5. On peer disconnect: `removePeerCursor()` cleans up
+
+**Peer identification** is session-local (not global): each peer gets a color from a fixed 8-color palette based on join order (mod 8) and a label like "User 1", "User 2". The `peerColors.ts` module provides `getPeerColor(index)` and `getPeerLabel(index)`.
+
+**SharePanel** shows colored dots next to peer names using the same palette.
+
+**Mermaid cursor tracking** is deferred — see GitHub issue #9.
+
 ### Implementation Status
 
 - **Part 1** (connection infrastructure): Complete — relay embedded in site server, opt-in UI, 67 tests passing
-- **Part 2** (element sync, cursors, text): Planned — layers on top of Part 1
+- **Part 2** (element sync + text): Complete — ExcalidrawSyncAdapter, MermaidSyncAdapter, useSync hook, scene init, debounced outgoing
+- **Part 3** (share UX): Complete — SharePanel, owner lifecycle, join codes, auto-connect, browserId
+- **Part 4** (cursor tracking): Complete — Excalidraw native collaborator rendering, peer colors, throttled broadcasts, 125 TS tests passing
 
 ---
 

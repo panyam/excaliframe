@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CollabState, CollabActions } from './useCollaboration';
 import { DEFAULT_RELAY_SERVERS, RelayServerOption } from './types';
 import { resolveRelayUrl, encodeJoinCode } from './url-params';
+import { getPeerColor } from './peerColors';
 
 export interface SharePanelProps {
   state: CollabState;
@@ -68,17 +69,21 @@ const SharePanel: React.FC<SharePanelProps> = ({
         <h3 className="text-sm font-semibold mb-3">Connected</h3>
         <div data-testid="peer-list" className="mb-3">
           <div className="text-xs font-medium mb-1">Peers:</div>
-          {Array.from(state.peers.values()).map(peer => (
-            <span key={peer.clientId} className="block text-sm">
-              {peer.username}
-              {peer.clientId === state.clientId
-                ? <span className="text-gray-400 dark:text-gray-500"> (you)</span>
-                : ''}
-              {peer.isOwner
-                ? <span className="text-indigo-400 dark:text-indigo-300"> (owner)</span>
-                : ''}
-            </span>
-          ))}
+          {Array.from(state.peers.values()).map((peer, i) => {
+            const color = getPeerColor(i);
+            return (
+              <span key={peer.clientId} className="flex items-center gap-1.5 text-sm">
+                <span className="inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color.background }} />
+                {peer.username}
+                {peer.clientId === state.clientId
+                  ? <span className="text-gray-400 dark:text-gray-500"> (you)</span>
+                  : ''}
+                {peer.isOwner
+                  ? <span className="text-indigo-400 dark:text-indigo-300"> (owner)</span>
+                  : ''}
+              </span>
+            );
+          })}
         </div>
         <button onClick={() => actions.disconnect()}
           className="px-3 py-1.5 text-xs font-medium rounded-md border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50">
@@ -97,14 +102,18 @@ const SharePanel: React.FC<SharePanelProps> = ({
           <div className="text-xs font-medium mb-1">
             {state.peers.size} peer{state.peers.size !== 1 ? 's' : ''}:
           </div>
-          {Array.from(state.peers.values()).map(peer => (
-            <span key={peer.clientId} className="block text-sm">
-              {peer.username}
-              {peer.clientId === state.clientId
-                ? <span className="text-gray-400 dark:text-gray-500"> (you)</span>
-                : ''}
-            </span>
-          ))}
+          {Array.from(state.peers.values()).map((peer, i) => {
+            const color = getPeerColor(i);
+            return (
+              <span key={peer.clientId} className="flex items-center gap-1.5 text-sm">
+                <span className="inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color.background }} />
+                {peer.username}
+                {peer.clientId === state.clientId
+                  ? <span className="text-gray-400 dark:text-gray-500"> (you)</span>
+                  : ''}
+              </span>
+            );
+          })}
         </div>
         <div className="flex gap-2">
           <button onClick={handleCopyJoinCode}

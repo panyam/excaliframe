@@ -20,6 +20,17 @@ vi.mock('@excalidraw/excalidraw', () => ({
   }),
 }));
 
+vi.mock('../peerColors', () => ({
+  getPeerColor: (index: number) => {
+    const colors = [
+      { background: '#ff6b6b', stroke: '#c92a2a' },
+      { background: '#51cf66', stroke: '#2b8a3e' },
+    ];
+    return colors[index % colors.length];
+  },
+  getPeerLabel: (index: number) => `User ${index + 1}`,
+}));
+
 import { ExcalidrawSyncAdapter } from './ExcalidrawSyncAdapter';
 
 function makeElement(overrides: Record<string, any> = {}) {
@@ -340,6 +351,110 @@ describe('ExcalidrawSyncAdapter', () => {
       adapter.applySceneInit(snapshot);
       expect(flagDuringUpdate).toBe(true);
       expect(adapter.isApplyingRemote).toBe(false);
+    });
+  });
+
+  describe('getCursorData', () => {
+    it('returns null when no local pointer set', () => {
+      const api = makeMockApi([]);
+      const adapter = new ExcalidrawSyncAdapter(api);
+      expect(adapter.getCursorData()).toBeNull();
+    });
+
+    it('returns pointer data after setLocalPointer', () => {
+      const api = makeMockApi([]);
+      const adapter = new ExcalidrawSyncAdapter(api);
+
+      adapter.setLocalPointer({ x: 100, y: 200, tool: 'pointer' }, 'up');
+      const cursor = adapter.getCursorData();
+      expect(cursor).toEqual({ x: 100, y: 200, tool: 'pointer', button: 'up' });
+    });
+
+    it('reflects latest pointer position', () => {
+      const api = makeMockApi([]);
+      const adapter = new ExcalidrawSyncAdapter(api);
+
+      adapter.setLocalPointer({ x: 10, y: 20, tool: 'pointer' }, 'up');
+      adapter.setLocalPointer({ x: 50, y: 60, tool: 'laser' }, 'down');
+      expect(adapter.getCursorData()).toEqual({ x: 50, y: 60, tool: 'laser', button: 'down' });
+    });
+  });
+
+  describe('applyRemoteCursor', () => {
+    it('calls updateScene with collaborators map', () => {
+      const api = makeMockApi([]);
+      const adapter = new ExcalidrawSyncAdapter(api);
+
+      adapter.applyRemoteCursor({
+        clientId: 'peer-1',
+        username: 'Alice',
+        x: 100,
+        y: 200,
+        tool: 'pointer',
+        button: 'up',
+      });
+
+      expect(api.updateScene).toHaveBeenCalledWith({
+        collaborators: expect.any(Map),
+      });
+
+      const collaborators = api.updateScene.mock.calls[0][0].collaborators as Map<string, any>;
+      expect(collaborators.size).toBe(1);
+      expect(collaborators.has('peer-1')).toBe(true);
+      const collab = collaborators.get('peer-1');
+      expect(collab.pointer).toEqual({ x: 100, y: 200, tool: 'pointer' });
+      expect(collab.button).toBe('up');
+      expect(collab.username).toBe('Alice');
+      expect(collab.color).toEqual({ background: '#ff6b6b', stroke: '#c92a2a' });
+    });
+
+    it('assigns stable colors per clientId', () => {
+      const api = makeMockApi([]);
+      const adapter = new ExcalidrawSyncAdapter(api);
+
+      adapter.applyRemoteCursor({ clientId: 'peer-1', username: 'A', x: 0, y: 0 });
+      adapter.applyRemoteCursor({ clientId: 'peer-2', username: 'B', x: 0, y: 0 });
+      // Update peer-1 again — should keep same color
+      adapter.applyRemoteCursor({ clientId: 'peer-1', username: 'A', x: 10, y: 10 });
+
+      const lastCall = api.updateScene.mock.calls[api.updateScene.mock.calls.length - 1][0];
+      const collaborators = lastCall.collaborators as Map<string, any>;
+      expect(collaborators.get('peer-1').color).toEqual({ background: '#ff6b6b', stroke: '#c92a2a' });
+      expect(collaborators.get('peer-2').color).toEqual({ background: '#51cf66', stroke: '#2b8a3e' });
+    });
+
+    it('uses getPeerLabel as fallback when username empty', () => {
+      const api = makeMockApi([]);
+      const adapter = new ExcalidrawSyncAdapter(api);
+
+      adapter.applyRemoteCursor({ clientId: 'peer-1', username: '', x: 0, y: 0 });
+      const collaborators = api.updateScene.mock.calls[0][0].collaborators as Map<string, any>;
+      expect(collaborators.get('peer-1').username).toBe('User 1');
+    });
+  });
+
+  describe('removePeerCursor', () => {
+    it('removes peer from collaborators and calls updateScene', () => {
+      const api = makeMockApi([]);
+      const adapter = new ExcalidrawSyncAdapter(api);
+
+      adapter.applyRemoteCursor({ clientId: 'peer-1', username: 'A', x: 0, y: 0 });
+      adapter.applyRemoteCursor({ clientId: 'peer-2', username: 'B', x: 0, y: 0 });
+      adapter.removePeerCursor('peer-1');
+
+      const lastCall = api.updateScene.mock.calls[api.updateScene.mock.calls.length - 1][0];
+      const collaborators = lastCall.collaborators as Map<string, any>;
+      expect(collaborators.size).toBe(1);
+      expect(collaborators.has('peer-1')).toBe(false);
+      expect(collaborators.has('peer-2')).toBe(true);
+    });
+
+    it('handles removing non-existent peer gracefully', () => {
+      const api = makeMockApi([]);
+      const adapter = new ExcalidrawSyncAdapter(api);
+
+      adapter.removePeerCursor('nonexistent');
+      expect(api.updateScene).toHaveBeenCalledWith({ collaborators: expect.any(Map) });
     });
   });
 });
