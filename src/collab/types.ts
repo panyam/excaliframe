@@ -32,9 +32,20 @@ export {
   ErrorEventSchema,
 } from './gen/excaliframe/v1/models/collab_pb';
 
-// App-level config type (not a proto message)
-export interface CollabProps {
-  relayUrl: string;
-  sessionId: string;
-  username: string;
+// App-level config types (not proto messages)
+
+export interface RelayServerOption {
+  label: string;
+  url: string;   // "/relay" (relative) or "wss://excaliframe.com/relay"
+}
+
+export const DEFAULT_RELAY_SERVERS: RelayServerOption[] = [
+  { label: 'This server', url: '/relay' },
+  { label: 'excaliframe.com', url: 'wss://excaliframe.com/relay' },
+];
+
+export interface CollabConfig {
+  drawingId: string;              // used as default session ID
+  initialRelayUrl?: string;       // from ?connect= param — auto-opens dialog
+  relayServers?: RelayServerOption[];
 }

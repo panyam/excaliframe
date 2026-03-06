@@ -1,11 +1,19 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { EditorHost, DrawingEnvelope } from './types';
+import { useAutoSave } from './useAutoSave';
+import AutoSaveToggle from './AutoSaveToggle';
+import { CollabConfig } from '../collab/types';
+import { useCollaboration } from '../collab/useCollaboration';
+import CollabPanel from '../collab/CollabPanel';
+import CollabBadge from '../collab/CollabBadge';
 
 interface Props {
   host: EditorHost;
   /** Show the Cancel button and top toolbar. Default true (Forge mode).
    *  When false, floating dirty badge (playground). */
   showCancel?: boolean;
+  /** Optional collab config — opt-in collaboration via dialog. */
+  collabConfig?: CollabConfig;
 }
 
 const DEFAULT_TEMPLATE = `flowchart TD
@@ -27,7 +35,7 @@ function setSvgContent(container: HTMLElement, svgString: string): void {
 }
 
 
-const MermaidEditor: React.FC<Props> = ({ host, showCancel = true }) => {
+const MermaidEditor: React.FC<Props> = ({ host, showCancel = true, collabConfig }) => {
   const [code, setCode] = useState('');
   const [initialCode, setInitialCode] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -127,6 +135,17 @@ const MermaidEditor: React.FC<Props> = ({ host, showCancel = true }) => {
       setIsSaving(false);
     }
   }, [code, isSaving, host]);
+
+  const { autoSaveEnabled, setAutoSaveEnabled, autoSaveStatus } = useAutoSave({
+    isDirty,
+    isSaving,
+    canAutoSave: !showCancel,
+    onSave: saveDrawing,
+  });
+
+  // Collaboration
+  const [collabState, collabActions] = useCollaboration('mermaid');
+  const [showCollabPanel, setShowCollabPanel] = useState(!!collabConfig?.initialRelayUrl);
 
   const handleCancel = useCallback(() => {
     if (isDirty) {
@@ -264,6 +283,7 @@ const MermaidEditor: React.FC<Props> = ({ host, showCancel = true }) => {
                 • Unsaved changes
               </span>
             )}
+            <CollabBadge state={collabState} onClick={() => setShowCollabPanel(!showCollabPanel)} />
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button onClick={handleCancel} disabled={isSaving}
@@ -279,6 +299,10 @@ const MermaidEditor: React.FC<Props> = ({ host, showCancel = true }) => {
             </button>
           </div>
         </div>
+        {showCollabPanel && (
+          <CollabPanel state={collabState} actions={collabActions} tool="mermaid"
+            drawingId={collabConfig?.drawingId ?? ''} onClose={() => setShowCollabPanel(false)} />
+        )}
         <div style={{ flex: 1, overflow: 'hidden' }}>
           {editorPane}
         </div>
@@ -286,20 +310,61 @@ const MermaidEditor: React.FC<Props> = ({ host, showCancel = true }) => {
     );
   }
 
-  // No-toolbar mode (playground): floating dirty badge
+  // No-toolbar mode (playground): floating dirty badge + auto-save toggle
   return (
     <div style={{ height: '100%', width: '100%', position: 'relative', backgroundColor: '#fff' }}>
       {editorPane}
-      {isDirty && (
-        <div style={{
-          position: 'fixed', bottom: '16px', left: '16px', padding: '6px 14px',
-          backgroundColor: 'rgba(222, 53, 11, 0.9)', color: 'white', borderRadius: '20px',
-          fontSize: '12px', fontWeight: 500, zIndex: 1000, pointerEvents: 'none',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-        }}>
-          Unsaved changes — ⌘S to save
-        </div>
-      )}
+      <div style={{
+        position: 'fixed', bottom: '16px', right: '16px', zIndex: 1000,
+        display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px',
+      }}>
+        {showCollabPanel && (
+          <div style={{
+            backgroundColor: 'rgba(255,255,255,0.95)', borderRadius: '8px',
+            padding: '12px', boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
+            minWidth: '280px',
+          }}>
+            <CollabPanel state={collabState} actions={collabActions} tool="mermaid"
+            drawingId={collabConfig?.drawingId ?? ''} onClose={() => setShowCollabPanel(false)} />
+          </div>
+        )}
+        <CollabBadge state={collabState} onClick={() => setShowCollabPanel(!showCollabPanel)} />
+      </div>
+      {(() => {
+        let badgeText: string | null = null;
+        let badgeBg = 'rgba(222, 53, 11, 0.9)';
+
+        if (autoSaveStatus === 'saved') {
+          badgeText = 'Saved';
+          badgeBg = 'rgba(0, 135, 90, 0.9)';
+        } else if (autoSaveStatus === 'saving') {
+          badgeText = 'Saving\u2026';
+          badgeBg = 'rgba(0, 82, 204, 0.9)';
+        } else if (isDirty && autoSaveEnabled) {
+          badgeText = 'Auto-saving\u2026';
+          badgeBg = 'rgba(255, 171, 0, 0.9)';
+        } else if (isDirty) {
+          badgeText = 'Unsaved changes \u2014 \u2318S to save';
+        }
+
+        return badgeText ? (
+          <div style={{
+            position: 'fixed', bottom: '16px', left: '16px', padding: '6px 14px',
+            backgroundColor: badgeBg, color: 'white', borderRadius: '20px',
+            fontSize: '12px', fontWeight: 500, zIndex: 1000, pointerEvents: 'none',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+          }}>
+            {badgeText}
+          </div>
+        ) : null;
+      })()}
+      <div style={{
+        position: 'fixed', bottom: '16px', right: '70px', zIndex: 1000,
+        backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: '8px',
+        padding: '4px 10px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+      }}>
+        <AutoSaveToggle enabled={autoSaveEnabled} onChange={setAutoSaveEnabled} />
+      </div>
     </div>
   );
 };

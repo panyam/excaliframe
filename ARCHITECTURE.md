@@ -87,10 +87,10 @@ excaliframe/
 │   │   ├── gen/                     # Generated protobuf-es TypeScript types
 │   │   ├── CollabClient.ts          # Framework-agnostic WebSocket client
 │   │   ├── useCollaboration.ts      # React hook for connection state
-│   │   ├── CollabPanel.tsx          # Connection UI (relay URL, session, peers)
-│   │   ├── CollabBadge.tsx          # Compact connection status indicator
-│   │   ├── url-params.ts            # Parse/build collab URL parameters
-│   │   └── types.ts                 # Re-exports from generated proto types
+│   │   ├── CollabPanel.tsx          # Opt-in dialog (relay server list, peers)
+│   │   ├── CollabBadge.tsx          # People icon badge with peer count
+│   │   ├── url-params.ts            # parseConnectParam, buildConnectUrl, resolveRelayUrl
+│   │   └── types.ts                 # CollabConfig, RelayServerOption, proto re-exports
 │   └── version.ts                  # Auto-generated version info
 │
 ├── relay/                           # Collaboration relay server (Go)
@@ -398,8 +398,21 @@ Excaliframe supports optional real-time collaboration via an external relay serv
 | **Relay** | WebSocket API | `relay/web/server/` | servicekit `grpcws.BidiStreamHandler` for WS bidi, Connect-RPC for unary |
 | **Client** | CollabClient | `src/collab/CollabClient.ts` | Framework-agnostic WebSocket client (no React dependency) |
 | **Client** | useCollaboration | `src/collab/useCollaboration.ts` | React hook wrapping CollabClient for state management |
-| **Client** | CollabPanel/Badge | `src/collab/CollabPanel.tsx`, `CollabBadge.tsx` | React UI for connection management and status |
-| **Client** | url-params | `src/collab/url-params.ts` | Parse/build `?relay=...&session=...&user=...` URLs |
+| **Client** | CollabPanel/Badge | `src/collab/CollabPanel.tsx`, `CollabBadge.tsx` | Opt-in dialog UI with relay server list and peer status icon |
+| **Client** | url-params | `src/collab/url-params.ts` | `parseConnectParam` / `buildConnectUrl` / `resolveRelayUrl` |
+
+### Embedded Relay
+
+The site server embeds the relay at `/relay/` — single server for dev and testing:
+
+```go
+// site/main.go
+relayApp := relayserver.NewRelayApp()
+relayApp.Init()
+mux.Handle("/relay/", http.StripPrefix("/relay", relayApp))
+```
+
+WebSocket endpoint: `/relay/ws/v1/{session_id}/sync`
 
 ### Protocol
 
@@ -422,11 +435,17 @@ The `client_type` field in `JoinRoom` distinguishes client kinds (`"browser"`, `
 
 ### Editor Integration
 
-Editors accept an optional `collab` prop (`CollabProps: {relayUrl, sessionId, username}`). When provided, the connection UI renders. When absent, editors behave exactly as before. URL params (`?relay=...&session=...`) enable link-sharing for collaborative sessions.
+Connection is **opt-in**. Editors accept an optional `collabConfig` prop (`CollabConfig: {drawingId, initialRelayUrl?, relayServers?}`):
+
+- **CollabBadge**: Always visible — people icon when disconnected, `N` + icon when connected
+- **CollabPanel**: Dialog with predefined relay server list (radio buttons), username field, session ID (= drawing ID)
+- **`?connect=<relay-url>`**: Query param auto-opens the dialog (debugging shortcut, does not auto-connect)
+- **Session ID**: Defaults to drawing ID — everyone editing the same drawing shares a room
+- **localStorage**: Persists username and custom relay URLs across sessions
 
 ### Implementation Status
 
-- **Part 1** (connection infrastructure): Tests written (TDD), stubs in place — implementation in progress
+- **Part 1** (connection infrastructure): Complete — relay embedded in site server, opt-in UI, 67 tests passing
 - **Part 2** (element sync, cursors, text): Planned — layers on top of Part 1
 
 ---

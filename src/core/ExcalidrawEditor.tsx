@@ -2,6 +2,11 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { exportToCanvas } from '@excalidraw/excalidraw';
 import { VERSION, BUILD_DATE } from '../version';
 import { EditorHost, DrawingEnvelope, ExcalidrawDrawingData } from './types';
+import { useAutoSave, AutoSaveStatus } from './useAutoSave';
+import { CollabConfig } from '../collab/types';
+import { useCollaboration } from '../collab/useCollaboration';
+import CollabPanel from '../collab/CollabPanel';
+import CollabBadge from '../collab/CollabBadge';
 
 // Excalidraw types (defined locally to avoid module resolution issues)
 type ExcalidrawElement = any;
@@ -24,6 +29,8 @@ interface Props {
   /** Show the Cancel button and top toolbar. Default true (Forge mode).
    *  When false, Save is in the MainMenu + Cmd/Ctrl+S, no toolbar. */
   showCancel?: boolean;
+  /** Optional collab config — opt-in collaboration via dialog. */
+  collabConfig?: CollabConfig;
 }
 
 // Keys that Excalidraw mutates internally on every scene update (version bumps,
@@ -45,7 +52,7 @@ function fingerprint(elements: readonly any[]): string {
   return JSON.stringify(stable);
 }
 
-const ExcalidrawEditor: React.FC<Props> = ({ host, showCancel = true }) => {
+const ExcalidrawEditor: React.FC<Props> = ({ host, showCancel = true, collabConfig }) => {
   const [ExcalidrawComponent, setExcalidrawComponent] = useState<any>(null);
   const [MainMenuComponent, setMainMenuComponent] = useState<any>(null);
   const excalidrawApiRef = useRef<ExcalidrawImperativeAPI | null>(null);
@@ -179,6 +186,18 @@ const ExcalidrawEditor: React.FC<Props> = ({ host, showCancel = true }) => {
   const handleChange = useCallback((elements: readonly ExcalidrawElement[]): void => {
     setIsDirty(fingerprint(elements) !== initialFingerprintRef.current);
   }, []);
+
+  const { autoSaveEnabled, setAutoSaveEnabled, autoSaveStatus } = useAutoSave({
+    isDirty,
+    isSaving,
+    canAutoSave: !showCancel,
+    onSave: saveDrawing,
+  });
+
+  // Collaboration
+  const [collabState, collabActions] = useCollaboration('excalidraw');
+  // Auto-open panel if ?connect= param was provided (but don't auto-connect)
+  const [showCollabPanel, setShowCollabPanel] = useState(!!collabConfig?.initialRelayUrl);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -323,6 +342,11 @@ const ExcalidrawEditor: React.FC<Props> = ({ host, showCancel = true }) => {
               {isSaving ? 'Saving...' : isDirty ? 'Save *' : 'Save'}
             </MainMenuComponent.Item>
           )}
+          {!showCancel && (
+            <MainMenuComponent.Item onSelect={() => setAutoSaveEnabled(!autoSaveEnabled)}>
+              {autoSaveEnabled ? '\u2713 Auto-save on' : '  Auto-save off'}
+            </MainMenuComponent.Item>
+          )}
           {!showCancel && <MainMenuComponent.Separator />}
           <MainMenuComponent.DefaultItems.LoadScene />
           <MainMenuComponent.DefaultItems.SaveToActiveFile />
@@ -369,6 +393,7 @@ const ExcalidrawEditor: React.FC<Props> = ({ host, showCancel = true }) => {
                 • Unsaved changes
               </span>
             )}
+            <CollabBadge state={collabState} onClick={() => setShowCollabPanel(!showCollabPanel)} />
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
@@ -402,6 +427,10 @@ const ExcalidrawEditor: React.FC<Props> = ({ host, showCancel = true }) => {
             </button>
           </div>
         </div>
+        {showCollabPanel && (
+          <CollabPanel state={collabState} actions={collabActions} tool="excalidraw"
+            drawingId={collabConfig?.drawingId ?? ''} onClose={() => setShowCollabPanel(false)} />
+        )}
         <div style={{ flex: 1, width: '100%', height: '100%' }} className="excalidraw-wrapper">
           {excalidrawCanvas}
         </div>
@@ -415,24 +444,58 @@ const ExcalidrawEditor: React.FC<Props> = ({ host, showCancel = true }) => {
       <div style={{ width: '100%', height: '100%' }} className="excalidraw-wrapper">
         {excalidrawCanvas}
       </div>
-      {isDirty && (
-        <div style={{
-          position: 'fixed',
-          bottom: '16px',
-          left: '16px',
-          padding: '6px 14px',
-          backgroundColor: 'rgba(222, 53, 11, 0.9)',
-          color: 'white',
-          borderRadius: '20px',
-          fontSize: '12px',
-          fontWeight: 500,
-          zIndex: 1000,
-          pointerEvents: 'none',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-        }}>
-          Unsaved changes — ⌘S to save
-        </div>
-      )}
+      <div style={{
+        position: 'fixed', bottom: '16px', right: '16px', zIndex: 1000,
+        display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px',
+      }}>
+        {showCollabPanel && (
+          <div style={{
+            backgroundColor: 'rgba(255,255,255,0.95)', borderRadius: '8px',
+            padding: '12px', boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
+            minWidth: '280px',
+          }}>
+            <CollabPanel state={collabState} actions={collabActions} tool="excalidraw"
+            drawingId={collabConfig?.drawingId ?? ''} onClose={() => setShowCollabPanel(false)} />
+          </div>
+        )}
+        <CollabBadge state={collabState} onClick={() => setShowCollabPanel(!showCollabPanel)} />
+      </div>
+      {(() => {
+        let badgeText: string | null = null;
+        let badgeBg = 'rgba(222, 53, 11, 0.9)';
+
+        if (autoSaveStatus === 'saved') {
+          badgeText = 'Saved';
+          badgeBg = 'rgba(0, 135, 90, 0.9)';
+        } else if (autoSaveStatus === 'saving') {
+          badgeText = 'Saving\u2026';
+          badgeBg = 'rgba(0, 82, 204, 0.9)';
+        } else if (isDirty && autoSaveEnabled) {
+          badgeText = 'Auto-saving\u2026';
+          badgeBg = 'rgba(255, 171, 0, 0.9)';
+        } else if (isDirty) {
+          badgeText = 'Unsaved changes \u2014 \u2318S to save';
+        }
+
+        return badgeText ? (
+          <div style={{
+            position: 'fixed',
+            bottom: '16px',
+            left: '16px',
+            padding: '6px 14px',
+            backgroundColor: badgeBg,
+            color: 'white',
+            borderRadius: '20px',
+            fontSize: '12px',
+            fontWeight: 500,
+            zIndex: 1000,
+            pointerEvents: 'none',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+          }}>
+            {badgeText}
+          </div>
+        ) : null;
+      })()}
     </div>
   );
 };

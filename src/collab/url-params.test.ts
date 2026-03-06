@@ -1,86 +1,69 @@
 import { describe, it, expect } from 'vitest';
-import { parseCollabParams, buildCollabUrl } from './url-params';
+import { parseConnectParam, buildConnectUrl, resolveRelayUrl } from './url-params';
 
-describe('parseCollabParams', () => {
-  it('returns null when no relay param', () => {
-    expect(parseCollabParams('?session=abc&user=Alice')).toBeNull();
-  });
-
-  it('returns null when no session param', () => {
-    expect(parseCollabParams('?relay=ws://localhost:8787&user=Alice')).toBeNull();
-  });
-
-  it('returns CollabProps with relay, session, and user', () => {
-    const result = parseCollabParams('?relay=ws://localhost:8787&session=abc&user=Alice');
-    expect(result).toEqual({
-      relayUrl: 'ws://localhost:8787',
-      sessionId: 'abc',
-      username: 'Alice',
-    });
-  });
-
-  it('generates random username when user param missing', () => {
-    const result = parseCollabParams('?relay=ws://localhost:8787&session=abc');
-    expect(result).not.toBeNull();
-    expect(result!.relayUrl).toBe('ws://localhost:8787');
-    expect(result!.sessionId).toBe('abc');
-    expect(result!.username).toBeTruthy();
-    expect(result!.username.length).toBeGreaterThan(0);
-  });
-
-  it('handles wss:// relay URLs', () => {
-    const result = parseCollabParams('?relay=wss://relay.example.com&session=s1');
-    expect(result!.relayUrl).toBe('wss://relay.example.com');
-  });
-
-  it('decodes URI-encoded values', () => {
-    const result = parseCollabParams('?relay=ws%3A%2F%2Flocalhost%3A8787&session=test%20session&user=Alice%20B');
-    expect(result!.relayUrl).toBe('ws://localhost:8787');
-    expect(result!.sessionId).toBe('test session');
-    expect(result!.username).toBe('Alice B');
+describe('parseConnectParam', () => {
+  it('returns null when no connect param', () => {
+    expect(parseConnectParam('?foo=bar')).toBeNull();
   });
 
   it('returns null for empty search string', () => {
-    expect(parseCollabParams('')).toBeNull();
+    expect(parseConnectParam('')).toBeNull();
   });
 
   it('returns null for undefined', () => {
-    expect(parseCollabParams(undefined)).toBeNull();
+    expect(parseConnectParam(undefined)).toBeNull();
+  });
+
+  it('returns relay URL from connect param', () => {
+    expect(parseConnectParam('?connect=/relay')).toBe('/relay');
+  });
+
+  it('returns full ws:// URL from connect param', () => {
+    expect(parseConnectParam('?connect=ws://localhost:8787/relay')).toBe('ws://localhost:8787/relay');
+  });
+
+  it('decodes URI-encoded values', () => {
+    expect(parseConnectParam('?connect=wss%3A%2F%2Fexample.com%2Frelay')).toBe('wss://example.com/relay');
+  });
+
+  it('ignores other params', () => {
+    expect(parseConnectParam('?foo=bar&connect=/relay&baz=1')).toBe('/relay');
   });
 });
 
-describe('buildCollabUrl', () => {
-  it('builds URL with relay, session, user params', () => {
-    const url = buildCollabUrl('http://localhost:8080/edit', {
-      relayUrl: 'ws://localhost:8787',
-      sessionId: 'sess1',
-      username: 'Alice',
-    });
-    expect(url).toContain('relay=');
-    expect(url).toContain('session=sess1');
-    expect(url).toContain('user=Alice');
-    // URL should decode to contain the relay URL
+describe('resolveRelayUrl', () => {
+  it('returns ws:// URLs unchanged', () => {
+    expect(resolveRelayUrl('ws://localhost:8787/relay')).toBe('ws://localhost:8787/relay');
+  });
+
+  it('returns wss:// URLs unchanged', () => {
+    expect(resolveRelayUrl('wss://example.com/relay')).toBe('wss://example.com/relay');
+  });
+
+  it('resolves relative path to ws:// URL using window.location', () => {
+    // jsdom sets window.location to http://localhost by default
+    const resolved = resolveRelayUrl('/relay');
+    expect(resolved).toMatch(/^ws:\/\/localhost/);
+    expect(resolved).toContain('/relay');
+  });
+});
+
+describe('buildConnectUrl', () => {
+  it('appends connect param to page URL', () => {
+    const url = buildConnectUrl('http://localhost:8080/edit/abc', '/relay');
     const parsed = new URL(url);
-    expect(parsed.searchParams.get('relay')).toBe('ws://localhost:8787');
+    expect(parsed.searchParams.get('connect')).toBe('/relay');
+    expect(parsed.pathname).toBe('/edit/abc');
+  });
+
+  it('encodes relay URL with special characters', () => {
+    const url = buildConnectUrl('http://localhost:8080/edit', 'wss://example.com/relay');
+    const parsed = new URL(url);
+    expect(parsed.searchParams.get('connect')).toBe('wss://example.com/relay');
   });
 
   it('preserves existing path', () => {
-    const url = buildCollabUrl('http://localhost:8080/playground/abc/edit', {
-      relayUrl: 'ws://localhost:8787',
-      sessionId: 'sess1',
-      username: 'Alice',
-    });
+    const url = buildConnectUrl('http://localhost:8080/playground/abc/edit', '/relay');
     expect(url).toContain('/playground/abc/edit');
-  });
-
-  it('encodes special characters', () => {
-    const url = buildCollabUrl('http://localhost:8080/edit', {
-      relayUrl: 'wss://relay.example.com',
-      sessionId: 'test session',
-      username: 'Alice & Bob',
-    });
-    const parsed = new URL(url);
-    expect(parsed.searchParams.get('session')).toBe('test session');
-    expect(parsed.searchParams.get('user')).toBe('Alice & Bob');
   });
 });

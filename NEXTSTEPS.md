@@ -30,15 +30,10 @@ Immediate and near-term action items for Excaliframe.
 
 ## In Progress
 
-### Real-Time Collaboration — Part 1: Connection Infrastructure
-- Proto definitions created (`relay/protos/excaliframe/v1/`) — CollabAction/CollabEvent with oneof unions
-- Code generation working: Go (`relay/gen/go/`) + TypeScript (`src/collab/gen/`)
-- Test suite written (TDD): 63 TS tests (vitest), ~30 Go tests
-- Stubs in place for: CollabClient, useCollaboration, CollabPanel, CollabBadge, url-params, CollabService, Room
-- Relay server uses servicekit `grpcws.BidiStreamHandler` for WebSocket bidi streaming
-- `make test` runs all tests across TS + Go
-- **Next**: Implement Go relay service (make Go tests pass), then TS client/components (make TS tests pass), then wire editor integration
-- **Part 2** (element sync, cursors, text sync) layers on top after Part 1 is complete
+### Real-Time Collaboration — Part 1.5: Polish & Part 2 Prep
+- Part 1 infrastructure complete: relay embedded in site server at `/relay/`, opt-in UI with dialog, 67 TS tests passing
+- **Remaining**: Finalize collab badge positioning (avoid overlap with Excalidraw/Mermaid built-in controls)
+- **Part 2** (element sync, cursors, text sync) layers on top — next major feature
 
 ### Fix False Positive "Unsaved Changes" Indicator
 - When loading an existing drawing, "Unsaved changes" appears immediately without user interaction
@@ -104,3 +99,5 @@ Immediate and near-term action items for Excaliframe.
 - [x] Reduce footer height (py-8 → py-2) for compact editor layout
 - [x] Fix C4 Mermaid preview on listing/detail pages — render SVG via innerHTML instead of `<img>` to preserve `<foreignObject>` (web + Forge)
 - [x] Rspack migration — parallel rspack configs for root + site, 5-10x faster builds, webpack kept as `-old` fallback targets
+- [x] Collab Part 1 — connection infrastructure: Go relay, CollabClient with GRPCWSClient, TDD tests
+- [x] Collab Part 1.5 — embed relay in site server (`/relay/`), opt-in collab UI (dialog with relay server list, people icon badge, peer count), `?connect=` param, session ID = drawing ID, localStorage persistence

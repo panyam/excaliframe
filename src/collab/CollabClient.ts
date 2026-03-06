@@ -1,5 +1,6 @@
 import { GRPCWSClient } from '@panyam/servicekit-client';
 import type { PeerInfo } from './types';
+import { resolveRelayUrl } from './url-params';
 
 export interface CollabClientOptions {
   onEvent?: (event: any) => void;
@@ -9,6 +10,9 @@ export interface CollabClientOptions {
   onConnect?: (clientId: string) => void;
   onDisconnect?: () => void;
   maxRetries?: number;
+  /** Factory for creating GRPCWSClient instances. Defaults to `() => new GRPCWSClient()`.
+   *  Override in tests with `GRPCWSClient.createMock()`. */
+  _grpcFactory?: () => GRPCWSClient;
 }
 
 /**
@@ -66,9 +70,7 @@ export class CollabClient {
 
     // Send LeaveRoom before closing
     if (this._isConnected) {
-      this.grpc.send({
-        action: { case: 'leave', value: { reason: 'user disconnected' } },
-      });
+      this.grpc.send({ leave: { reason: 'user disconnected' } });
     }
 
     this.grpc.close();
@@ -87,8 +89,9 @@ export class CollabClient {
   }
 
   private openWebSocket(): void {
-    const url = `${this._relayUrl}/ws/v1/${this._sessionId}/sync`;
-    this.grpc = new GRPCWSClient();
+    const resolved = resolveRelayUrl(this._relayUrl);
+    const url = `${resolved}/ws/v1/${this._sessionId}/sync`;
+    this.grpc = this.options._grpcFactory ? this.options._grpcFactory() : new GRPCWSClient();
 
     // GRPCWSClient.onMessage receives data already unwrapped from the
     // servicekit envelope ({type:"data", data:...} → just the data).
@@ -105,16 +108,16 @@ export class CollabClient {
     };
 
     // connect() is Promise-based — send JoinRoom once WS is open.
+    // Messages use standard protobuf JSON format (field names at top level
+    // for oneof, camelCase for field names) so the Go relay can parse them
+    // with protojson.Unmarshal.
     this.grpc.connect(url).then(() => {
       this.grpc?.send({
-        action: {
-          case: 'join',
-          value: {
-            sessionId: this._sessionId,
-            username: this._username,
-            tool: this._tool,
-            clientType: 'browser',
-          },
+        join: {
+          sessionId: this._sessionId,
+          username: this._username,
+          tool: this._tool,
+          clientType: 'browser',
         },
       });
     }).catch(() => {
@@ -125,26 +128,34 @@ export class CollabClient {
   private handleEvent(data: any): void {
     this.options.onEvent?.(data);
 
-    const evt = data.event;
-    if (!evt) return;
+    // Standard protobuf JSON: oneof fields appear at the top level
+    // e.g. { "roomJoined": { "clientId": "c1", ... } }
+    if (data.roomJoined) {
+      this._clientId = data.roomJoined.clientId;
+      this._isConnected = true;
+      this._isConnecting = false;
+      this.retryCount = 0;
+      this.options.onConnect?.(this._clientId);
 
-    switch (evt.case) {
-      case 'roomJoined': {
-        this._clientId = evt.value.clientId;
-        this._isConnected = true;
-        this._isConnecting = false;
-        this.retryCount = 0;
-        this.options.onConnect?.(this._clientId);
-        break;
+      // Add self as a peer (server doesn't include joining client in peers list)
+      this.options.onPeerJoined?.({
+        clientId: this._clientId,
+        username: this._username,
+        avatarUrl: '',
+        clientType: 'browser',
+        isActive: true,
+      } as PeerInfo);
+
+      // Add existing peers already in the room
+      if (data.roomJoined.peers) {
+        for (const peer of data.roomJoined.peers) {
+          this.options.onPeerJoined?.(peer);
+        }
       }
-      case 'peerJoined': {
-        this.options.onPeerJoined?.(evt.value.peer);
-        break;
-      }
-      case 'peerLeft': {
-        this.options.onPeerLeft?.(evt.value.clientId);
-        break;
-      }
+    } else if (data.peerJoined) {
+      this.options.onPeerJoined?.(data.peerJoined.peer);
+    } else if (data.peerLeft) {
+      this.options.onPeerLeft?.(data.peerLeft.clientId);
     }
   }
 

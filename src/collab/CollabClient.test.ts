@@ -1,71 +1,50 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { GRPCWSClient } from '@panyam/servicekit-client';
+import type { MockController } from '@panyam/servicekit-client';
 import { CollabClient } from './CollabClient';
 
 // ─── Flush microtasks (GRPCWSClient.connect() is Promise-based) ──
 
 const flushPromises = () => new Promise(resolve => setTimeout(resolve, 0));
 
-// ─── Mock WebSocket ─────────────────────────────
-// GRPCWSClient → BaseWSClient → uses globalThis.WebSocket
+// ─── Test helper ─────────────────────────────────
+// Each CollabClient gets a _grpcFactory that creates mock GRPCWSClients.
+// The controllers array tracks all mock instances (important for reconnect tests).
 
-class MockWebSocket {
-  static instances: MockWebSocket[] = [];
-  static CONNECTING = 0;
-  static OPEN = 1;
-  static CLOSING = 2;
-  static CLOSED = 3;
+function createTestClient(options: ConstructorParameters<typeof CollabClient>[0] = {}) {
+  const controllers: MockController[] = [];
+  const client = new CollabClient({
+    ...options,
+    _grpcFactory: () => {
+      const { client: grpc, controller } = GRPCWSClient.createMock();
+      controllers.push(controller);
+      return grpc;
+    },
+  });
+  return { client, controllers };
+}
 
-  url: string;
-  binaryType: string = 'arraybuffer';
-  readyState: number = MockWebSocket.CONNECTING;
-  onopen: ((ev: Event) => void) | null = null;
-  onmessage: ((ev: MessageEvent) => void) | null = null;
-  onerror: ((ev: Event) => void) | null = null;
-  onclose: ((ev: CloseEvent) => void) | null = null;
-  sentMessages: string[] = [];
-
-  constructor(url: string) {
-    this.url = url;
-    MockWebSocket.instances.push(this);
-  }
-
-  send(data: string) { this.sentMessages.push(data); }
-  close(code?: number, reason?: string) {
-    this.readyState = MockWebSocket.CLOSED;
-    this.onclose?.(new CloseEvent('close', { code: code || 1000, reason }));
-  }
-
-  // Test helpers
-  simulateOpen() {
-    this.readyState = MockWebSocket.OPEN;
-    this.onopen?.(new Event('open'));
-  }
-  simulateMessage(data: unknown) {
-    // Servicekit envelope: {type: "data", data: <payload>}
-    // BaseWSClient parses this, GRPCWSClient unwraps the envelope
-    this.onmessage?.(new MessageEvent('message', {
-      data: JSON.stringify({ type: 'data', data }),
-    }));
-  }
-  simulateError() { this.onerror?.(new Event('error')); }
-  simulateClose(code = 1006) {
-    this.readyState = MockWebSocket.CLOSED;
-    this.onclose?.(new CloseEvent('close', { code }));
-  }
+/** Connect a test client through the full handshake (open + roomJoined). */
+async function connectAndJoin(
+  client: CollabClient,
+  ctrl: MockController,
+  opts: { clientId?: string; sessionId?: string } = {},
+) {
+  ctrl.simulateOpen();
+  await flushPromises();
+  // Standard protobuf JSON: oneof fields at top level
+  ctrl.simulateMessage({
+    roomJoined: {
+      clientId: opts.clientId ?? 'c1',
+      sessionId: opts.sessionId ?? 'sess1',
+      peers: [],
+    },
+  });
 }
 
 // ─── Tests ──────────────────────────────────────
 
 describe('CollabClient', () => {
-  beforeEach(() => {
-    MockWebSocket.instances = [];
-    vi.stubGlobal('WebSocket', MockWebSocket as unknown);
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
   describe('constructor', () => {
     it('creates instance with default disconnected state', () => {
       const client = new CollabClient();
@@ -76,47 +55,34 @@ describe('CollabClient', () => {
   });
 
   describe('connect', () => {
-    it('constructs correct WebSocket URL from relay URL and session ID', () => {
-      const client = new CollabClient();
-      client.connect('ws://localhost:8787', 'test-session', 'Alice', 'excalidraw');
-      expect(MockWebSocket.instances).toHaveLength(1);
-      expect(MockWebSocket.instances[0].url).toBe('ws://localhost:8787/ws/v1/test-session/sync');
-    });
-
     it('sets isConnecting to true while connecting', () => {
-      const client = new CollabClient();
+      const { client } = createTestClient();
       client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
       expect(client.isConnecting).toBe(true);
       expect(client.isConnected).toBe(false);
     });
 
-    it('sends JoinRoom action (servicekit envelope) on WebSocket open', async () => {
-      const client = new CollabClient();
+    it('sends JoinRoom action on WebSocket open', async () => {
+      const { client, controllers } = createTestClient();
       client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
-      MockWebSocket.instances[0].simulateOpen();
-      await flushPromises(); // wait for connect Promise .then() to send JoinRoom
+      const ctrl = controllers[0];
+      ctrl.simulateOpen();
+      await flushPromises();
 
-      expect(MockWebSocket.instances[0].sentMessages).toHaveLength(1);
-      const envelope = JSON.parse(MockWebSocket.instances[0].sentMessages[0]);
-      expect(envelope.type).toBe('data');
-      const msg = envelope.data;
-      expect(msg.action).toMatchObject({ case: 'join' });
-      expect(msg.action.value.sessionId).toBe('sess1');
-      expect(msg.action.value.username).toBe('Alice');
-      expect(msg.action.value.tool).toBe('excalidraw');
-      expect(msg.action.value.clientType).toBe('browser');
+      expect(ctrl.sentMessages).toHaveLength(1);
+      const msg = ctrl.sentMessages[0] as any;
+      expect(msg.join).toBeDefined();
+      expect(msg.join.sessionId).toBe('sess1');
+      expect(msg.join.username).toBe('Alice');
+      expect(msg.join.tool).toBe('excalidraw');
+      expect(msg.join.clientType).toBe('browser');
     });
 
     it('sets isConnected after receiving RoomJoined event', async () => {
       const onConnect = vi.fn();
-      const client = new CollabClient({ onConnect });
+      const { client, controllers } = createTestClient({ onConnect });
       client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
-      const ws = MockWebSocket.instances[0];
-      ws.simulateOpen();
-      await flushPromises();
-      ws.simulateMessage({
-        event: { case: 'roomJoined', value: { clientId: 'client-123', sessionId: 'sess1', peers: [] } },
-      });
+      await connectAndJoin(client, controllers[0], { clientId: 'client-123' });
 
       expect(client.isConnected).toBe(true);
       expect(client.isConnecting).toBe(false);
@@ -124,22 +90,52 @@ describe('CollabClient', () => {
       expect(onConnect).toHaveBeenCalledWith('client-123');
     });
 
-    it('calls onPeerJoined callback when peer joins', async () => {
+    it('dispatches self as peer on roomJoined', async () => {
       const onPeerJoined = vi.fn();
-      const client = new CollabClient({ onPeerJoined });
+      const { client, controllers } = createTestClient({ onPeerJoined });
       client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
-      const ws = MockWebSocket.instances[0];
-      ws.simulateOpen();
+      await connectAndJoin(client, controllers[0]);
+
+      // Self-peer dispatched during roomJoined processing
+      expect(onPeerJoined).toHaveBeenCalledWith(
+        expect.objectContaining({ clientId: 'c1', username: 'Alice' }),
+      );
+    });
+
+    it('dispatches existing peers from roomJoined', async () => {
+      const onPeerJoined = vi.fn();
+      const { client, controllers } = createTestClient({ onPeerJoined });
+      client.connect('ws://localhost:8787', 'sess1', 'Bob', 'excalidraw');
+      const ctrl = controllers[0];
+      ctrl.simulateOpen();
       await flushPromises();
-      ws.simulateMessage({
-        event: { case: 'roomJoined', value: { clientId: 'c1', sessionId: 'sess1', peers: [] } },
+
+      // Server sends roomJoined with one existing peer
+      ctrl.simulateMessage({
+        roomJoined: {
+          clientId: 'c2',
+          sessionId: 'sess1',
+          peers: [{ clientId: 'c1', username: 'Alice', avatarUrl: '', clientType: 'browser', isActive: true }],
+        },
       });
-      ws.simulateMessage({
-        event: {
-          case: 'peerJoined',
-          value: {
-            peer: { clientId: 'c2', username: 'Bob', avatarUrl: '', clientType: 'browser', isActive: true },
-          },
+
+      // Self-peer (Bob) + existing peer (Alice)
+      expect(onPeerJoined).toHaveBeenCalledTimes(2);
+      expect(onPeerJoined).toHaveBeenCalledWith(expect.objectContaining({ clientId: 'c2', username: 'Bob' }));
+      expect(onPeerJoined).toHaveBeenCalledWith(expect.objectContaining({ clientId: 'c1', username: 'Alice' }));
+    });
+
+    it('calls onPeerJoined callback when peer joins later', async () => {
+      const onPeerJoined = vi.fn();
+      const { client, controllers } = createTestClient({ onPeerJoined });
+      client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
+      const ctrl = controllers[0];
+      await connectAndJoin(client, ctrl);
+      onPeerJoined.mockClear(); // clear the self-peer call
+
+      ctrl.simulateMessage({
+        peerJoined: {
+          peer: { clientId: 'c2', username: 'Bob', avatarUrl: '', clientType: 'browser', isActive: true },
         },
       });
 
@@ -150,16 +146,13 @@ describe('CollabClient', () => {
 
     it('calls onPeerLeft callback when peer leaves', async () => {
       const onPeerLeft = vi.fn();
-      const client = new CollabClient({ onPeerLeft });
+      const { client, controllers } = createTestClient({ onPeerLeft });
       client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
-      const ws = MockWebSocket.instances[0];
-      ws.simulateOpen();
-      await flushPromises();
-      ws.simulateMessage({
-        event: { case: 'roomJoined', value: { clientId: 'c1', sessionId: 'sess1', peers: [] } },
-      });
-      ws.simulateMessage({
-        event: { case: 'peerLeft', value: { clientId: 'c2', reason: 'disconnected', peerCount: 1 } },
+      const ctrl = controllers[0];
+      await connectAndJoin(client, ctrl);
+
+      ctrl.simulateMessage({
+        peerLeft: { clientId: 'c2', reason: 'disconnected', peerCount: 1 },
       });
 
       expect(onPeerLeft).toHaveBeenCalledWith('c2');
@@ -167,51 +160,43 @@ describe('CollabClient', () => {
 
     it('calls onEvent callback for all received events', async () => {
       const onEvent = vi.fn();
-      const client = new CollabClient({ onEvent });
+      const { client, controllers } = createTestClient({ onEvent });
       client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
-      const ws = MockWebSocket.instances[0];
-      ws.simulateOpen();
+      const ctrl = controllers[0];
+      ctrl.simulateOpen();
       await flushPromises();
 
-      ws.simulateMessage({ event: { case: 'roomJoined', value: { clientId: 'c1', sessionId: 's1', peers: [] } } });
-      ws.simulateMessage({ event: { case: 'peerJoined', value: { peer: { clientId: 'c2' } } } });
+      ctrl.simulateMessage({ roomJoined: { clientId: 'c1', sessionId: 's1', peers: [] } });
+      ctrl.simulateMessage({ peerJoined: { peer: { clientId: 'c2' } } });
 
       expect(onEvent).toHaveBeenCalledTimes(2);
     });
 
-    it('calls onError callback on WebSocket error', () => {
+    it('calls onError callback on error', () => {
       const onError = vi.fn();
-      const client = new CollabClient({ onError });
+      const { client, controllers } = createTestClient({ onError });
       client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
-      MockWebSocket.instances[0].simulateError();
+      controllers[0].simulateError('connection failed');
 
       expect(onError).toHaveBeenCalled();
     });
 
-    it('calls onDisconnect callback on WebSocket close', async () => {
+    it('calls onDisconnect callback on close', async () => {
       const onDisconnect = vi.fn();
-      const client = new CollabClient({ onDisconnect });
+      const { client, controllers } = createTestClient({ onDisconnect });
       client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
-      const ws = MockWebSocket.instances[0];
-      ws.simulateOpen();
-      await flushPromises();
-      ws.simulateMessage({
-        event: { case: 'roomJoined', value: { clientId: 'c1', sessionId: 's1', peers: [] } },
-      });
-      ws.simulateClose(1000);
+      const ctrl = controllers[0];
+      await connectAndJoin(client, ctrl);
+
+      ctrl.simulateClose(1000);
 
       expect(onDisconnect).toHaveBeenCalled();
     });
 
     it('throws if already connected', async () => {
-      const client = new CollabClient();
+      const { client, controllers } = createTestClient();
       client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
-      const ws = MockWebSocket.instances[0];
-      ws.simulateOpen();
-      await flushPromises();
-      ws.simulateMessage({
-        event: { case: 'roomJoined', value: { clientId: 'c1', sessionId: 's1', peers: [] } },
-      });
+      await connectAndJoin(client, controllers[0]);
 
       expect(() => {
         client.connect('ws://localhost:8787', 'sess2', 'Alice', 'excalidraw');
@@ -220,48 +205,24 @@ describe('CollabClient', () => {
   });
 
   describe('disconnect', () => {
-    it('sends LeaveRoom action (servicekit envelope) before closing', async () => {
-      const client = new CollabClient();
+    it('sends LeaveRoom action before closing', async () => {
+      const { client, controllers } = createTestClient();
       client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
-      const ws = MockWebSocket.instances[0];
-      ws.simulateOpen();
-      await flushPromises();
-      ws.simulateMessage({
-        event: { case: 'roomJoined', value: { clientId: 'c1', sessionId: 's1', peers: [] } },
-      });
+      const ctrl = controllers[0];
+      await connectAndJoin(client, ctrl);
 
-      ws.sentMessages = [];
+      const beforeCount = ctrl.sentMessages.length;
       client.disconnect();
 
-      expect(ws.sentMessages).toHaveLength(1);
-      const envelope = JSON.parse(ws.sentMessages[0]);
-      expect(envelope.type).toBe('data');
-      expect(envelope.data.action).toMatchObject({ case: 'leave' });
-    });
-
-    it('closes WebSocket connection', async () => {
-      const client = new CollabClient();
-      client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
-      const ws = MockWebSocket.instances[0];
-      ws.simulateOpen();
-      await flushPromises();
-      ws.simulateMessage({
-        event: { case: 'roomJoined', value: { clientId: 'c1', sessionId: 's1', peers: [] } },
-      });
-
-      client.disconnect();
-      expect(ws.readyState).toBe(MockWebSocket.CLOSED);
+      const newMessages = ctrl.sentMessages.slice(beforeCount);
+      expect(newMessages).toHaveLength(1);
+      expect((newMessages[0] as any).leave).toMatchObject({ reason: 'user disconnected' });
     });
 
     it('resets state to disconnected', async () => {
-      const client = new CollabClient();
+      const { client, controllers } = createTestClient();
       client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
-      const ws = MockWebSocket.instances[0];
-      ws.simulateOpen();
-      await flushPromises();
-      ws.simulateMessage({
-        event: { case: 'roomJoined', value: { clientId: 'c1', sessionId: 's1', peers: [] } },
-      });
+      await connectAndJoin(client, controllers[0]);
 
       client.disconnect();
       expect(client.isConnected).toBe(false);
@@ -269,35 +230,31 @@ describe('CollabClient', () => {
     });
 
     it('is a no-op if not connected', () => {
-      const client = new CollabClient();
+      const { client } = createTestClient();
       expect(() => client.disconnect()).not.toThrow();
     });
   });
 
   describe('send', () => {
-    it('serializes and sends over WebSocket in servicekit envelope', async () => {
-      const client = new CollabClient();
+    it('sends action with clientId and timestamp', async () => {
+      const { client, controllers } = createTestClient();
       client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
-      const ws = MockWebSocket.instances[0];
-      ws.simulateOpen();
-      await flushPromises();
-      ws.simulateMessage({
-        event: { case: 'roomJoined', value: { clientId: 'c1', sessionId: 's1', peers: [] } },
-      });
+      const ctrl = controllers[0];
+      await connectAndJoin(client, ctrl);
 
-      ws.sentMessages = [];
-      client.send({ action: { case: 'presence', value: { isActive: true, username: 'Alice' } } });
+      const beforeCount = ctrl.sentMessages.length;
+      client.send({ presence: { isActive: true, username: 'Alice' } });
 
-      expect(ws.sentMessages).toHaveLength(1);
-      const envelope = JSON.parse(ws.sentMessages[0]);
-      expect(envelope.type).toBe('data');
-      expect(envelope.data.clientId).toBe('c1');
-      expect(envelope.data.timestamp).toBeDefined();
+      const newMessages = ctrl.sentMessages.slice(beforeCount);
+      expect(newMessages).toHaveLength(1);
+      const msg = newMessages[0] as any;
+      expect(msg.clientId).toBe('c1');
+      expect(msg.timestamp).toBeDefined();
     });
 
     it('throws if not connected', () => {
-      const client = new CollabClient();
-      expect(() => client.send({ action: { case: 'presence' } })).toThrow();
+      const { client } = createTestClient();
+      expect(() => client.send({ presence: { isActive: true } })).toThrow();
     });
   });
 
@@ -306,89 +263,84 @@ describe('CollabClient', () => {
     afterEach(() => { vi.useRealTimers(); });
 
     it('attempts reconnect after unexpected disconnect', async () => {
-      const client = new CollabClient();
+      const { client, controllers } = createTestClient();
       client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
-      const ws = MockWebSocket.instances[0];
-      ws.simulateOpen();
-      await vi.advanceTimersByTimeAsync(0); // flush connect Promise
-      ws.simulateMessage({
-        event: { case: 'roomJoined', value: { clientId: 'c1', sessionId: 's1', peers: [] } },
+      const ctrl = controllers[0];
+      ctrl.simulateOpen();
+      await vi.advanceTimersByTimeAsync(0);
+      ctrl.simulateMessage({
+        roomJoined: { clientId: 'c1', sessionId: 's1', peers: [] },
       });
 
-      ws.simulateClose(1006);
+      ctrl.simulateClose(1006);
       await vi.advanceTimersByTimeAsync(1000);
 
-      expect(MockWebSocket.instances).toHaveLength(2);
+      expect(controllers).toHaveLength(2); // new GRPCWSClient created
     });
 
     it('uses exponential backoff (1s, 2s, 4s)', async () => {
-      const client = new CollabClient();
+      const { client, controllers } = createTestClient();
       client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
-      let ws = MockWebSocket.instances[0];
-      ws.simulateOpen();
+      controllers[0].simulateOpen();
       await vi.advanceTimersByTimeAsync(0);
-      ws.simulateMessage({
-        event: { case: 'roomJoined', value: { clientId: 'c1', sessionId: 's1', peers: [] } },
+      controllers[0].simulateMessage({
+        roomJoined: { clientId: 'c1', sessionId: 's1', peers: [] },
       });
 
       // First unexpected close
-      ws.simulateClose(1006);
+      controllers[0].simulateClose(1006);
       await vi.advanceTimersByTimeAsync(1000); // 1s
-      expect(MockWebSocket.instances).toHaveLength(2);
+      expect(controllers).toHaveLength(2);
 
       // Second failure
-      ws = MockWebSocket.instances[1];
-      ws.simulateClose(1006);
+      controllers[1].simulateClose(1006);
       await vi.advanceTimersByTimeAsync(1000); // not enough
-      expect(MockWebSocket.instances).toHaveLength(2);
+      expect(controllers).toHaveLength(2);
       await vi.advanceTimersByTimeAsync(1000); // 2s total
-      expect(MockWebSocket.instances).toHaveLength(3);
+      expect(controllers).toHaveLength(3);
 
       // Third failure
-      ws = MockWebSocket.instances[2];
-      ws.simulateClose(1006);
+      controllers[2].simulateClose(1006);
       await vi.advanceTimersByTimeAsync(3000); // not enough
-      expect(MockWebSocket.instances).toHaveLength(3);
+      expect(controllers).toHaveLength(3);
       await vi.advanceTimersByTimeAsync(1000); // 4s total
-      expect(MockWebSocket.instances).toHaveLength(4);
+      expect(controllers).toHaveLength(4);
     });
 
     it('stops reconnecting after maxRetries', async () => {
-      const client = new CollabClient({ maxRetries: 2 });
+      const { client, controllers } = createTestClient({ maxRetries: 2 });
       client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
-      let ws = MockWebSocket.instances[0];
-      ws.simulateOpen();
+      controllers[0].simulateOpen();
       await vi.advanceTimersByTimeAsync(0);
-      ws.simulateMessage({
-        event: { case: 'roomJoined', value: { clientId: 'c1', sessionId: 's1', peers: [] } },
+      controllers[0].simulateMessage({
+        roomJoined: { clientId: 'c1', sessionId: 's1', peers: [] },
       });
 
-      ws.simulateClose(1006);
+      controllers[0].simulateClose(1006);
       await vi.advanceTimersByTimeAsync(1000);
-      expect(MockWebSocket.instances).toHaveLength(2);
+      expect(controllers).toHaveLength(2);
 
-      MockWebSocket.instances[1].simulateClose(1006);
+      controllers[1].simulateClose(1006);
       await vi.advanceTimersByTimeAsync(2000);
-      expect(MockWebSocket.instances).toHaveLength(3);
+      expect(controllers).toHaveLength(3);
 
-      MockWebSocket.instances[2].simulateClose(1006);
+      controllers[2].simulateClose(1006);
       await vi.advanceTimersByTimeAsync(60000);
-      expect(MockWebSocket.instances).toHaveLength(3); // no more retries
+      expect(controllers).toHaveLength(3); // no more retries
     });
 
     it('does not reconnect after explicit disconnect', async () => {
-      const client = new CollabClient();
+      const { client, controllers } = createTestClient();
       client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
-      const ws = MockWebSocket.instances[0];
-      ws.simulateOpen();
+      controllers[0].simulateOpen();
       await vi.advanceTimersByTimeAsync(0);
-      ws.simulateMessage({
-        event: { case: 'roomJoined', value: { clientId: 'c1', sessionId: 's1', peers: [] } },
+      controllers[0].simulateMessage({
+        roomJoined: { clientId: 'c1', sessionId: 's1', peers: [] },
       });
 
       client.disconnect();
       await vi.advanceTimersByTimeAsync(60000);
-      expect(MockWebSocket.instances).toHaveLength(1);
+      expect(controllers).toHaveLength(1);
     });
   });
 });

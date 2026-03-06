@@ -17,19 +17,21 @@ function makeState(overrides: Partial<CollabState> = {}): CollabState {
 }
 
 describe('CollabBadge', () => {
-  it('renders nothing for disconnected state by default', () => {
-    const { container } = render(<CollabBadge state={makeState()} />);
-    expect(container.firstChild).toBeNull();
+  it('renders people icon button when disconnected', () => {
+    render(<CollabBadge state={makeState()} />);
+    const badge = screen.getByTestId('collab-badge');
+    expect(badge).toBeInTheDocument();
+    expect(badge.getAttribute('title')).toBe('Collaborate');
   });
 
-  it('renders indicator for connecting state', () => {
+  it('renders connecting indicator', () => {
     render(<CollabBadge state={makeState({ isConnecting: true })} />);
     const badge = screen.getByTestId('collab-badge');
     expect(badge).toBeInTheDocument();
-    expect(badge.textContent).toMatch(/connecting/i);
+    expect(badge.getAttribute('title')).toBe('Connecting...');
   });
 
-  it('renders badge with peer count for connected state', () => {
+  it('renders peer count when connected', () => {
     const peers = new Map<string, PeerInfo>();
     peers.set('c1', { clientId: 'c1', username: 'Alice', avatarUrl: '', clientType: 'browser', isActive: true } as PeerInfo);
     peers.set('c2', { clientId: 'c2', username: 'Bob', avatarUrl: '', clientType: 'browser', isActive: true } as PeerInfo);
@@ -37,27 +39,28 @@ describe('CollabBadge', () => {
     render(<CollabBadge state={makeState({ isConnected: true, clientId: 'c1', peers })} />);
     const badge = screen.getByTestId('collab-badge');
     expect(badge).toBeInTheDocument();
-    expect(badge.textContent).toMatch(/2 peers/i);
+    expect(badge.getAttribute('title')).toBe('2 peers');
+    expect(badge.textContent).toContain('2');
   });
 
-  it('shows singular "1 peer" for single peer', () => {
+  it('shows singular "1 peer" title for single peer', () => {
     const peers = new Map<string, PeerInfo>();
     peers.set('c1', { clientId: 'c1', username: 'Alice', avatarUrl: '', clientType: 'browser', isActive: true } as PeerInfo);
 
     render(<CollabBadge state={makeState({ isConnected: true, clientId: 'c1', peers })} />);
-    expect(screen.getByTestId('collab-badge').textContent).toMatch(/1 peer\b/i);
+    expect(screen.getByTestId('collab-badge').getAttribute('title')).toBe('1 peer');
   });
 
-  it('renders badge with error message for error state', () => {
+  it('shows error state with title', () => {
     render(<CollabBadge state={makeState({ error: 'Connection failed' })} />);
     const badge = screen.getByTestId('collab-badge');
     expect(badge).toBeInTheDocument();
-    expect(badge.textContent).toMatch(/connection failed/i);
+    expect(badge.getAttribute('title')).toBe('Connection failed');
   });
 
   it('calls onClick when badge is clicked', () => {
     const onClick = vi.fn();
-    render(<CollabBadge state={makeState({ isConnecting: true })} onClick={onClick} />);
+    render(<CollabBadge state={makeState()} onClick={onClick} />);
     fireEvent.click(screen.getByTestId('collab-badge'));
     expect(onClick).toHaveBeenCalled();
   });
