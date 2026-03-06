@@ -195,14 +195,10 @@ export class CollabClient {
       this.options.onDisconnect?.();
     }
 
-    // Reconnect on unexpected close
-    if (!this.explicitDisconnect && this.retryCount < this.maxRetries) {
-      const delay = Math.pow(2, this.retryCount) * 1000;
-      this.retryCount++;
-      this.retryTimer = setTimeout(() => {
-        this.openWebSocket();
-      }, delay);
-    }
+    // Auto-reconnect disabled for now — reconnecting with stale session
+    // params after a server restart creates phantom sessions. The user can
+    // re-click Share to reconnect. TODO: add smart reconnect that validates
+    // the session is still alive before re-joining.
   }
 
   private resetState(): void {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { exportToCanvas } from '@excalidraw/excalidraw';
+import { exportToCanvas, hashElementsVersion } from '@excalidraw/excalidraw';
 import { VERSION, BUILD_DATE } from '../version';
 import { EditorHost, DrawingEnvelope, ExcalidrawDrawingData } from './types';
 import { useAutoSave, AutoSaveStatus } from './useAutoSave';
@@ -190,12 +190,20 @@ const ExcalidrawEditor: React.FC<Props> = ({ host, showCancel = true, collabConf
   // Refs keep this callback stable (Excalidraw re-renders on callback identity change).
   const syncAdapterRef = useRef<ExcalidrawSyncAdapter | null>(null);
   const syncActionsRef = useRef<SyncActions | null>(null);
+  const lastNotifiedHash = useRef<number>(0);
 
   const handleChange = useCallback((elements: readonly ExcalidrawElement[]): void => {
     setIsDirty(fingerprint(elements) !== initialFingerprintRef.current);
     const adapter = syncAdapterRef.current;
     if (adapter && !adapter.isApplyingRemote) {
-      syncActionsRef.current?.notifyLocalChange();
+      // Gate on element hash — Excalidraw fires onChange for selections,
+      // cursor moves, zoom, etc. which would keep resetting the debounce
+      // timer and prevent outgoing updates from ever being sent.
+      const hash = hashElementsVersion(elements);
+      if (hash !== lastNotifiedHash.current) {
+        lastNotifiedHash.current = hash;
+        syncActionsRef.current?.notifyLocalChange();
+      }
     }
   }, []);
 

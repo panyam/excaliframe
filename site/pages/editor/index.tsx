@@ -40,6 +40,26 @@ function findActiveSession(drawingId: string): string | null {
   return localStorage.getItem(`excaliframe:activeSession:${drawingId}`);
 }
 
+/** Validate that a room actually exists on the relay before auto-connecting.
+ *  Clears stale localStorage entry if the room is gone (e.g. after server restart). */
+async function validateRoom(drawingId: string, sessionId: string): Promise<boolean> {
+  try {
+    const resp = await fetch(`/relay/api/v1/rooms/${sessionId}`);
+    if (!resp.ok) {
+      localStorage.removeItem(`excaliframe:activeSession:${drawingId}`);
+      return false;
+    }
+    const data = await resp.json();
+    if (!data.peers || data.peers.length === 0) {
+      localStorage.removeItem(`excaliframe:activeSession:${drawingId}`);
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 const drawingId = window.PLAYGROUND_DRAWING_ID;
 if (!drawingId) {
   window.location.href = '/';
@@ -54,11 +74,6 @@ if (!drawingId) {
   const params = new URLSearchParams(window.location.search);
   const autoJoinParam = params.get('autoJoin') === '1';
   const relayParam = params.get('relay');
-
-  // Check same-origin auto-connect: owner stores sessionId in localStorage
-  const activeSessionId = (!autoJoinParam && !connectRelay)
-    ? findActiveSession(drawingId)
-    : null;
 
   // Load drawing first to get the tool type, then dynamically import the editor
   host.loadDrawing().then(async (envelope) => {
@@ -76,11 +91,14 @@ if (!drawingId) {
       collabConfig.autoJoinRelayUrl = relayParam || '/relay';
       collabConfig.autoJoinSessionId = params.get('session') || undefined;
     }
-    // Same-origin auto-connect: owner wrote sessionId to localStorage
-    else if (activeSessionId) {
-      collabConfig.autoJoin = true;
-      collabConfig.autoJoinRelayUrl = '/relay';
-      collabConfig.autoJoinSessionId = activeSessionId;
+    // Same-origin auto-connect: validate room is still alive before joining
+    else if (!connectRelay) {
+      const activeSessionId = findActiveSession(drawingId);
+      if (activeSessionId && await validateRoom(drawingId, activeSessionId)) {
+        collabConfig.autoJoin = true;
+        collabConfig.autoJoinRelayUrl = '/relay';
+        collabConfig.autoJoinSessionId = activeSessionId;
+      }
     }
 
     const root = ReactDOM.createRoot(document.getElementById('playground-root')!);
