@@ -7,11 +7,12 @@
 package services
 
 import (
+	reflect "reflect"
+	unsafe "unsafe"
+
 	models "github.com/user/excaliframe/relay/gen/go/excaliframe/v1/models"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	reflect "reflect"
-	unsafe "unsafe"
 )
 
 const (
