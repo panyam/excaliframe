@@ -8,7 +8,6 @@ package services
 
 import (
 	context "context"
-
 	models "github.com/user/excaliframe/relay/gen/go/excaliframe/v1/models"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"

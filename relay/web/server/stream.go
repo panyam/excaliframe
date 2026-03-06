@@ -41,11 +41,11 @@ func (s *CollabBidiStream) Send(action *pb.CollabAction) error {
 		return err
 	}
 
-	// Store session/client info after join
-	if join := action.GetJoin(); join != nil && resp != nil {
+	// Store session/client info after join (use response sessionId — may be relay-generated)
+	if action.GetJoin() != nil && resp != nil {
 		if rj := resp.GetRoomJoined(); rj != nil {
 			s.mu.Lock()
-			s.sessionId = join.GetSessionId()
+			s.sessionId = rj.GetSessionId()
 			s.clientId = rj.GetClientId()
 			s.mu.Unlock()
 		}

@@ -1,12 +1,16 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { exportToCanvas } from '@excalidraw/excalidraw';
 import { VERSION, BUILD_DATE } from '../version';
 import { EditorHost, DrawingEnvelope, ExcalidrawDrawingData } from './types';
 import { useAutoSave, AutoSaveStatus } from './useAutoSave';
 import { CollabConfig } from '../collab/types';
 import { useCollaboration } from '../collab/useCollaboration';
-import CollabPanel from '../collab/CollabPanel';
+import { useSync } from '../collab/sync/useSync';
+import { ExcalidrawSyncAdapter } from '../collab/adapters/ExcalidrawSyncAdapter';
+import type { SyncActions, SyncConnection } from '../collab/sync/SyncAdapter';
+import SharePanel from '../collab/SharePanel';
 import CollabBadge from '../collab/CollabBadge';
+import { resolveRelayUrl } from '../collab/url-params';
 
 // Excalidraw types (defined locally to avoid module resolution issues)
 type ExcalidrawElement = any;
@@ -179,12 +183,20 @@ const ExcalidrawEditor: React.FC<Props> = ({ host, showCancel = true, collabConf
     host.close();
   }, [isDirty, host]);
 
-  // Track changes to detect dirty state.
+  // Track changes to detect dirty state + notify sync engine.
   // Uses fingerprint() to compare only user-visible properties, ignoring
   // Excalidraw's internal versioning fields (version, versionNonce, updated, seed)
   // that mutate on every scene update even without user interaction.
+  // Refs keep this callback stable (Excalidraw re-renders on callback identity change).
+  const syncAdapterRef = useRef<ExcalidrawSyncAdapter | null>(null);
+  const syncActionsRef = useRef<SyncActions | null>(null);
+
   const handleChange = useCallback((elements: readonly ExcalidrawElement[]): void => {
     setIsDirty(fingerprint(elements) !== initialFingerprintRef.current);
+    const adapter = syncAdapterRef.current;
+    if (adapter && !adapter.isApplyingRemote) {
+      syncActionsRef.current?.notifyLocalChange();
+    }
   }, []);
 
   const { autoSaveEnabled, setAutoSaveEnabled, autoSaveStatus } = useAutoSave({
@@ -194,10 +206,37 @@ const ExcalidrawEditor: React.FC<Props> = ({ host, showCancel = true, collabConf
     onSave: saveDrawing,
   });
 
-  // Collaboration
-  const [collabState, collabActions] = useCollaboration('excalidraw');
+  // Collaboration — ref-based bridge so useSync and useCollaboration don't know about each other
+  const onCollabEvent = useCallback((event: any) => {
+    syncActionsRef.current?.handleEvent(event);
+  }, []);
+  const [collabState, collabActions] = useCollaboration('excalidraw', onCollabEvent);
+
+  // Sync adapter — created once when Excalidraw API becomes available
+  const [syncAdapter, setSyncAdapter] = useState<ExcalidrawSyncAdapter | null>(null);
+
+  const syncConnection = useMemo<SyncConnection>(() => ({
+    isConnected: collabState.isConnected,
+    clientId: collabState.clientId,
+    isOwner: collabState.isOwner,
+    peers: collabState.peers,
+    send: collabActions.send,
+  }), [collabState.isConnected, collabState.clientId, collabState.isOwner, collabState.peers, collabActions.send]);
+
+  const [, syncActions] = useSync(syncAdapter, syncConnection);
+  syncActionsRef.current = syncActions;
+
   // Auto-open panel if ?connect= param was provided (but don't auto-connect)
   const [showCollabPanel, setShowCollabPanel] = useState(!!collabConfig?.initialRelayUrl);
+
+  // Auto-connect as follower when collabConfig.autoJoin is set
+  useEffect(() => {
+    if (collabConfig?.autoJoin && !collabState.isConnected && !collabState.isConnecting) {
+      const relayUrl = collabConfig.autoJoinRelayUrl || '/relay';
+      const sessionId = collabConfig.autoJoinSessionId || '';
+      collabActions.connect(resolveRelayUrl(relayUrl), sessionId, '', false, collabConfig.drawingId);
+    }
+  }, [collabConfig?.autoJoin]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -297,6 +336,11 @@ const ExcalidrawEditor: React.FC<Props> = ({ host, showCancel = true, collabConf
     <ExcalidrawComponent
       excalidrawAPI={(api: ExcalidrawImperativeAPI) => {
         excalidrawApiRef.current = api;
+        if (!syncAdapterRef.current) {
+          const adapter = new ExcalidrawSyncAdapter(api);
+          syncAdapterRef.current = adapter;
+          setSyncAdapter(adapter);
+        }
       }}
       initialData={initialData || {
         elements: [],
@@ -372,7 +416,9 @@ const ExcalidrawEditor: React.FC<Props> = ({ host, showCancel = true, collabConf
                 • Unsaved changes
               </span>
             )}
-            <CollabBadge state={collabState} onClick={() => setShowCollabPanel(!showCollabPanel)} />
+            {!collabConfig?.autoJoin && (
+              <CollabBadge state={collabState} onClick={() => setShowCollabPanel(!showCollabPanel)} />
+            )}
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
@@ -406,8 +452,8 @@ const ExcalidrawEditor: React.FC<Props> = ({ host, showCancel = true, collabConf
             </button>
           </div>
         </div>
-        {showCollabPanel && (
-          <CollabPanel state={collabState} actions={collabActions} tool="excalidraw"
+        {showCollabPanel && !collabConfig?.autoJoin && (
+          <SharePanel state={collabState} actions={collabActions} tool="excalidraw"
             drawingId={collabConfig?.drawingId ?? ''} onClose={() => setShowCollabPanel(false)} />
         )}
         <div style={{ flex: 1, width: '100%', height: '100%' }} className="excalidraw-wrapper">
@@ -423,15 +469,17 @@ const ExcalidrawEditor: React.FC<Props> = ({ host, showCancel = true, collabConf
       <div className="w-full h-full excalidraw-wrapper">
         {excalidrawCanvas}
       </div>
-      <div className="fixed bottom-4 right-4 z-[1000] flex flex-col items-end gap-2">
-        {showCollabPanel && (
-          <div className="bg-white/95 dark:bg-gray-800/95 rounded-lg p-3 shadow-lg min-w-[280px]">
-            <CollabPanel state={collabState} actions={collabActions} tool="excalidraw"
-            drawingId={collabConfig?.drawingId ?? ''} onClose={() => setShowCollabPanel(false)} />
-          </div>
-        )}
-        <CollabBadge state={collabState} onClick={() => setShowCollabPanel(!showCollabPanel)} />
-      </div>
+      {!collabConfig?.autoJoin && (
+        <div className="fixed bottom-4 right-4 z-[1000] flex flex-col items-end gap-2">
+          {showCollabPanel && (
+            <div className="bg-white/95 dark:bg-gray-800/95 rounded-lg p-3 shadow-lg min-w-[280px]">
+              <SharePanel state={collabState} actions={collabActions} tool="excalidraw"
+              drawingId={collabConfig?.drawingId ?? ''} onClose={() => setShowCollabPanel(false)} />
+            </div>
+          )}
+          <CollabBadge state={collabState} onClick={() => setShowCollabPanel(!showCollabPanel)} />
+        </div>
+      )}
       {(() => {
         let badgeText: string | null = null;
         let badgeBg = 'rgba(222, 53, 11, 0.9)';

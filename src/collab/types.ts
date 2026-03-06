@@ -11,6 +11,14 @@ export type {
   PeerJoined,
   PeerLeft,
   ErrorEvent,
+  SessionEnded,
+  OwnerChanged,
+  SceneUpdate,
+  ElementUpdate,
+  CursorUpdate,
+  TextUpdate,
+  SceneInitRequest,
+  SceneInitResponse,
   GetRoomRequest,
   GetRoomResponse,
   ListRoomsRequest,
@@ -30,6 +38,12 @@ export {
   PeerJoinedSchema,
   PeerLeftSchema,
   ErrorEventSchema,
+  SceneUpdateSchema,
+  ElementUpdateSchema,
+  CursorUpdateSchema,
+  TextUpdateSchema,
+  SceneInitRequestSchema,
+  SceneInitResponseSchema,
 } from './gen/excaliframe/v1/models/collab_pb';
 
 // App-level config types (not proto messages)
@@ -45,7 +59,10 @@ export const DEFAULT_RELAY_SERVERS: RelayServerOption[] = [
 ];
 
 export interface CollabConfig {
-  drawingId: string;              // used as default session ID
+  drawingId: string;              // local drawing identifier
   initialRelayUrl?: string;       // from ?connect= param — auto-opens dialog
   relayServers?: RelayServerOption[];
+  autoJoin?: boolean;             // auto-connect as follower (same-origin or join link)
+  autoJoinRelayUrl?: string;      // which relay to auto-join on
+  autoJoinSessionId?: string;     // relay sessionId to join (from localStorage or join link)
 }

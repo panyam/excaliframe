@@ -15,6 +15,32 @@ func NewCollabRoom(sessionId string) *CollabRoom {
 	}
 }
 
+// CloseAllClients closes all client send channels and removes them from the room.
+func (r *CollabRoom) CloseAllClients() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for id, c := range r.Clients {
+		close(c.SendCh)
+		delete(r.Clients, id)
+	}
+}
+
+// FindByBrowserId returns any client with the given browser ID,
+// excluding the specified client. Returns nil if none found.
+func (r *CollabRoom) FindByBrowserId(browserId string, excludeClientId string) *CollabClient {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	for _, c := range r.Clients {
+		if c.ClientId == excludeClientId {
+			continue
+		}
+		if c.BrowserId == browserId {
+			return c
+		}
+	}
+	return nil
+}
+
 // AddClient adds a client to the room.
 func (r *CollabRoom) AddClient(client *CollabClient) {
 	r.mu.Lock()
@@ -46,6 +72,7 @@ func (r *CollabRoom) GetPeerInfo() []*pb.PeerInfo {
 			AvatarUrl:  c.AvatarUrl,
 			ClientType: c.ClientType,
 			IsActive:   c.IsActive,
+			IsOwner:    c.IsOwner,
 		})
 	}
 	return peers

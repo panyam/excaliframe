@@ -1,7 +1,11 @@
 package server
 
 import (
+	"encoding/base64"
+	"fmt"
 	"net/http"
+	"net/url"
+	"strings"
 
 	goal "github.com/panyam/goapplib"
 )
@@ -188,6 +192,25 @@ func (p *PlaygroundEditPage) Load(r *http.Request, w http.ResponseWriter, app *g
 	return nil, false
 }
 
+// decodeJoinCode decodes a join code of the form base64url(relayUrl):sessionId.
+// Returns the relay URL, session ID, and whether decoding succeeded.
+func decodeJoinCode(code string) (relayUrl, sessionId string, ok bool) {
+	colonIdx := strings.Index(code, ":")
+	if colonIdx < 0 {
+		return "", "", false
+	}
+	b64 := code[:colonIdx]
+	sessionId = code[colonIdx+1:]
+	if sessionId == "" {
+		return "", "", false
+	}
+	decoded, err := base64.RawURLEncoding.DecodeString(b64)
+	if err != nil {
+		return "", "", false
+	}
+	return string(decoded), sessionId, true
+}
+
 // SetupRoutes registers all page routes
 func SetupRoutes(app *goal.App[*ExcaliframeApp]) *http.ServeMux {
 	mux := http.NewServeMux()
@@ -223,6 +246,21 @@ func SetupRoutes(app *goal.App[*ExcaliframeApp]) *http.ServeMux {
 	mux.HandleFunc("/docs", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/docs/", http.StatusMovedPermanently)
 	})
+	// Cross-origin join: /join/{code} decodes a join code and redirects to the editor
+	mux.HandleFunc("/join/{code}", func(w http.ResponseWriter, r *http.Request) {
+		code := r.PathValue("code")
+		relayUrl, sessionId, ok := decodeJoinCode(code)
+		if !ok {
+			http.Error(w, "Invalid join code", http.StatusBadRequest)
+			return
+		}
+		target := fmt.Sprintf("/playground/%s/edit?autoJoin=1&relay=%s&session=%s",
+			url.PathEscape(sessionId),
+			url.QueryEscape(relayUrl),
+			url.QueryEscape(sessionId))
+		http.Redirect(w, r, target, http.StatusFound)
+	})
+
 	// Redirect old /playground/ URLs to root
 	mux.HandleFunc("/playground/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/", http.StatusMovedPermanently)

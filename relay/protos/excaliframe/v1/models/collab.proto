@@ -19,15 +19,19 @@ message CollabAction {
     CursorUpdate cursor_update = 14;
     TextUpdate text_update = 15;
     SceneInitRequest scene_init_request = 16;
+    SceneInitResponse scene_init_response = 17;
   }
 }
 
 message JoinRoom {
-  string session_id = 1;
+  string session_id = 1;      // empty = relay generates one (owner creating new session)
   string username = 2;
   string tool = 3;            // "excalidraw" | "mermaid"
   string client_type = 4;     // "browser" | "api" | "cli"
   string avatar_url = 5;
+  bool is_owner = 6;
+  string browser_id = 7;      // localStorage UUID for ownership transfer
+  string client_hint = 8;     // opaque hint (e.g. browserId:drawingId) for session reuse
 }
 
 message LeaveRoom {
@@ -39,7 +43,7 @@ message PresenceUpdate {
   string username = 2;
 }
 
-// Part 2 messages (defined now, implemented later):
+// Part 2 messages:
 message SceneUpdate {
   repeated ElementUpdate elements = 1;
 }
@@ -68,6 +72,13 @@ message TextUpdate {
 
 message SceneInitRequest {}
 
+// Tool-agnostic response to SceneInitRequest. Payload is a JSON blob
+// whose schema is owned by each tool's SyncAdapter (Excalidraw elements,
+// Mermaid text, etc.).
+message SceneInitResponse {
+  string payload = 1;
+}
+
 // ─── Server → Client ────────────────────────────
 
 message CollabEvent {
@@ -84,8 +95,11 @@ message CollabEvent {
     SceneUpdate scene_update = 14;
     CursorUpdate cursor_update = 15;
     TextUpdate text_update = 16;
-    SceneInit scene_init = 17;
+    SceneInitResponse scene_init_response = 17;
     ErrorEvent error = 18;
+    SceneInitRequest scene_init_request = 19;
+    SessionEnded session_ended = 20;
+    OwnerChanged owner_changed = 21;
   }
 }
 
@@ -93,6 +107,7 @@ message RoomJoined {
   string client_id = 1;
   string session_id = 2;
   repeated PeerInfo peers = 3;
+  string owner_client_id = 4;
 }
 
 message PeerInfo {
@@ -101,6 +116,7 @@ message PeerInfo {
   string avatar_url = 3;
   string client_type = 4;
   bool is_active = 5;
+  bool is_owner = 6;
 }
 
 message PeerJoined {
@@ -113,14 +129,17 @@ message PeerLeft {
   int32 peer_count = 3;
 }
 
-message SceneInit {
-  repeated ElementUpdate elements = 1;
-  string background_color = 2;
-}
-
 message ErrorEvent {
   string code = 1;
   string message = 2;
+}
+
+message SessionEnded {
+  string reason = 1;
+}
+
+message OwnerChanged {
+  string new_owner_client_id = 1;
 }
 
 // ─── Dashboard / Info ───────────────────────────
@@ -133,6 +152,7 @@ message GetRoomResponse {
   string session_id = 1;
   repeated PeerInfo peers = 2;
   int64 created_at = 3;
+  string owner_client_id = 4;
 }
 
 message ListRoomsRequest {}

@@ -7,12 +7,11 @@
 package models
 
 import (
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
-
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -36,6 +35,7 @@ type CollabAction struct {
 	//	*CollabAction_CursorUpdate
 	//	*CollabAction_TextUpdate
 	//	*CollabAction_SceneInitRequest
+	//	*CollabAction_SceneInitResponse
 	Action        isCollabAction_Action `protobuf_oneof:"action"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -162,6 +162,15 @@ func (x *CollabAction) GetSceneInitRequest() *SceneInitRequest {
 	return nil
 }
 
+func (x *CollabAction) GetSceneInitResponse() *SceneInitResponse {
+	if x != nil {
+		if x, ok := x.Action.(*CollabAction_SceneInitResponse); ok {
+			return x.SceneInitResponse
+		}
+	}
+	return nil
+}
+
 type isCollabAction_Action interface {
 	isCollabAction_Action()
 }
@@ -195,6 +204,10 @@ type CollabAction_SceneInitRequest struct {
 	SceneInitRequest *SceneInitRequest `protobuf:"bytes,16,opt,name=scene_init_request,json=sceneInitRequest,proto3,oneof"`
 }
 
+type CollabAction_SceneInitResponse struct {
+	SceneInitResponse *SceneInitResponse `protobuf:"bytes,17,opt,name=scene_init_response,json=sceneInitResponse,proto3,oneof"`
+}
+
 func (*CollabAction_Join) isCollabAction_Action() {}
 
 func (*CollabAction_Leave) isCollabAction_Action() {}
@@ -209,13 +222,18 @@ func (*CollabAction_TextUpdate) isCollabAction_Action() {}
 
 func (*CollabAction_SceneInitRequest) isCollabAction_Action() {}
 
+func (*CollabAction_SceneInitResponse) isCollabAction_Action() {}
+
 type JoinRoom struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"` // empty = relay generates one (owner creating new session)
 	Username      string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
 	Tool          string                 `protobuf:"bytes,3,opt,name=tool,proto3" json:"tool,omitempty"`                               // "excalidraw" | "mermaid"
 	ClientType    string                 `protobuf:"bytes,4,opt,name=client_type,json=clientType,proto3" json:"client_type,omitempty"` // "browser" | "api" | "cli"
 	AvatarUrl     string                 `protobuf:"bytes,5,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
+	IsOwner       bool                   `protobuf:"varint,6,opt,name=is_owner,json=isOwner,proto3" json:"is_owner,omitempty"`
+	BrowserId     string                 `protobuf:"bytes,7,opt,name=browser_id,json=browserId,proto3" json:"browser_id,omitempty"`    // localStorage UUID for ownership transfer
+	ClientHint    string                 `protobuf:"bytes,8,opt,name=client_hint,json=clientHint,proto3" json:"client_hint,omitempty"` // opaque hint (e.g. browserId:drawingId) for session reuse
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -281,6 +299,27 @@ func (x *JoinRoom) GetClientType() string {
 func (x *JoinRoom) GetAvatarUrl() string {
 	if x != nil {
 		return x.AvatarUrl
+	}
+	return ""
+}
+
+func (x *JoinRoom) GetIsOwner() bool {
+	if x != nil {
+		return x.IsOwner
+	}
+	return false
+}
+
+func (x *JoinRoom) GetBrowserId() string {
+	if x != nil {
+		return x.BrowserId
+	}
+	return ""
+}
+
+func (x *JoinRoom) GetClientHint() string {
+	if x != nil {
+		return x.ClientHint
 	}
 	return ""
 }
@@ -381,7 +420,7 @@ func (x *PresenceUpdate) GetUsername() string {
 	return ""
 }
 
-// Part 2 messages (defined now, implemented later):
+// Part 2 messages:
 type SceneUpdate struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Elements      []*ElementUpdate       `protobuf:"bytes,1,rep,name=elements,proto3" json:"elements,omitempty"`
@@ -674,6 +713,53 @@ func (*SceneInitRequest) Descriptor() ([]byte, []int) {
 	return file_excaliframe_v1_models_collab_proto_rawDescGZIP(), []int{8}
 }
 
+// Tool-agnostic response to SceneInitRequest. Payload is a JSON blob
+// whose schema is owned by each tool's SyncAdapter (Excalidraw elements,
+// Mermaid text, etc.).
+type SceneInitResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Payload       string                 `protobuf:"bytes,1,opt,name=payload,proto3" json:"payload,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SceneInitResponse) Reset() {
+	*x = SceneInitResponse{}
+	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SceneInitResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SceneInitResponse) ProtoMessage() {}
+
+func (x *SceneInitResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SceneInitResponse.ProtoReflect.Descriptor instead.
+func (*SceneInitResponse) Descriptor() ([]byte, []int) {
+	return file_excaliframe_v1_models_collab_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *SceneInitResponse) GetPayload() string {
+	if x != nil {
+		return x.Payload
+	}
+	return ""
+}
+
 type CollabEvent struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	EventId         string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
@@ -688,8 +774,11 @@ type CollabEvent struct {
 	//	*CollabEvent_SceneUpdate
 	//	*CollabEvent_CursorUpdate
 	//	*CollabEvent_TextUpdate
-	//	*CollabEvent_SceneInit
+	//	*CollabEvent_SceneInitResponse
 	//	*CollabEvent_Error
+	//	*CollabEvent_SceneInitRequest
+	//	*CollabEvent_SessionEnded
+	//	*CollabEvent_OwnerChanged
 	Event         isCollabEvent_Event `protobuf_oneof:"event"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -697,7 +786,7 @@ type CollabEvent struct {
 
 func (x *CollabEvent) Reset() {
 	*x = CollabEvent{}
-	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[9]
+	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -709,7 +798,7 @@ func (x *CollabEvent) String() string {
 func (*CollabEvent) ProtoMessage() {}
 
 func (x *CollabEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[9]
+	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -722,7 +811,7 @@ func (x *CollabEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CollabEvent.ProtoReflect.Descriptor instead.
 func (*CollabEvent) Descriptor() ([]byte, []int) {
-	return file_excaliframe_v1_models_collab_proto_rawDescGZIP(), []int{9}
+	return file_excaliframe_v1_models_collab_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *CollabEvent) GetEventId() string {
@@ -816,10 +905,10 @@ func (x *CollabEvent) GetTextUpdate() *TextUpdate {
 	return nil
 }
 
-func (x *CollabEvent) GetSceneInit() *SceneInit {
+func (x *CollabEvent) GetSceneInitResponse() *SceneInitResponse {
 	if x != nil {
-		if x, ok := x.Event.(*CollabEvent_SceneInit); ok {
-			return x.SceneInit
+		if x, ok := x.Event.(*CollabEvent_SceneInitResponse); ok {
+			return x.SceneInitResponse
 		}
 	}
 	return nil
@@ -829,6 +918,33 @@ func (x *CollabEvent) GetError() *ErrorEvent {
 	if x != nil {
 		if x, ok := x.Event.(*CollabEvent_Error); ok {
 			return x.Error
+		}
+	}
+	return nil
+}
+
+func (x *CollabEvent) GetSceneInitRequest() *SceneInitRequest {
+	if x != nil {
+		if x, ok := x.Event.(*CollabEvent_SceneInitRequest); ok {
+			return x.SceneInitRequest
+		}
+	}
+	return nil
+}
+
+func (x *CollabEvent) GetSessionEnded() *SessionEnded {
+	if x != nil {
+		if x, ok := x.Event.(*CollabEvent_SessionEnded); ok {
+			return x.SessionEnded
+		}
+	}
+	return nil
+}
+
+func (x *CollabEvent) GetOwnerChanged() *OwnerChanged {
+	if x != nil {
+		if x, ok := x.Event.(*CollabEvent_OwnerChanged); ok {
+			return x.OwnerChanged
 		}
 	}
 	return nil
@@ -867,12 +983,24 @@ type CollabEvent_TextUpdate struct {
 	TextUpdate *TextUpdate `protobuf:"bytes,16,opt,name=text_update,json=textUpdate,proto3,oneof"`
 }
 
-type CollabEvent_SceneInit struct {
-	SceneInit *SceneInit `protobuf:"bytes,17,opt,name=scene_init,json=sceneInit,proto3,oneof"`
+type CollabEvent_SceneInitResponse struct {
+	SceneInitResponse *SceneInitResponse `protobuf:"bytes,17,opt,name=scene_init_response,json=sceneInitResponse,proto3,oneof"`
 }
 
 type CollabEvent_Error struct {
 	Error *ErrorEvent `protobuf:"bytes,18,opt,name=error,proto3,oneof"`
+}
+
+type CollabEvent_SceneInitRequest struct {
+	SceneInitRequest *SceneInitRequest `protobuf:"bytes,19,opt,name=scene_init_request,json=sceneInitRequest,proto3,oneof"`
+}
+
+type CollabEvent_SessionEnded struct {
+	SessionEnded *SessionEnded `protobuf:"bytes,20,opt,name=session_ended,json=sessionEnded,proto3,oneof"`
+}
+
+type CollabEvent_OwnerChanged struct {
+	OwnerChanged *OwnerChanged `protobuf:"bytes,21,opt,name=owner_changed,json=ownerChanged,proto3,oneof"`
 }
 
 func (*CollabEvent_RoomJoined) isCollabEvent_Event() {}
@@ -889,22 +1017,29 @@ func (*CollabEvent_CursorUpdate) isCollabEvent_Event() {}
 
 func (*CollabEvent_TextUpdate) isCollabEvent_Event() {}
 
-func (*CollabEvent_SceneInit) isCollabEvent_Event() {}
+func (*CollabEvent_SceneInitResponse) isCollabEvent_Event() {}
 
 func (*CollabEvent_Error) isCollabEvent_Event() {}
+
+func (*CollabEvent_SceneInitRequest) isCollabEvent_Event() {}
+
+func (*CollabEvent_SessionEnded) isCollabEvent_Event() {}
+
+func (*CollabEvent_OwnerChanged) isCollabEvent_Event() {}
 
 type RoomJoined struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ClientId      string                 `protobuf:"bytes,1,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
 	SessionId     string                 `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
 	Peers         []*PeerInfo            `protobuf:"bytes,3,rep,name=peers,proto3" json:"peers,omitempty"`
+	OwnerClientId string                 `protobuf:"bytes,4,opt,name=owner_client_id,json=ownerClientId,proto3" json:"owner_client_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *RoomJoined) Reset() {
 	*x = RoomJoined{}
-	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[10]
+	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -916,7 +1051,7 @@ func (x *RoomJoined) String() string {
 func (*RoomJoined) ProtoMessage() {}
 
 func (x *RoomJoined) ProtoReflect() protoreflect.Message {
-	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[10]
+	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -929,7 +1064,7 @@ func (x *RoomJoined) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RoomJoined.ProtoReflect.Descriptor instead.
 func (*RoomJoined) Descriptor() ([]byte, []int) {
-	return file_excaliframe_v1_models_collab_proto_rawDescGZIP(), []int{10}
+	return file_excaliframe_v1_models_collab_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *RoomJoined) GetClientId() string {
@@ -953,6 +1088,13 @@ func (x *RoomJoined) GetPeers() []*PeerInfo {
 	return nil
 }
 
+func (x *RoomJoined) GetOwnerClientId() string {
+	if x != nil {
+		return x.OwnerClientId
+	}
+	return ""
+}
+
 type PeerInfo struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ClientId      string                 `protobuf:"bytes,1,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
@@ -960,13 +1102,14 @@ type PeerInfo struct {
 	AvatarUrl     string                 `protobuf:"bytes,3,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
 	ClientType    string                 `protobuf:"bytes,4,opt,name=client_type,json=clientType,proto3" json:"client_type,omitempty"`
 	IsActive      bool                   `protobuf:"varint,5,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
+	IsOwner       bool                   `protobuf:"varint,6,opt,name=is_owner,json=isOwner,proto3" json:"is_owner,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *PeerInfo) Reset() {
 	*x = PeerInfo{}
-	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[11]
+	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -978,7 +1121,7 @@ func (x *PeerInfo) String() string {
 func (*PeerInfo) ProtoMessage() {}
 
 func (x *PeerInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[11]
+	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -991,7 +1134,7 @@ func (x *PeerInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PeerInfo.ProtoReflect.Descriptor instead.
 func (*PeerInfo) Descriptor() ([]byte, []int) {
-	return file_excaliframe_v1_models_collab_proto_rawDescGZIP(), []int{11}
+	return file_excaliframe_v1_models_collab_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *PeerInfo) GetClientId() string {
@@ -1029,6 +1172,13 @@ func (x *PeerInfo) GetIsActive() bool {
 	return false
 }
 
+func (x *PeerInfo) GetIsOwner() bool {
+	if x != nil {
+		return x.IsOwner
+	}
+	return false
+}
+
 type PeerJoined struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Peer          *PeerInfo              `protobuf:"bytes,1,opt,name=peer,proto3" json:"peer,omitempty"`
@@ -1038,7 +1188,7 @@ type PeerJoined struct {
 
 func (x *PeerJoined) Reset() {
 	*x = PeerJoined{}
-	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[12]
+	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1050,7 +1200,7 @@ func (x *PeerJoined) String() string {
 func (*PeerJoined) ProtoMessage() {}
 
 func (x *PeerJoined) ProtoReflect() protoreflect.Message {
-	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[12]
+	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1063,7 +1213,7 @@ func (x *PeerJoined) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PeerJoined.ProtoReflect.Descriptor instead.
 func (*PeerJoined) Descriptor() ([]byte, []int) {
-	return file_excaliframe_v1_models_collab_proto_rawDescGZIP(), []int{12}
+	return file_excaliframe_v1_models_collab_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *PeerJoined) GetPeer() *PeerInfo {
@@ -1084,7 +1234,7 @@ type PeerLeft struct {
 
 func (x *PeerLeft) Reset() {
 	*x = PeerLeft{}
-	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[13]
+	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1096,7 +1246,7 @@ func (x *PeerLeft) String() string {
 func (*PeerLeft) ProtoMessage() {}
 
 func (x *PeerLeft) ProtoReflect() protoreflect.Message {
-	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[13]
+	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1109,7 +1259,7 @@ func (x *PeerLeft) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PeerLeft.ProtoReflect.Descriptor instead.
 func (*PeerLeft) Descriptor() ([]byte, []int) {
-	return file_excaliframe_v1_models_collab_proto_rawDescGZIP(), []int{13}
+	return file_excaliframe_v1_models_collab_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *PeerLeft) GetClientId() string {
@@ -1131,58 +1281,6 @@ func (x *PeerLeft) GetPeerCount() int32 {
 		return x.PeerCount
 	}
 	return 0
-}
-
-type SceneInit struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	Elements        []*ElementUpdate       `protobuf:"bytes,1,rep,name=elements,proto3" json:"elements,omitempty"`
-	BackgroundColor string                 `protobuf:"bytes,2,opt,name=background_color,json=backgroundColor,proto3" json:"background_color,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
-}
-
-func (x *SceneInit) Reset() {
-	*x = SceneInit{}
-	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[14]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *SceneInit) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*SceneInit) ProtoMessage() {}
-
-func (x *SceneInit) ProtoReflect() protoreflect.Message {
-	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[14]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use SceneInit.ProtoReflect.Descriptor instead.
-func (*SceneInit) Descriptor() ([]byte, []int) {
-	return file_excaliframe_v1_models_collab_proto_rawDescGZIP(), []int{14}
-}
-
-func (x *SceneInit) GetElements() []*ElementUpdate {
-	if x != nil {
-		return x.Elements
-	}
-	return nil
-}
-
-func (x *SceneInit) GetBackgroundColor() string {
-	if x != nil {
-		return x.BackgroundColor
-	}
-	return ""
 }
 
 type ErrorEvent struct {
@@ -1237,6 +1335,94 @@ func (x *ErrorEvent) GetMessage() string {
 	return ""
 }
 
+type SessionEnded struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Reason        string                 `protobuf:"bytes,1,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SessionEnded) Reset() {
+	*x = SessionEnded{}
+	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SessionEnded) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SessionEnded) ProtoMessage() {}
+
+func (x *SessionEnded) ProtoReflect() protoreflect.Message {
+	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SessionEnded.ProtoReflect.Descriptor instead.
+func (*SessionEnded) Descriptor() ([]byte, []int) {
+	return file_excaliframe_v1_models_collab_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *SessionEnded) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type OwnerChanged struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	NewOwnerClientId string                 `protobuf:"bytes,1,opt,name=new_owner_client_id,json=newOwnerClientId,proto3" json:"new_owner_client_id,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *OwnerChanged) Reset() {
+	*x = OwnerChanged{}
+	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OwnerChanged) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OwnerChanged) ProtoMessage() {}
+
+func (x *OwnerChanged) ProtoReflect() protoreflect.Message {
+	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OwnerChanged.ProtoReflect.Descriptor instead.
+func (*OwnerChanged) Descriptor() ([]byte, []int) {
+	return file_excaliframe_v1_models_collab_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *OwnerChanged) GetNewOwnerClientId() string {
+	if x != nil {
+		return x.NewOwnerClientId
+	}
+	return ""
+}
+
 type GetRoomRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
@@ -1246,7 +1432,7 @@ type GetRoomRequest struct {
 
 func (x *GetRoomRequest) Reset() {
 	*x = GetRoomRequest{}
-	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[16]
+	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1258,7 +1444,7 @@ func (x *GetRoomRequest) String() string {
 func (*GetRoomRequest) ProtoMessage() {}
 
 func (x *GetRoomRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[16]
+	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1271,7 +1457,7 @@ func (x *GetRoomRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRoomRequest.ProtoReflect.Descriptor instead.
 func (*GetRoomRequest) Descriptor() ([]byte, []int) {
-	return file_excaliframe_v1_models_collab_proto_rawDescGZIP(), []int{16}
+	return file_excaliframe_v1_models_collab_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *GetRoomRequest) GetSessionId() string {
@@ -1286,13 +1472,14 @@ type GetRoomResponse struct {
 	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
 	Peers         []*PeerInfo            `protobuf:"bytes,2,rep,name=peers,proto3" json:"peers,omitempty"`
 	CreatedAt     int64                  `protobuf:"varint,3,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	OwnerClientId string                 `protobuf:"bytes,4,opt,name=owner_client_id,json=ownerClientId,proto3" json:"owner_client_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetRoomResponse) Reset() {
 	*x = GetRoomResponse{}
-	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[17]
+	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1304,7 +1491,7 @@ func (x *GetRoomResponse) String() string {
 func (*GetRoomResponse) ProtoMessage() {}
 
 func (x *GetRoomResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[17]
+	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1317,7 +1504,7 @@ func (x *GetRoomResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRoomResponse.ProtoReflect.Descriptor instead.
 func (*GetRoomResponse) Descriptor() ([]byte, []int) {
-	return file_excaliframe_v1_models_collab_proto_rawDescGZIP(), []int{17}
+	return file_excaliframe_v1_models_collab_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *GetRoomResponse) GetSessionId() string {
@@ -1341,6 +1528,13 @@ func (x *GetRoomResponse) GetCreatedAt() int64 {
 	return 0
 }
 
+func (x *GetRoomResponse) GetOwnerClientId() string {
+	if x != nil {
+		return x.OwnerClientId
+	}
+	return ""
+}
+
 type ListRoomsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -1349,7 +1543,7 @@ type ListRoomsRequest struct {
 
 func (x *ListRoomsRequest) Reset() {
 	*x = ListRoomsRequest{}
-	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[18]
+	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1361,7 +1555,7 @@ func (x *ListRoomsRequest) String() string {
 func (*ListRoomsRequest) ProtoMessage() {}
 
 func (x *ListRoomsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[18]
+	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1374,7 +1568,7 @@ func (x *ListRoomsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRoomsRequest.ProtoReflect.Descriptor instead.
 func (*ListRoomsRequest) Descriptor() ([]byte, []int) {
-	return file_excaliframe_v1_models_collab_proto_rawDescGZIP(), []int{18}
+	return file_excaliframe_v1_models_collab_proto_rawDescGZIP(), []int{20}
 }
 
 type ListRoomsResponse struct {
@@ -1386,7 +1580,7 @@ type ListRoomsResponse struct {
 
 func (x *ListRoomsResponse) Reset() {
 	*x = ListRoomsResponse{}
-	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[19]
+	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1398,7 +1592,7 @@ func (x *ListRoomsResponse) String() string {
 func (*ListRoomsResponse) ProtoMessage() {}
 
 func (x *ListRoomsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[19]
+	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1411,7 +1605,7 @@ func (x *ListRoomsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRoomsResponse.ProtoReflect.Descriptor instead.
 func (*ListRoomsResponse) Descriptor() ([]byte, []int) {
-	return file_excaliframe_v1_models_collab_proto_rawDescGZIP(), []int{19}
+	return file_excaliframe_v1_models_collab_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *ListRoomsResponse) GetRooms() []*RoomSummary {
@@ -1432,7 +1626,7 @@ type RoomSummary struct {
 
 func (x *RoomSummary) Reset() {
 	*x = RoomSummary{}
-	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[20]
+	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1444,7 +1638,7 @@ func (x *RoomSummary) String() string {
 func (*RoomSummary) ProtoMessage() {}
 
 func (x *RoomSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[20]
+	mi := &file_excaliframe_v1_models_collab_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1457,7 +1651,7 @@ func (x *RoomSummary) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RoomSummary.ProtoReflect.Descriptor instead.
 func (*RoomSummary) Descriptor() ([]byte, []int) {
-	return file_excaliframe_v1_models_collab_proto_rawDescGZIP(), []int{20}
+	return file_excaliframe_v1_models_collab_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *RoomSummary) GetSessionId() string {
@@ -1485,7 +1679,7 @@ var File_excaliframe_v1_models_collab_proto protoreflect.FileDescriptor
 
 const file_excaliframe_v1_models_collab_proto_rawDesc = "" +
 	"\n" +
-	"\"excaliframe/v1/models/collab.proto\x12\x15excaliframe.v1.models\"\xda\x04\n" +
+	"\"excaliframe/v1/models/collab.proto\x12\x15excaliframe.v1.models\"\xb6\x05\n" +
 	"\fCollabAction\x12\x1b\n" +
 	"\taction_id\x18\x01 \x01(\tR\bactionId\x12\x1b\n" +
 	"\tclient_id\x18\x02 \x01(\tR\bclientId\x12\x1c\n" +
@@ -1498,8 +1692,9 @@ const file_excaliframe_v1_models_collab_proto_rawDesc = "" +
 	"\rcursor_update\x18\x0e \x01(\v2#.excaliframe.v1.models.CursorUpdateH\x00R\fcursorUpdate\x12D\n" +
 	"\vtext_update\x18\x0f \x01(\v2!.excaliframe.v1.models.TextUpdateH\x00R\n" +
 	"textUpdate\x12W\n" +
-	"\x12scene_init_request\x18\x10 \x01(\v2'.excaliframe.v1.models.SceneInitRequestH\x00R\x10sceneInitRequestB\b\n" +
-	"\x06action\"\x99\x01\n" +
+	"\x12scene_init_request\x18\x10 \x01(\v2'.excaliframe.v1.models.SceneInitRequestH\x00R\x10sceneInitRequest\x12Z\n" +
+	"\x13scene_init_response\x18\x11 \x01(\v2(.excaliframe.v1.models.SceneInitResponseH\x00R\x11sceneInitResponseB\b\n" +
+	"\x06action\"\xf4\x01\n" +
 	"\bJoinRoom\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x1a\n" +
@@ -1508,7 +1703,12 @@ const file_excaliframe_v1_models_collab_proto_rawDesc = "" +
 	"\vclient_type\x18\x04 \x01(\tR\n" +
 	"clientType\x12\x1d\n" +
 	"\n" +
-	"avatar_url\x18\x05 \x01(\tR\tavatarUrl\"#\n" +
+	"avatar_url\x18\x05 \x01(\tR\tavatarUrl\x12\x19\n" +
+	"\bis_owner\x18\x06 \x01(\bR\aisOwner\x12\x1d\n" +
+	"\n" +
+	"browser_id\x18\a \x01(\tR\tbrowserId\x12\x1f\n" +
+	"\vclient_hint\x18\b \x01(\tR\n" +
+	"clientHint\"#\n" +
 	"\tLeaveRoom\x12\x16\n" +
 	"\x06reason\x18\x01 \x01(\tR\x06reason\"I\n" +
 	"\x0ePresenceUpdate\x12\x1b\n" +
@@ -1536,7 +1736,9 @@ const file_excaliframe_v1_models_collab_proto_rawDesc = "" +
 	"\x04text\x18\x01 \x01(\tR\x04text\x12\x18\n" +
 	"\aversion\x18\x02 \x01(\x05R\aversion\x12'\n" +
 	"\x0fcursor_position\x18\x03 \x01(\x05R\x0ecursorPosition\"\x12\n" +
-	"\x10SceneInitRequest\"\xec\x05\n" +
+	"\x10SceneInitRequest\"-\n" +
+	"\x11SceneInitResponse\x12\x18\n" +
+	"\apayload\x18\x01 \x01(\tR\apayload\"\xf6\a\n" +
 	"\vCollabEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12$\n" +
 	"\x0efrom_client_id\x18\x02 \x01(\tR\ffromClientId\x12)\n" +
@@ -1551,17 +1753,20 @@ const file_excaliframe_v1_models_collab_proto_rawDesc = "" +
 	"\fscene_update\x18\x0e \x01(\v2\".excaliframe.v1.models.SceneUpdateH\x00R\vsceneUpdate\x12J\n" +
 	"\rcursor_update\x18\x0f \x01(\v2#.excaliframe.v1.models.CursorUpdateH\x00R\fcursorUpdate\x12D\n" +
 	"\vtext_update\x18\x10 \x01(\v2!.excaliframe.v1.models.TextUpdateH\x00R\n" +
-	"textUpdate\x12A\n" +
-	"\n" +
-	"scene_init\x18\x11 \x01(\v2 .excaliframe.v1.models.SceneInitH\x00R\tsceneInit\x129\n" +
-	"\x05error\x18\x12 \x01(\v2!.excaliframe.v1.models.ErrorEventH\x00R\x05errorB\a\n" +
-	"\x05event\"\x7f\n" +
+	"textUpdate\x12Z\n" +
+	"\x13scene_init_response\x18\x11 \x01(\v2(.excaliframe.v1.models.SceneInitResponseH\x00R\x11sceneInitResponse\x129\n" +
+	"\x05error\x18\x12 \x01(\v2!.excaliframe.v1.models.ErrorEventH\x00R\x05error\x12W\n" +
+	"\x12scene_init_request\x18\x13 \x01(\v2'.excaliframe.v1.models.SceneInitRequestH\x00R\x10sceneInitRequest\x12J\n" +
+	"\rsession_ended\x18\x14 \x01(\v2#.excaliframe.v1.models.SessionEndedH\x00R\fsessionEnded\x12J\n" +
+	"\rowner_changed\x18\x15 \x01(\v2#.excaliframe.v1.models.OwnerChangedH\x00R\fownerChangedB\a\n" +
+	"\x05event\"\xa7\x01\n" +
 	"\n" +
 	"RoomJoined\x12\x1b\n" +
 	"\tclient_id\x18\x01 \x01(\tR\bclientId\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x02 \x01(\tR\tsessionId\x125\n" +
-	"\x05peers\x18\x03 \x03(\v2\x1f.excaliframe.v1.models.PeerInfoR\x05peers\"\xa0\x01\n" +
+	"\x05peers\x18\x03 \x03(\v2\x1f.excaliframe.v1.models.PeerInfoR\x05peers\x12&\n" +
+	"\x0fowner_client_id\x18\x04 \x01(\tR\rownerClientId\"\xbb\x01\n" +
 	"\bPeerInfo\x12\x1b\n" +
 	"\tclient_id\x18\x01 \x01(\tR\bclientId\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12\x1d\n" +
@@ -1569,7 +1774,8 @@ const file_excaliframe_v1_models_collab_proto_rawDesc = "" +
 	"avatar_url\x18\x03 \x01(\tR\tavatarUrl\x12\x1f\n" +
 	"\vclient_type\x18\x04 \x01(\tR\n" +
 	"clientType\x12\x1b\n" +
-	"\tis_active\x18\x05 \x01(\bR\bisActive\"A\n" +
+	"\tis_active\x18\x05 \x01(\bR\bisActive\x12\x19\n" +
+	"\bis_owner\x18\x06 \x01(\bR\aisOwner\"A\n" +
 	"\n" +
 	"PeerJoined\x123\n" +
 	"\x04peer\x18\x01 \x01(\v2\x1f.excaliframe.v1.models.PeerInfoR\x04peer\"^\n" +
@@ -1577,23 +1783,25 @@ const file_excaliframe_v1_models_collab_proto_rawDesc = "" +
 	"\tclient_id\x18\x01 \x01(\tR\bclientId\x12\x16\n" +
 	"\x06reason\x18\x02 \x01(\tR\x06reason\x12\x1d\n" +
 	"\n" +
-	"peer_count\x18\x03 \x01(\x05R\tpeerCount\"x\n" +
-	"\tSceneInit\x12@\n" +
-	"\belements\x18\x01 \x03(\v2$.excaliframe.v1.models.ElementUpdateR\belements\x12)\n" +
-	"\x10background_color\x18\x02 \x01(\tR\x0fbackgroundColor\":\n" +
+	"peer_count\x18\x03 \x01(\x05R\tpeerCount\":\n" +
 	"\n" +
 	"ErrorEvent\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\"/\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"&\n" +
+	"\fSessionEnded\x12\x16\n" +
+	"\x06reason\x18\x01 \x01(\tR\x06reason\"=\n" +
+	"\fOwnerChanged\x12-\n" +
+	"\x13new_owner_client_id\x18\x01 \x01(\tR\x10newOwnerClientId\"/\n" +
 	"\x0eGetRoomRequest\x12\x1d\n" +
 	"\n" +
-	"session_id\x18\x01 \x01(\tR\tsessionId\"\x86\x01\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\"\xae\x01\n" +
 	"\x0fGetRoomResponse\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x125\n" +
 	"\x05peers\x18\x02 \x03(\v2\x1f.excaliframe.v1.models.PeerInfoR\x05peers\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\x03 \x01(\x03R\tcreatedAt\"\x12\n" +
+	"created_at\x18\x03 \x01(\x03R\tcreatedAt\x12&\n" +
+	"\x0fowner_client_id\x18\x04 \x01(\tR\rownerClientId\"\x12\n" +
 	"\x10ListRoomsRequest\"M\n" +
 	"\x11ListRoomsResponse\x128\n" +
 	"\x05rooms\x18\x01 \x03(\v2\".excaliframe.v1.models.RoomSummaryR\x05rooms\"j\n" +
@@ -1618,7 +1826,7 @@ func file_excaliframe_v1_models_collab_proto_rawDescGZIP() []byte {
 	return file_excaliframe_v1_models_collab_proto_rawDescData
 }
 
-var file_excaliframe_v1_models_collab_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
+var file_excaliframe_v1_models_collab_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_excaliframe_v1_models_collab_proto_goTypes = []any{
 	(*CollabAction)(nil),      // 0: excaliframe.v1.models.CollabAction
 	(*JoinRoom)(nil),          // 1: excaliframe.v1.models.JoinRoom
@@ -1629,19 +1837,21 @@ var file_excaliframe_v1_models_collab_proto_goTypes = []any{
 	(*CursorUpdate)(nil),      // 6: excaliframe.v1.models.CursorUpdate
 	(*TextUpdate)(nil),        // 7: excaliframe.v1.models.TextUpdate
 	(*SceneInitRequest)(nil),  // 8: excaliframe.v1.models.SceneInitRequest
-	(*CollabEvent)(nil),       // 9: excaliframe.v1.models.CollabEvent
-	(*RoomJoined)(nil),        // 10: excaliframe.v1.models.RoomJoined
-	(*PeerInfo)(nil),          // 11: excaliframe.v1.models.PeerInfo
-	(*PeerJoined)(nil),        // 12: excaliframe.v1.models.PeerJoined
-	(*PeerLeft)(nil),          // 13: excaliframe.v1.models.PeerLeft
-	(*SceneInit)(nil),         // 14: excaliframe.v1.models.SceneInit
+	(*SceneInitResponse)(nil), // 9: excaliframe.v1.models.SceneInitResponse
+	(*CollabEvent)(nil),       // 10: excaliframe.v1.models.CollabEvent
+	(*RoomJoined)(nil),        // 11: excaliframe.v1.models.RoomJoined
+	(*PeerInfo)(nil),          // 12: excaliframe.v1.models.PeerInfo
+	(*PeerJoined)(nil),        // 13: excaliframe.v1.models.PeerJoined
+	(*PeerLeft)(nil),          // 14: excaliframe.v1.models.PeerLeft
 	(*ErrorEvent)(nil),        // 15: excaliframe.v1.models.ErrorEvent
-	(*GetRoomRequest)(nil),    // 16: excaliframe.v1.models.GetRoomRequest
-	(*GetRoomResponse)(nil),   // 17: excaliframe.v1.models.GetRoomResponse
-	(*ListRoomsRequest)(nil),  // 18: excaliframe.v1.models.ListRoomsRequest
-	(*ListRoomsResponse)(nil), // 19: excaliframe.v1.models.ListRoomsResponse
-	(*RoomSummary)(nil),       // 20: excaliframe.v1.models.RoomSummary
-	nil,                       // 21: excaliframe.v1.models.CursorUpdate.SelectedElementIdsEntry
+	(*SessionEnded)(nil),      // 16: excaliframe.v1.models.SessionEnded
+	(*OwnerChanged)(nil),      // 17: excaliframe.v1.models.OwnerChanged
+	(*GetRoomRequest)(nil),    // 18: excaliframe.v1.models.GetRoomRequest
+	(*GetRoomResponse)(nil),   // 19: excaliframe.v1.models.GetRoomResponse
+	(*ListRoomsRequest)(nil),  // 20: excaliframe.v1.models.ListRoomsRequest
+	(*ListRoomsResponse)(nil), // 21: excaliframe.v1.models.ListRoomsResponse
+	(*RoomSummary)(nil),       // 22: excaliframe.v1.models.RoomSummary
+	nil,                       // 23: excaliframe.v1.models.CursorUpdate.SelectedElementIdsEntry
 }
 var file_excaliframe_v1_models_collab_proto_depIdxs = []int32{
 	1,  // 0: excaliframe.v1.models.CollabAction.join:type_name -> excaliframe.v1.models.JoinRoom
@@ -1651,27 +1861,30 @@ var file_excaliframe_v1_models_collab_proto_depIdxs = []int32{
 	6,  // 4: excaliframe.v1.models.CollabAction.cursor_update:type_name -> excaliframe.v1.models.CursorUpdate
 	7,  // 5: excaliframe.v1.models.CollabAction.text_update:type_name -> excaliframe.v1.models.TextUpdate
 	8,  // 6: excaliframe.v1.models.CollabAction.scene_init_request:type_name -> excaliframe.v1.models.SceneInitRequest
-	5,  // 7: excaliframe.v1.models.SceneUpdate.elements:type_name -> excaliframe.v1.models.ElementUpdate
-	21, // 8: excaliframe.v1.models.CursorUpdate.selected_element_ids:type_name -> excaliframe.v1.models.CursorUpdate.SelectedElementIdsEntry
-	10, // 9: excaliframe.v1.models.CollabEvent.room_joined:type_name -> excaliframe.v1.models.RoomJoined
-	12, // 10: excaliframe.v1.models.CollabEvent.peer_joined:type_name -> excaliframe.v1.models.PeerJoined
-	13, // 11: excaliframe.v1.models.CollabEvent.peer_left:type_name -> excaliframe.v1.models.PeerLeft
-	3,  // 12: excaliframe.v1.models.CollabEvent.presence:type_name -> excaliframe.v1.models.PresenceUpdate
-	4,  // 13: excaliframe.v1.models.CollabEvent.scene_update:type_name -> excaliframe.v1.models.SceneUpdate
-	6,  // 14: excaliframe.v1.models.CollabEvent.cursor_update:type_name -> excaliframe.v1.models.CursorUpdate
-	7,  // 15: excaliframe.v1.models.CollabEvent.text_update:type_name -> excaliframe.v1.models.TextUpdate
-	14, // 16: excaliframe.v1.models.CollabEvent.scene_init:type_name -> excaliframe.v1.models.SceneInit
-	15, // 17: excaliframe.v1.models.CollabEvent.error:type_name -> excaliframe.v1.models.ErrorEvent
-	11, // 18: excaliframe.v1.models.RoomJoined.peers:type_name -> excaliframe.v1.models.PeerInfo
-	11, // 19: excaliframe.v1.models.PeerJoined.peer:type_name -> excaliframe.v1.models.PeerInfo
-	5,  // 20: excaliframe.v1.models.SceneInit.elements:type_name -> excaliframe.v1.models.ElementUpdate
-	11, // 21: excaliframe.v1.models.GetRoomResponse.peers:type_name -> excaliframe.v1.models.PeerInfo
-	20, // 22: excaliframe.v1.models.ListRoomsResponse.rooms:type_name -> excaliframe.v1.models.RoomSummary
-	23, // [23:23] is the sub-list for method output_type
-	23, // [23:23] is the sub-list for method input_type
-	23, // [23:23] is the sub-list for extension type_name
-	23, // [23:23] is the sub-list for extension extendee
-	0,  // [0:23] is the sub-list for field type_name
+	9,  // 7: excaliframe.v1.models.CollabAction.scene_init_response:type_name -> excaliframe.v1.models.SceneInitResponse
+	5,  // 8: excaliframe.v1.models.SceneUpdate.elements:type_name -> excaliframe.v1.models.ElementUpdate
+	23, // 9: excaliframe.v1.models.CursorUpdate.selected_element_ids:type_name -> excaliframe.v1.models.CursorUpdate.SelectedElementIdsEntry
+	11, // 10: excaliframe.v1.models.CollabEvent.room_joined:type_name -> excaliframe.v1.models.RoomJoined
+	13, // 11: excaliframe.v1.models.CollabEvent.peer_joined:type_name -> excaliframe.v1.models.PeerJoined
+	14, // 12: excaliframe.v1.models.CollabEvent.peer_left:type_name -> excaliframe.v1.models.PeerLeft
+	3,  // 13: excaliframe.v1.models.CollabEvent.presence:type_name -> excaliframe.v1.models.PresenceUpdate
+	4,  // 14: excaliframe.v1.models.CollabEvent.scene_update:type_name -> excaliframe.v1.models.SceneUpdate
+	6,  // 15: excaliframe.v1.models.CollabEvent.cursor_update:type_name -> excaliframe.v1.models.CursorUpdate
+	7,  // 16: excaliframe.v1.models.CollabEvent.text_update:type_name -> excaliframe.v1.models.TextUpdate
+	9,  // 17: excaliframe.v1.models.CollabEvent.scene_init_response:type_name -> excaliframe.v1.models.SceneInitResponse
+	15, // 18: excaliframe.v1.models.CollabEvent.error:type_name -> excaliframe.v1.models.ErrorEvent
+	8,  // 19: excaliframe.v1.models.CollabEvent.scene_init_request:type_name -> excaliframe.v1.models.SceneInitRequest
+	16, // 20: excaliframe.v1.models.CollabEvent.session_ended:type_name -> excaliframe.v1.models.SessionEnded
+	17, // 21: excaliframe.v1.models.CollabEvent.owner_changed:type_name -> excaliframe.v1.models.OwnerChanged
+	12, // 22: excaliframe.v1.models.RoomJoined.peers:type_name -> excaliframe.v1.models.PeerInfo
+	12, // 23: excaliframe.v1.models.PeerJoined.peer:type_name -> excaliframe.v1.models.PeerInfo
+	12, // 24: excaliframe.v1.models.GetRoomResponse.peers:type_name -> excaliframe.v1.models.PeerInfo
+	22, // 25: excaliframe.v1.models.ListRoomsResponse.rooms:type_name -> excaliframe.v1.models.RoomSummary
+	26, // [26:26] is the sub-list for method output_type
+	26, // [26:26] is the sub-list for method input_type
+	26, // [26:26] is the sub-list for extension type_name
+	26, // [26:26] is the sub-list for extension extendee
+	0,  // [0:26] is the sub-list for field type_name
 }
 
 func init() { file_excaliframe_v1_models_collab_proto_init() }
@@ -1687,8 +1900,9 @@ func file_excaliframe_v1_models_collab_proto_init() {
 		(*CollabAction_CursorUpdate)(nil),
 		(*CollabAction_TextUpdate)(nil),
 		(*CollabAction_SceneInitRequest)(nil),
+		(*CollabAction_SceneInitResponse)(nil),
 	}
-	file_excaliframe_v1_models_collab_proto_msgTypes[9].OneofWrappers = []any{
+	file_excaliframe_v1_models_collab_proto_msgTypes[10].OneofWrappers = []any{
 		(*CollabEvent_RoomJoined)(nil),
 		(*CollabEvent_PeerJoined)(nil),
 		(*CollabEvent_PeerLeft)(nil),
@@ -1696,8 +1910,11 @@ func file_excaliframe_v1_models_collab_proto_init() {
 		(*CollabEvent_SceneUpdate)(nil),
 		(*CollabEvent_CursorUpdate)(nil),
 		(*CollabEvent_TextUpdate)(nil),
-		(*CollabEvent_SceneInit)(nil),
+		(*CollabEvent_SceneInitResponse)(nil),
 		(*CollabEvent_Error)(nil),
+		(*CollabEvent_SceneInitRequest)(nil),
+		(*CollabEvent_SessionEnded)(nil),
+		(*CollabEvent_OwnerChanged)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -1705,7 +1922,7 @@ func file_excaliframe_v1_models_collab_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_excaliframe_v1_models_collab_proto_rawDesc), len(file_excaliframe_v1_models_collab_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   22,
+			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

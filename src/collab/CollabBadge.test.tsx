@@ -10,8 +10,11 @@ function makeState(overrides: Partial<CollabState> = {}): CollabState {
     isConnected: false,
     isConnecting: false,
     clientId: '',
+    sessionId: '',
     peers: new Map(),
     error: null,
+    isOwner: false,
+    ownerClientId: '',
     ...overrides,
   };
 }
@@ -21,7 +24,7 @@ describe('CollabBadge', () => {
     render(<CollabBadge state={makeState()} />);
     const badge = screen.getByTestId('collab-badge');
     expect(badge).toBeInTheDocument();
-    expect(badge.getAttribute('title')).toBe('Collaborate');
+    expect(badge.getAttribute('title')).toBe('Share this drawing');
   });
 
   it('renders connecting indicator', () => {
@@ -31,7 +34,7 @@ describe('CollabBadge', () => {
     expect(badge.getAttribute('title')).toBe('Connecting...');
   });
 
-  it('renders peer count when connected', () => {
+  it('renders peer count when connected as follower', () => {
     const peers = new Map<string, PeerInfo>();
     peers.set('c1', { clientId: 'c1', username: 'Alice', avatarUrl: '', clientType: 'browser', isActive: true } as PeerInfo);
     peers.set('c2', { clientId: 'c2', username: 'Bob', avatarUrl: '', clientType: 'browser', isActive: true } as PeerInfo);
@@ -39,7 +42,7 @@ describe('CollabBadge', () => {
     render(<CollabBadge state={makeState({ isConnected: true, clientId: 'c1', peers })} />);
     const badge = screen.getByTestId('collab-badge');
     expect(badge).toBeInTheDocument();
-    expect(badge.getAttribute('title')).toBe('2 peers');
+    expect(badge.getAttribute('title')).toBe('Connected \u2014 2 peers');
     expect(badge.textContent).toContain('2');
   });
 
@@ -48,7 +51,7 @@ describe('CollabBadge', () => {
     peers.set('c1', { clientId: 'c1', username: 'Alice', avatarUrl: '', clientType: 'browser', isActive: true } as PeerInfo);
 
     render(<CollabBadge state={makeState({ isConnected: true, clientId: 'c1', peers })} />);
-    expect(screen.getByTestId('collab-badge').getAttribute('title')).toBe('1 peer');
+    expect(screen.getByTestId('collab-badge').getAttribute('title')).toBe('Connected \u2014 1 peer');
   });
 
   it('shows error state with title', () => {

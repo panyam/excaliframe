@@ -9,6 +9,8 @@ export interface CollabClientOptions {
   onError?: (error: Error) => void;
   onConnect?: (clientId: string) => void;
   onDisconnect?: () => void;
+  onSessionEnded?: (reason: string) => void;
+  onOwnerChanged?: (newOwnerClientId: string) => void;
   maxRetries?: number;
   /** Factory for creating GRPCWSClient instances. Defaults to `() => new GRPCWSClient()`.
    *  Override in tests with `GRPCWSClient.createMock()`. */
@@ -25,6 +27,9 @@ export class CollabClient {
   private _clientId: string = '';
   private _isConnected: boolean = false;
   private _isConnecting: boolean = false;
+  private _isOwner: boolean = false;
+  private _browserId: string = '';
+  private _clientHint: string = '';
   private _relayUrl: string = '';
   private _sessionId: string = '';
   private _username: string = '';
@@ -41,18 +46,23 @@ export class CollabClient {
   }
 
   get clientId(): string { return this._clientId; }
+  get sessionId(): string { return this._sessionId; }
   get isConnected(): boolean { return this._isConnected; }
   get isConnecting(): boolean { return this._isConnecting; }
+  get isOwner(): boolean { return this._isOwner; }
 
-  connect(relayUrl: string, sessionId: string, username: string, tool: string): void {
+  connect(relayUrl: string, sessionId: string, username: string, tool: string, isOwner: boolean = false, browserId: string = '', clientHint: string = ''): void {
     if (this._isConnected) {
       throw new Error('Already connected');
     }
 
     this._relayUrl = relayUrl;
     this._sessionId = sessionId;
-    this._username = username;
+    this._username = username || ('Anon-' + Math.random().toString(36).slice(2, 6));
     this._tool = tool;
+    this._isOwner = isOwner;
+    this._browserId = browserId;
+    this._clientHint = clientHint;
     this._isConnecting = true;
     this.explicitDisconnect = false;
     this.retryCount = 0;
@@ -90,7 +100,8 @@ export class CollabClient {
 
   private openWebSocket(): void {
     const resolved = resolveRelayUrl(this._relayUrl);
-    const url = `${resolved}/ws/v1/${this._sessionId}/sync`;
+    const wsSessionId = this._sessionId || '_new';
+    const url = `${resolved}/ws/v1/${wsSessionId}/sync`;
     this.grpc = this.options._grpcFactory ? this.options._grpcFactory() : new GRPCWSClient();
 
     // GRPCWSClient.onMessage receives data already unwrapped from the
@@ -118,6 +129,9 @@ export class CollabClient {
           username: this._username,
           tool: this._tool,
           clientType: 'browser',
+          isOwner: this._isOwner,
+          browserId: this._browserId,
+          clientHint: this._clientHint,
         },
       });
     }).catch(() => {
@@ -132,6 +146,10 @@ export class CollabClient {
     // e.g. { "roomJoined": { "clientId": "c1", ... } }
     if (data.roomJoined) {
       this._clientId = data.roomJoined.clientId;
+      // Capture relay-generated sessionId (may differ from what we sent)
+      if (data.roomJoined.sessionId) {
+        this._sessionId = data.roomJoined.sessionId;
+      }
       this._isConnected = true;
       this._isConnecting = false;
       this.retryCount = 0;
@@ -156,6 +174,15 @@ export class CollabClient {
       this.options.onPeerJoined?.(data.peerJoined.peer);
     } else if (data.peerLeft) {
       this.options.onPeerLeft?.(data.peerLeft.clientId);
+    } else if (data.sessionEnded) {
+      this.options.onSessionEnded?.(data.sessionEnded.reason || '');
+      this.explicitDisconnect = true; // Don't reconnect
+      this.grpc?.close();
+      this.resetState();
+    } else if (data.ownerChanged) {
+      const newOwnerId = data.ownerChanged.newOwnerClientId;
+      this._isOwner = newOwnerId === this._clientId;
+      this.options.onOwnerChanged?.(newOwnerId);
     }
   }
 
@@ -182,6 +209,7 @@ export class CollabClient {
     this._isConnected = false;
     this._isConnecting = false;
     this._clientId = '';
+    this._isOwner = false;
     this.grpc = null;
   }
 }
