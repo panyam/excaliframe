@@ -284,32 +284,11 @@ const ExcalidrawEditor: React.FC<Props> = ({ host, showCancel = true, collabConf
 
   if (!ExcalidrawComponent || isLoading) {
     return (
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100%',
-        backgroundColor: '#fff',
-        gap: '16px'
-      }}>
-        <div style={{
-          width: '48px',
-          height: '48px',
-          border: '3px solid #f3f4f6',
-          borderTop: '3px solid #0052cc',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite'
-        }} />
-        <div style={{ color: '#172b4d', fontSize: '16px', fontWeight: 500 }}>
+      <div className="flex flex-col justify-center items-center h-full bg-white dark:bg-gray-900 gap-4">
+        <div className="w-12 h-12 border-[3px] border-gray-100 dark:border-gray-700 border-t-blue-600 rounded-full animate-spin" />
+        <div className="text-gray-800 dark:text-gray-200 text-base font-medium">
           Loading Excalidraw...
         </div>
-        <style>{`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}</style>
       </div>
     );
   }
@@ -440,14 +419,11 @@ const ExcalidrawEditor: React.FC<Props> = ({ host, showCancel = true, collabConf
 
   // No-toolbar mode (web/playground): Save in MainMenu + Cmd/Ctrl+S, floating dirty badge
   return (
-    <div style={{ height: '100%', width: '100%', position: 'relative', backgroundColor: '#fff' }}>
-      <div style={{ width: '100%', height: '100%' }} className="excalidraw-wrapper">
+    <div className="h-full w-full relative bg-white dark:bg-gray-900">
+      <div className="w-full h-full excalidraw-wrapper">
         {excalidrawCanvas}
       </div>
-      <div style={{
-        position: 'fixed', bottom: '16px', right: '16px', zIndex: 1000,
-        display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px',
-      }}>
+      <div className="fixed bottom-4 right-4 z-[1000] flex flex-col items-end gap-2">
         {showCollabPanel && (
           <div className="bg-white/95 dark:bg-gray-800/95 rounded-lg p-3 shadow-lg min-w-[280px]">
             <CollabPanel state={collabState} actions={collabActions} tool="excalidraw"
@@ -474,20 +450,8 @@ const ExcalidrawEditor: React.FC<Props> = ({ host, showCancel = true, collabConf
         }
 
         return badgeText ? (
-          <div style={{
-            position: 'fixed',
-            bottom: '16px',
-            left: '16px',
-            padding: '6px 14px',
-            backgroundColor: badgeBg,
-            color: 'white',
-            borderRadius: '20px',
-            fontSize: '12px',
-            fontWeight: 500,
-            zIndex: 1000,
-            pointerEvents: 'none',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-          }}>
+          <div className="fixed bottom-4 left-4 px-3.5 py-1.5 text-white rounded-full text-xs font-medium z-[1000] pointer-events-none shadow-md"
+            style={{ backgroundColor: badgeBg }}>
             {badgeText}
           </div>
         ) : null;

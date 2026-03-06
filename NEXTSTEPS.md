@@ -30,9 +30,8 @@ Immediate and near-term action items for Excaliframe.
 
 ## In Progress
 
-### Real-Time Collaboration — Part 1.5: Polish & Part 2 Prep
-- Part 1 infrastructure complete: relay embedded in site server at `/relay/`, opt-in UI with dialog, 67 TS tests passing
-- **Remaining**: Finalize collab badge positioning (avoid overlap with Excalidraw/Mermaid built-in controls)
+### Real-Time Collaboration — Part 2 Prep
+- Part 1/1.5 complete: relay embedded, opt-in UI, dark mode theming, 67 TS tests passing
 - **Part 2** (element sync, cursors, text sync) layers on top — next major feature
 
 ### Fix False Positive "Unsaved Changes" Indicator
@@ -101,3 +100,4 @@ Immediate and near-term action items for Excaliframe.
 - [x] Rspack migration — parallel rspack configs for root + site, 5-10x faster builds, webpack kept as `-old` fallback targets
 - [x] Collab Part 1 — connection infrastructure: Go relay, CollabClient with GRPCWSClient, TDD tests
 - [x] Collab Part 1.5 — embed relay in site server (`/relay/`), opt-in collab UI (dialog with relay server list, people icon badge, peer count), `?connect=` param, session ID = drawing ID, localStorage persistence
+- [x] Tailwind dark mode for editor chrome — CollabPanel, CollabBadge, AutoSaveToggle, loading spinners, status badges, popover containers all use Tailwind with `dark:` variants

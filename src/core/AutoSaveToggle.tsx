@@ -6,20 +6,12 @@ interface Props {
 }
 
 const AutoSaveToggle: React.FC<Props> = ({ enabled, onChange }) => (
-  <label style={{
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '6px',
-    fontSize: '12px',
-    color: '#172b4d',
-    cursor: 'pointer',
-    userSelect: 'none',
-  }}>
+  <label className="inline-flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300 cursor-pointer select-none">
     <input
       type="checkbox"
       checked={enabled}
       onChange={(e) => onChange(e.target.checked)}
-      style={{ margin: 0, cursor: 'pointer' }}
+      className="m-0 cursor-pointer accent-indigo-500"
     />
     Auto-save
   </label>
