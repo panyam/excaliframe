@@ -90,6 +90,12 @@ excaliframe/
 │   │   ├── ExcalidrawEditor.tsx   # Excalidraw editor (accepts host adapter)
 │   │   ├── ExcalidrawRenderer.tsx # Excalidraw renderer (accepts host adapter)
 │   │   └── MermaidEditor.tsx      # Mermaid split-pane editor
+│   ├── collab/          # Real-time collaboration client
+│   │   ├── CollabClient.ts        # Framework-agnostic WebSocket client
+│   │   ├── useCollaboration.ts    # React hook wrapping CollabClient
+│   │   ├── CollabPanel.tsx        # Connection UI (relay URL, session, peers)
+│   │   ├── CollabBadge.tsx        # Compact status indicator
+│   │   └── gen/                   # Generated TypeScript from protos
 │   ├── hosts/           # Platform-specific host adapters
 │   │   ├── forge.ts     # ForgeEditorHost / ForgeRendererHost
 │   │   ├── web.ts       # WebEditorHost / WebRendererHost (IndexedDB)
@@ -97,6 +103,12 @@ excaliframe/
 │   ├── editor/          # Forge editor entry point
 │   ├── renderer/        # Forge renderer entry point
 │   └── version.ts       # Auto-generated version info
+├── relay/               # Collaboration relay server (Go)
+│   ├── main.go          # Standalone entry point
+│   ├── services/        # CollabService, Room management
+│   ├── web/server/      # HTTP handlers, WebSocket bidi stream
+│   ├── protos/          # Proto definitions + buf config
+│   └── gen/go/          # Generated Go from protos
 ├── site/                # Marketing site + playground frontend
 │   ├── package.json     # Site's own deps (React, Excalidraw, jsx-dom, webpack)
 │   ├── tsconfig.json    # Site TS config with @excaliframe/* path alias
@@ -244,7 +256,9 @@ Since Excaliframe only uses Custom UI (static assets) and stores data in Conflue
 
 | Document | Description |
 |----------|-------------|
+| [docs/LOCAL_SETUP.md](./docs/LOCAL_SETUP.md) | Local development setup guide |
 | [docs/FAQ.md](./docs/FAQ.md) | Enterprise FAQ - security, compliance |
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | Technical architecture deep dive |
 | [SECURITY_ROADMAP.md](./SECURITY_ROADMAP.md) | Security validation roadmap |
 
 ---
@@ -277,6 +291,8 @@ forge login
 - **Frontend**: React 18, TypeScript
 - **Diagram engines**: Excalidraw 0.18, Mermaid 11
 - **Platform**: Atlassian Forge (Custom UI) + standalone web playground
+- **Collaboration**: Protobuf + servicekit (WebSocket bidi streaming)
+- **Relay server**: Go (embeddable `http.Handler`)
 - **Build**: Webpack 5 with dynamic import code splitting
 - **API**: `@forge/bridge` for Confluence integration
 

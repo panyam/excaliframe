@@ -11,6 +11,7 @@ import (
 	goal "github.com/panyam/goapplib"
 	tmplr "github.com/panyam/templar"
 	"excaliframe-site/server"
+	relayserver "github.com/user/excaliframe/relay/web/server"
 )
 
 // canonicalRedirectMiddleware redirects www to non-www and http to https
@@ -82,6 +83,13 @@ func main() {
 
 	// Setup routes
 	mux := server.SetupRoutes(app)
+
+	// Mount relay server at /relay/
+	relayApp := relayserver.NewRelayApp()
+	if err := relayApp.Init(); err != nil {
+		log.Fatal("Failed to initialize relay:", err)
+	}
+	mux.Handle("/relay/", http.StripPrefix("/relay", relayApp))
 
 	// Serve static files
 	mux.Handle("/static/", http.StripPrefix("/static", http.FileServer(http.Dir(STATIC_FOLDER))))

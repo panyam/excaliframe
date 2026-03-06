@@ -1,11 +1,19 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { EditorHost, DrawingEnvelope } from './types';
+import { useAutoSave } from './useAutoSave';
+import AutoSaveToggle from './AutoSaveToggle';
+import { CollabConfig } from '../collab/types';
+import { useCollaboration } from '../collab/useCollaboration';
+import CollabPanel from '../collab/CollabPanel';
+import CollabBadge from '../collab/CollabBadge';
 
 interface Props {
   host: EditorHost;
   /** Show the Cancel button and top toolbar. Default true (Forge mode).
    *  When false, floating dirty badge (playground). */
   showCancel?: boolean;
+  /** Optional collab config — opt-in collaboration via dialog. */
+  collabConfig?: CollabConfig;
 }
 
 const DEFAULT_TEMPLATE = `flowchart TD
@@ -27,7 +35,7 @@ function setSvgContent(container: HTMLElement, svgString: string): void {
 }
 
 
-const MermaidEditor: React.FC<Props> = ({ host, showCancel = true }) => {
+const MermaidEditor: React.FC<Props> = ({ host, showCancel = true, collabConfig }) => {
   const [code, setCode] = useState('');
   const [initialCode, setInitialCode] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -128,6 +136,17 @@ const MermaidEditor: React.FC<Props> = ({ host, showCancel = true }) => {
     }
   }, [code, isSaving, host]);
 
+  const { autoSaveEnabled, setAutoSaveEnabled, autoSaveStatus } = useAutoSave({
+    isDirty,
+    isSaving,
+    canAutoSave: !showCancel,
+    onSave: saveDrawing,
+  });
+
+  // Collaboration
+  const [collabState, collabActions] = useCollaboration('mermaid');
+  const [showCollabPanel, setShowCollabPanel] = useState(!!collabConfig?.initialRelayUrl);
+
   const handleCancel = useCallback(() => {
     if (isDirty) {
       if (!window.confirm('You have unsaved changes. Are you sure you want to close?')) {
@@ -212,19 +231,11 @@ const MermaidEditor: React.FC<Props> = ({ host, showCancel = true }) => {
 
   if (isLoading) {
     return (
-      <div style={{
-        display: 'flex', flexDirection: 'column', justifyContent: 'center',
-        alignItems: 'center', height: '100%', backgroundColor: '#fff', gap: '16px',
-      }}>
-        <div style={{
-          width: '48px', height: '48px', border: '3px solid #f3f4f6',
-          borderTop: '3px solid #0052cc', borderRadius: '50%',
-          animation: 'spin 1s linear infinite',
-        }} />
-        <div style={{ color: '#172b4d', fontSize: '16px', fontWeight: 500 }}>
+      <div className="flex flex-col justify-center items-center h-full bg-white dark:bg-gray-900 gap-4">
+        <div className="w-12 h-12 border-[3px] border-gray-100 dark:border-gray-700 border-t-blue-600 rounded-full animate-spin" />
+        <div className="text-gray-800 dark:text-gray-200 text-base font-medium">
           Loading Mermaid...
         </div>
-        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
@@ -264,6 +275,7 @@ const MermaidEditor: React.FC<Props> = ({ host, showCancel = true }) => {
                 • Unsaved changes
               </span>
             )}
+            <CollabBadge state={collabState} onClick={() => setShowCollabPanel(!showCollabPanel)} />
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button onClick={handleCancel} disabled={isSaving}
@@ -279,6 +291,10 @@ const MermaidEditor: React.FC<Props> = ({ host, showCancel = true }) => {
             </button>
           </div>
         </div>
+        {showCollabPanel && (
+          <CollabPanel state={collabState} actions={collabActions} tool="mermaid"
+            drawingId={collabConfig?.drawingId ?? ''} onClose={() => setShowCollabPanel(false)} />
+        )}
         <div style={{ flex: 1, overflow: 'hidden' }}>
           {editorPane}
         </div>
@@ -286,20 +302,46 @@ const MermaidEditor: React.FC<Props> = ({ host, showCancel = true }) => {
     );
   }
 
-  // No-toolbar mode (playground): floating dirty badge
+  // No-toolbar mode (playground): floating dirty badge + auto-save toggle
   return (
-    <div style={{ height: '100%', width: '100%', position: 'relative', backgroundColor: '#fff' }}>
+    <div className="h-full w-full relative bg-white dark:bg-gray-900">
       {editorPane}
-      {isDirty && (
-        <div style={{
-          position: 'fixed', bottom: '16px', left: '16px', padding: '6px 14px',
-          backgroundColor: 'rgba(222, 53, 11, 0.9)', color: 'white', borderRadius: '20px',
-          fontSize: '12px', fontWeight: 500, zIndex: 1000, pointerEvents: 'none',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-        }}>
-          Unsaved changes — ⌘S to save
-        </div>
-      )}
+      <div className="fixed bottom-4 right-4 z-[1000] flex flex-col items-end gap-2">
+        {showCollabPanel && (
+          <div className="bg-white/95 dark:bg-gray-800/95 rounded-lg p-3 shadow-lg min-w-[280px]">
+            <CollabPanel state={collabState} actions={collabActions} tool="mermaid"
+            drawingId={collabConfig?.drawingId ?? ''} onClose={() => setShowCollabPanel(false)} />
+          </div>
+        )}
+        <CollabBadge state={collabState} onClick={() => setShowCollabPanel(!showCollabPanel)} />
+      </div>
+      {(() => {
+        let badgeText: string | null = null;
+        let badgeBg = 'rgba(222, 53, 11, 0.9)';
+
+        if (autoSaveStatus === 'saved') {
+          badgeText = 'Saved';
+          badgeBg = 'rgba(0, 135, 90, 0.9)';
+        } else if (autoSaveStatus === 'saving') {
+          badgeText = 'Saving\u2026';
+          badgeBg = 'rgba(0, 82, 204, 0.9)';
+        } else if (isDirty && autoSaveEnabled) {
+          badgeText = 'Auto-saving\u2026';
+          badgeBg = 'rgba(255, 171, 0, 0.9)';
+        } else if (isDirty) {
+          badgeText = 'Unsaved changes \u2014 \u2318S to save';
+        }
+
+        return badgeText ? (
+          <div className="fixed bottom-4 left-4 px-3.5 py-1.5 text-white rounded-full text-xs font-medium z-[1000] pointer-events-none shadow-md"
+            style={{ backgroundColor: badgeBg }}>
+            {badgeText}
+          </div>
+        ) : null;
+      })()}
+      <div className="fixed bottom-4 right-[70px] z-[1000] bg-white/90 dark:bg-gray-800/90 rounded-lg px-2.5 py-1 shadow-md">
+        <AutoSaveToggle enabled={autoSaveEnabled} onChange={setAutoSaveEnabled} />
+      </div>
     </div>
   );
 };

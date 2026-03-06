@@ -27,6 +27,7 @@ Make Excaliframe the go-to lightweight diagramming toolkit for Confluence and th
 | Multi-drawing playground (list/detail/edit + IndexedDB) | Done |
 | Editable drawing title in playground editor | Done |
 | Playground as landing page (drawing list at `/`) | Done |
+| Rspack migration (5-10x faster builds, webpack fallback) | Done |
 | GitHub Actions CI (build, lint, audit) | TODO |
 | Atlassian Marketplace submission | TODO |
 | SBOM generation on releases | TODO |
@@ -69,6 +70,28 @@ Architecture uses `DrawingEnvelope.tool` field to identify diagram type. Host ad
 
 ---
 
+## Phase 3.5: Real-Time Collaboration
+
+**Goal:** Enable live multi-user editing and programmatic control of drawings via an external relay server.
+
+| Milestone | Status |
+|-----------|--------|
+| Proto definitions (CollabAction/CollabEvent, buf code gen) | Done |
+| Relay server (Go + servicekit, WebSocket bidi, rooms) | In Progress |
+| Browser client (CollabClient, framework-agnostic) | In Progress |
+| React hooks + UI (useCollaboration, CollabPanel, CollabBadge) | In Progress |
+| Test suite (TDD — 63 TS + ~30 Go tests) | Done |
+| `make test` unified test runner | Done |
+| Editor integration (optional `collab` prop, URL params) | Planned |
+| Element sync (Excalidraw scene diffing/merging) | Planned |
+| Cursor broadcasting (Excalidraw collaborators) | Planned |
+| Text sync (Mermaid LWW) | Planned |
+| Programmatic control (CLI/agent → live drawing via relay) | Planned |
+
+The relay is stateless — no database, no persistent storage. It routes messages between peers in real-time. Any client (browser, CLI, agent) that speaks the protocol can join sessions.
+
+---
+
 ## Phase 4: Enterprise Certification
 
 **Goal:** Achieve Atlassian's highest trust tier for marketplace apps.
@@ -84,6 +107,6 @@ Architecture uses `DrawingEnvelope.tool` field to identify diagram type. Host ad
 ## Non-Goals
 
 - **Replace Lucidchart/draw.io** — Excaliframe targets quick-sketch use cases, not formal diagrams
-- **Store data outside Confluence** — all diagram data stays in Confluence macro bodies
-- **Backend processing** — all drawing operations are client-side; server remains stateless
+- **Store data outside Confluence** — all diagram data stays in Confluence macro bodies (relay is transient, not persistent)
+- **Heavy backend processing** — drawing operations are client-side; the relay server is a stateless message router only
 - **Per-user licensing** — Excaliframe is free and open-source (MIT)

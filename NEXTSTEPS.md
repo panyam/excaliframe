@@ -30,6 +30,10 @@ Immediate and near-term action items for Excaliframe.
 
 ## In Progress
 
+### Real-Time Collaboration — Part 2 Prep
+- Part 1/1.5 complete: relay embedded, opt-in UI, dark mode theming, 67 TS tests passing
+- **Part 2** (element sync, cursors, text sync) layers on top — next major feature
+
 ### Fix False Positive "Unsaved Changes" Indicator
 - When loading an existing drawing, "Unsaved changes" appears immediately without user interaction
 - Root cause: Excalidraw mutates internal element properties (`version`, `versionNonce`, `updated`, `seed`) when loading elements into the scene
@@ -93,3 +97,7 @@ Immediate and near-term action items for Excaliframe.
 - [x] Change all editor `100vh` heights to `100%` so editors respect container bounds, not viewport
 - [x] Reduce footer height (py-8 → py-2) for compact editor layout
 - [x] Fix C4 Mermaid preview on listing/detail pages — render SVG via innerHTML instead of `<img>` to preserve `<foreignObject>` (web + Forge)
+- [x] Rspack migration — parallel rspack configs for root + site, 5-10x faster builds, webpack kept as `-old` fallback targets
+- [x] Collab Part 1 — connection infrastructure: Go relay, CollabClient with GRPCWSClient, TDD tests
+- [x] Collab Part 1.5 — embed relay in site server (`/relay/`), opt-in collab UI (dialog with relay server list, people icon badge, peer count), `?connect=` param, session ID = drawing ID, localStorage persistence
+- [x] Tailwind dark mode for editor chrome — CollabPanel, CollabBadge, AutoSaveToggle, loading spinners, status badges, popover containers all use Tailwind with `dark:` variants

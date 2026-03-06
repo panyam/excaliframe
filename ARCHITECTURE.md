@@ -83,7 +83,24 @@ excaliframe/
 │   │   ├── index.tsx               # Wires core renderer + Forge host
 │   │   ├── index.html              # HTML template
 │   │   └── styles.css
+│   ├── collab/                      # Real-time collaboration client
+│   │   ├── gen/                     # Generated protobuf-es TypeScript types
+│   │   ├── CollabClient.ts          # Framework-agnostic WebSocket client
+│   │   ├── useCollaboration.ts      # React hook for connection state
+│   │   ├── CollabPanel.tsx          # Opt-in dialog (relay server list, peers)
+│   │   ├── CollabBadge.tsx          # People icon badge with peer count
+│   │   ├── url-params.ts            # parseConnectParam, buildConnectUrl, resolveRelayUrl
+│   │   └── types.ts                 # CollabConfig, RelayServerOption, proto re-exports
 │   └── version.ts                  # Auto-generated version info
+│
+├── relay/                           # Collaboration relay server (Go)
+│   ├── protos/                      # Protobuf definitions (buf.yaml, buf.gen.yaml)
+│   │   └── excaliframe/v1/          # models/collab.proto, services/collab.proto
+│   ├── gen/go/                      # Generated Go protobuf + Connect-RPC + gRPC
+│   ├── services/                    # CollabService, Room management
+│   ├── web/server/                  # HTTP/WebSocket API (servicekit)
+│   ├── main.go                      # Entry point
+│   └── go.mod
 │
 ├── static/                         # Webpack build output (Forge resources)
 │   ├── editor/                     # Editor bundle (served by Forge)
@@ -92,7 +109,8 @@ excaliframe/
 ├── site/                           # Marketing site (Go + playground frontend)
 │   ├── package.json                # Site's own npm deps (React, Excalidraw, jsx-dom, webpack)
 │   ├── tsconfig.json               # Site TS config with @excaliframe/* path alias
-│   ├── webpack.config.js           # Builds playground bundles (3 entry points)
+│   ├── rspack.config.js            # Builds playground bundles (3 entry points) — default
+│   ├── webpack.config.js           # Builds playground bundles (3 entry points) — fallback
 │   ├── pages/                      # Playground frontend source (TypeScript/TSX)
 │   │   ├── editor/                 # Editor dispatcher (dynamic import per tool)
 │   │   │   ├── index.tsx           # Reads envelope.tool, lazy-loads correct editor
@@ -126,7 +144,8 @@ excaliframe/
 │
 ├── manifest.yml                    # Forge app manifest
 ├── package.json                    # Forge app npm dependencies
-├── webpack.config.js               # Webpack config (editor + renderer)
+├── rspack.config.js                # Rspack config (editor + renderer) — default bundler
+├── webpack.config.js               # Webpack config (editor + renderer) — fallback
 ├── tsconfig.json                   # TypeScript config (src/ only)
 └── Makefile                        # Build, deploy, install commands
 ```
@@ -239,21 +258,25 @@ Each boot module is a webpack async chunk that imports the tool's core editor + 
 | Frontend | React 18, TypeScript 5 |
 | Diagramming | @excalidraw/excalidraw 0.18, mermaid 11 |
 | Confluence API | @forge/bridge 4, @forge/api 4 |
-| Bundler | Webpack 5 (multi-config: editor + renderer) |
+| Bundler | Rspack (default), Webpack 5 (fallback) — multi-config: editor + renderer |
 | Build | npm + Makefile |
 
 ### Build & Deploy
 
 ```bash
-make build              # Webpack builds editor + renderer to static/
-make playground-build   # Webpack builds playground to site/static/playground/editor/
+make build              # Rspack builds editor + renderer to static/
+make build-old          # Webpack fallback (same output)
+make playground-build   # Rspack builds playground to site/static/playground/
+make playground-build-old # Webpack fallback
 make deploy             # Build + forge deploy -e development
 make deploy-prod        # Build + forge deploy -e production
 make install-app        # forge install -e development -p Confluence
 make tunnel             # Build + forge tunnel (live dev testing)
 ```
 
-Webpack outputs to `static/editor/` and `static/renderer/`, which Forge serves as Custom UI resources. The playground builds separately from `site/` via its own `webpack.config.js` to `site/static/playground/{listing,detail,editor}/`. Excalidraw fonts are copied to both the Forge editor and playground editor bundles.
+**Bundler**: Rspack is the default bundler (5-10x faster than Webpack). Webpack configs are kept intact as `-old` fallback targets. Both use identical output paths and config structure — `rspack.config.js` mirrors `webpack.config.js` with built-in plugin replacements (`HtmlRspackPlugin`, `CopyRspackPlugin`, `builtin:swc-loader`).
+
+Build outputs to `static/editor/` and `static/renderer/`, which Forge serves as Custom UI resources. The playground builds separately from `site/` via its own `rspack.config.js` to `site/static/playground/{listing,detail,editor}/`. Excalidraw fonts are copied to both the Forge editor and playground editor bundles.
 
 ---
 
@@ -299,7 +322,7 @@ The playground is a multi-page experience for creating, browsing, and editing dr
 
 **Self-contained site/**: The `site/` directory has its own `package.json`, `tsconfig.json`, and `webpack.config.js`. Playground page source lives in `site/pages/` and imports shared core code via the `@excaliframe/*` path alias (mapped to `../src/*`). This means `site/` can eventually move to its own repo — only the alias config changes, no source code changes.
 
-**Webpack**: `site/webpack.config.js` produces three bundles:
+**Bundler**: `site/rspack.config.js` (default) or `site/webpack.config.js` (fallback) produces three bundles:
 - `playground-listing` → `site/static/playground/listing/bundle.js` (small, jsx-dom)
 - `playground-detail` → `site/static/playground/detail/bundle.js` (small, jsx-dom)
 - `playground-editor` → `site/static/playground/editor/bundle.js` (dispatcher + async chunks)
@@ -336,6 +359,94 @@ cd site/
 make run            # Run locally
 make deploy         # Deploy to App Engine
 ```
+
+---
+
+## Real-Time Collaboration (Relay)
+
+Excaliframe supports optional real-time collaboration via an external relay server. The relay is a **stateless message router** — it can be hosted anywhere (excaliframe.com, user's server, localhost). This preserves the zero-backend philosophy: the relay holds no persistent state.
+
+### Architecture
+
+```
+┌─────────────────────┐     ┌─────────────────────┐
+│   Browser Tab A     │     │   Browser Tab B      │
+│                     │     │                      │
+│ CollabClient ←──────┼─WS──┼──→ CollabClient      │
+│ useCollaboration()  │     │  useCollaboration()  │
+│ CollabPanel/Badge   │     │  CollabPanel/Badge   │
+└─────────────────────┘     └──────────────────────┘
+          │                           │
+          └────────┐    ┌─────────────┘
+                   ▼    ▼
+          ┌─────────────────────┐
+          │    Relay Server     │
+          │  (Go + servicekit)  │
+          │                     │
+          │  Room → FanOut      │
+          │  WS bidi streaming  │
+          │  Connect-RPC unary  │
+          └─────────────────────┘
+```
+
+### Components
+
+| Layer | Component | Location | Description |
+|-------|-----------|----------|-------------|
+| **Proto** | Message types | `relay/protos/excaliframe/v1/` | CollabAction (client→server), CollabEvent (server→client), oneof discriminated unions |
+| **Relay** | CollabService | `relay/services/` | Room management, action dispatch, peer lifecycle |
+| **Relay** | WebSocket API | `relay/web/server/` | servicekit `grpcws.BidiStreamHandler` for WS bidi, Connect-RPC for unary |
+| **Client** | CollabClient | `src/collab/CollabClient.ts` | Framework-agnostic WebSocket client (no React dependency) |
+| **Client** | useCollaboration | `src/collab/useCollaboration.ts` | React hook wrapping CollabClient for state management |
+| **Client** | CollabPanel/Badge | `src/collab/CollabPanel.tsx`, `CollabBadge.tsx` | Opt-in dialog UI with relay server list and peer status icon |
+| **Client** | url-params | `src/collab/url-params.ts` | `parseConnectParam` / `buildConnectUrl` / `resolveRelayUrl` |
+
+### Embedded Relay
+
+The site server embeds the relay at `/relay/` — single server for dev and testing:
+
+```go
+// site/main.go
+relayApp := relayserver.NewRelayApp()
+relayApp.Init()
+mux.Handle("/relay/", http.StripPrefix("/relay", relayApp))
+```
+
+WebSocket endpoint: `/relay/ws/v1/{session_id}/sync`
+
+### Protocol
+
+Messages use protobuf definitions with JSON-over-WebSocket transport (servicekit envelope: `{type: "data", data: <payload>}`).
+
+- **CollabAction** (client→server): oneof `JoinRoom`, `LeaveRoom`, `PresenceUpdate`, `SceneUpdate`, `CursorUpdate`, `TextUpdate`
+- **CollabEvent** (server→client): oneof `RoomJoined`, `PeerJoined`, `PeerLeft`, `PresenceUpdate`, `SceneUpdate`, `CursorUpdate`, `TextUpdate`, `SceneInit`, `ErrorEvent`
+
+Generated code: Go in `relay/gen/go/`, TypeScript in `src/collab/gen/`.
+
+### Programmatic Control
+
+The relay isn't limited to browser-to-browser collaboration. Any client that speaks the CollabAction/CollabEvent protocol can join a session — CLI tools, coding agents, test harnesses, or backend services. This enables **programmatic control** of live drawings:
+
+- A CLI tool can push elements (rectangles, arrows, text) into a browser session via `SceneUpdate`
+- A coding agent can generate a diagram and inject it into a running editor
+- An automated pipeline can update a Mermaid diagram's text via `TextUpdate`
+
+The `client_type` field in `JoinRoom` distinguishes client kinds (`"browser"`, `"cli"`, `"api"`), allowing the UI to display programmatic peers differently. The `CollabClient` class is framework-agnostic (no React dependency), making it straightforward to use from Node.js, Deno, or any JavaScript runtime.
+
+### Editor Integration
+
+Connection is **opt-in**. Editors accept an optional `collabConfig` prop (`CollabConfig: {drawingId, initialRelayUrl?, relayServers?}`):
+
+- **CollabBadge**: Always visible — people icon when disconnected, `N` + icon when connected
+- **CollabPanel**: Dialog with predefined relay server list (radio buttons), username field, session ID (= drawing ID)
+- **`?connect=<relay-url>`**: Query param auto-opens the dialog (debugging shortcut, does not auto-connect)
+- **Session ID**: Defaults to drawing ID — everyone editing the same drawing shares a room
+- **localStorage**: Persists username and custom relay URLs across sessions
+
+### Implementation Status
+
+- **Part 1** (connection infrastructure): Complete — relay embedded in site server, opt-in UI, 67 tests passing
+- **Part 2** (element sync, cursors, text): Planned — layers on top of Part 1
 
 ---
 
@@ -404,7 +515,7 @@ Host adapters are shared across all diagram types — they store/retrieve `Drawi
 
 ### What Stays the Same
 
-- Webpack config: still two entry points (editor, renderer) for Forge
+- Bundler config: still two entry points (editor, renderer) for Forge (rspack.config.js + webpack.config.js)
 - Forge resources: still `static/editor/` and `static/renderer/`
 - Sync tool: picks up new source files automatically (entire `src/` is synced)
 - No new enterprise-side config changes needed for additional libraries
