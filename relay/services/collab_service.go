@@ -17,6 +17,7 @@ type CollabRoom struct {
 	Created        time.Time
 	OwnerClientId  string
 	OwnerBrowserId string
+	Tool           string // "excalidraw" | "mermaid" — set from first joiner
 	mu             sync.RWMutex
 }
 
@@ -135,6 +136,7 @@ func (s *CollabService) GetRoom(ctx context.Context, req *pb.GetRoomRequest) (*p
 		Peers:         room.GetPeerInfo(),
 		CreatedAt:     room.Created.Unix(),
 		OwnerClientId: room.OwnerClientId,
+		Tool:          room.Tool,
 	}, nil
 }
 
@@ -219,13 +221,16 @@ func (s *CollabService) handleJoin(ctx context.Context, action *pb.CollabAction)
 	}
 	room.AddClient(client)
 
-	// Set room ownership
+	// Set room ownership and tool
+	room.mu.Lock()
 	if isOwner {
-		room.mu.Lock()
 		room.OwnerClientId = clientId
 		room.OwnerBrowserId = browserId
-		room.mu.Unlock()
 	}
+	if room.Tool == "" {
+		room.Tool = join.GetTool()
+	}
+	room.mu.Unlock()
 
 	// Broadcast PeerJoined to existing clients
 	room.BroadcastExcept(&pb.CollabEvent{

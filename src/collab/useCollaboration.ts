@@ -104,9 +104,12 @@ export function useCollaboration(
             ownerClientId,
             isOwner: s.clientId === ownerClientId || isOwner,
           }));
-          // Owner: store active session in localStorage for same-origin auto-connect
-          if (isOwner && drawingId && returnedSessionId) {
-            localStorage.setItem(`excaliframe:activeSession:${drawingId}`, returnedSessionId);
+          // Store session mappings in localStorage for same-origin auto-connect and join code reuse
+          if (drawingId && returnedSessionId) {
+            localStorage.setItem(`excaliframe:sessionDrawing:${returnedSessionId}`, drawingId);
+            if (isOwner) {
+              localStorage.setItem(`excaliframe:activeSession:${drawingId}`, returnedSessionId);
+            }
           }
         }
         onEvent?.(event);

@@ -69,23 +69,21 @@ describe('buildConnectUrl', () => {
 });
 
 describe('encodeJoinCode / decodeJoinCode', () => {
-  it('round-trips relay URL, sessionId, and drawingId', () => {
-    const code = encodeJoinCode('wss://example.com/relay', 'sess-123', 'drawing-abc');
+  it('round-trips relay URL and sessionId', () => {
+    const code = encodeJoinCode('wss://example.com/relay', 'sess-123');
     const decoded = decodeJoinCode(code);
     expect(decoded).toEqual({
       relayUrl: 'wss://example.com/relay',
       sessionId: 'sess-123',
-      drawingId: 'drawing-abc',
     });
   });
 
   it('handles relay URLs with special characters', () => {
-    const code = encodeJoinCode('ws://localhost:8787/relay', 's1', 'd1');
+    const code = encodeJoinCode('ws://localhost:8787/relay', 's1');
     const decoded = decodeJoinCode(code);
     expect(decoded).toEqual({
       relayUrl: 'ws://localhost:8787/relay',
       sessionId: 's1',
-      drawingId: 'd1',
     });
   });
 
@@ -93,24 +91,16 @@ describe('encodeJoinCode / decodeJoinCode', () => {
     expect(decodeJoinCode('nocolons')).toBeNull();
   });
 
-  it('returns null for code with only one colon (missing drawingId)', () => {
-    expect(decodeJoinCode('abc:sess1')).toBeNull();
-  });
-
   it('returns null for empty sessionId', () => {
-    expect(decodeJoinCode('abc::drawingId')).toBeNull();
-  });
-
-  it('returns null for empty drawingId', () => {
-    expect(decodeJoinCode('abc:sess1:')).toBeNull();
+    expect(decodeJoinCode('abc:')).toBeNull();
   });
 
   it('returns null for invalid base64', () => {
-    expect(decodeJoinCode('!!!invalid:sess1:draw1')).toBeNull();
+    expect(decodeJoinCode('!!!invalid:sess1')).toBeNull();
   });
 
   it('produces URL-safe base64 (no +, /, or = padding)', () => {
-    const code = encodeJoinCode('wss://example.com/relay/path', 's', 'd');
+    const code = encodeJoinCode('wss://example.com/relay/path', 's');
     const b64Part = code.split(':')[0];
     expect(b64Part).not.toMatch(/[+/=]/);
   });

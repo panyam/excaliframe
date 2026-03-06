@@ -1473,6 +1473,7 @@ type GetRoomResponse struct {
 	Peers         []*PeerInfo            `protobuf:"bytes,2,rep,name=peers,proto3" json:"peers,omitempty"`
 	CreatedAt     int64                  `protobuf:"varint,3,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	OwnerClientId string                 `protobuf:"bytes,4,opt,name=owner_client_id,json=ownerClientId,proto3" json:"owner_client_id,omitempty"`
+	Tool          string                 `protobuf:"bytes,5,opt,name=tool,proto3" json:"tool,omitempty"` // "excalidraw" | "mermaid"
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1531,6 +1532,13 @@ func (x *GetRoomResponse) GetCreatedAt() int64 {
 func (x *GetRoomResponse) GetOwnerClientId() string {
 	if x != nil {
 		return x.OwnerClientId
+	}
+	return ""
+}
+
+func (x *GetRoomResponse) GetTool() string {
+	if x != nil {
+		return x.Tool
 	}
 	return ""
 }
@@ -1794,14 +1802,15 @@ const file_excaliframe_v1_models_collab_proto_rawDesc = "" +
 	"\x13new_owner_client_id\x18\x01 \x01(\tR\x10newOwnerClientId\"/\n" +
 	"\x0eGetRoomRequest\x12\x1d\n" +
 	"\n" +
-	"session_id\x18\x01 \x01(\tR\tsessionId\"\xae\x01\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\"\xc2\x01\n" +
 	"\x0fGetRoomResponse\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x125\n" +
 	"\x05peers\x18\x02 \x03(\v2\x1f.excaliframe.v1.models.PeerInfoR\x05peers\x12\x1d\n" +
 	"\n" +
 	"created_at\x18\x03 \x01(\x03R\tcreatedAt\x12&\n" +
-	"\x0fowner_client_id\x18\x04 \x01(\tR\rownerClientId\"\x12\n" +
+	"\x0fowner_client_id\x18\x04 \x01(\tR\rownerClientId\x12\x12\n" +
+	"\x04tool\x18\x05 \x01(\tR\x04tool\"\x12\n" +
 	"\x10ListRoomsRequest\"M\n" +
 	"\x11ListRoomsResponse\x128\n" +
 	"\x05rooms\x18\x01 \x03(\v2\".excaliframe.v1.models.RoomSummaryR\x05rooms\"j\n" +

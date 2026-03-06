@@ -51,7 +51,7 @@ const SharePanel: React.FC<SharePanelProps> = ({
     if (!sessionId) return;
     const relayUrl = getRelayUrl();
     const resolved = resolveRelayUrl(relayUrl);
-    const code = encodeJoinCode(resolved, sessionId, drawingId);
+    const code = encodeJoinCode(resolved, sessionId);
     const joinUrl = `${window.location.origin}/join/${code}`;
     navigator.clipboard.writeText(joinUrl).then(() => {
       setCopied(true);

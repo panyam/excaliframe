@@ -1,0 +1,118 @@
+{{# include "./BasePage.html" #}}
+
+{{ define "BodySection" }}
+<main class="flex-1 flex items-center justify-center p-4">
+    <div class="w-full max-w-md">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">Join Session</h2>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Paste a join link or code to collaborate on a drawing.</p>
+
+            <div class="flex gap-2">
+                <input id="join-input" type="text" placeholder="Paste join link or code…"
+                    class="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    autofocus />
+                <button id="join-btn"
+                    class="px-4 py-2 text-sm font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                    Join
+                </button>
+            </div>
+            <div id="join-error" class="hidden mt-3 px-2.5 py-1.5 text-xs rounded-md bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800"></div>
+        </div>
+    </div>
+</main>
+
+<script>
+(function() {
+    var prefill = '{{ .JoinCode }}';
+    var input = document.getElementById('join-input');
+    var btn = document.getElementById('join-btn');
+    var errEl = document.getElementById('join-error');
+
+    if (prefill) {
+        input.value = prefill;
+        // Auto-process prefilled code after a tick (allows page to render)
+        setTimeout(function() { processCode(prefill); }, 0);
+    }
+
+    btn.addEventListener('click', function() {
+        var val = input.value.trim();
+        if (val) processCode(val);
+    });
+
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            var val = input.value.trim();
+            if (val) processCode(val);
+        }
+    });
+
+    function processCode(raw) {
+        errEl.classList.add('hidden');
+
+        // Extract code from full URL if pasted (e.g. https://host/join/CODE)
+        var code = raw;
+        var joinIdx = raw.indexOf('/join/');
+        if (joinIdx >= 0) {
+            code = raw.substring(joinIdx + 6);
+        }
+
+        // Decode: base64url(relayUrl):sessionId
+        var colonIdx = code.indexOf(':');
+        if (colonIdx < 0) { showError('Invalid join code'); return; }
+        var b64 = code.substring(0, colonIdx);
+        var sessionId = code.substring(colonIdx + 1);
+        if (!sessionId) { showError('Invalid join code'); return; }
+        var relayUrl;
+        try {
+            relayUrl = atob(b64.replace(/-/g, '+').replace(/_/g, '/'));
+        } catch(e) {
+            showError('Invalid join code');
+            return;
+        }
+
+        // Check localStorage for existing mapping (same-origin revisit)
+        var existingDrawingId = localStorage.getItem('excaliframe:sessionDrawing:' + sessionId);
+        if (existingDrawingId) {
+            redirectToEditor(existingDrawingId, relayUrl, sessionId);
+            return;
+        }
+
+        // First visit: fetch room info from relay for tool type, create new drawing
+        btn.disabled = true;
+        btn.textContent = 'Joining\u2026';
+        fetch('/relay/api/v1/rooms/' + encodeURIComponent(sessionId))
+            .then(function(r) { return r.ok ? r.json() : Promise.reject('not found'); })
+            .then(function(room) {
+                var tool = room.tool || 'excalidraw';
+                var newDrawingId = crypto.randomUUID();
+                localStorage.setItem('excaliframe:sessionDrawing:' + sessionId, newDrawingId);
+                redirectToEditor(newDrawingId, relayUrl, sessionId, tool);
+            })
+            .catch(function() {
+                btn.disabled = false;
+                btn.textContent = 'Join';
+                showError('Session not found or has ended.');
+            });
+    }
+
+    function redirectToEditor(drawingId, relay, session, tool) {
+        var url = '/playground/' + encodeURIComponent(drawingId) + '/edit?autoJoin=1'
+            + '&relay=' + encodeURIComponent(relay)
+            + '&session=' + encodeURIComponent(session);
+        if (tool) url += '&tool=' + encodeURIComponent(tool);
+        window.location.href = url;
+    }
+
+    function showError(msg) {
+        errEl.textContent = msg;
+        errEl.classList.remove('hidden');
+    }
+})();
+</script>
+{{ end }}
+
+{{ define "PostBodySection" }}{{ end }}
+
+{{ define "JoinPage" }}
+{{ template "BasePage" . }}
+{{ end }}

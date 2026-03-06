@@ -62,7 +62,7 @@ if (!drawingId) {
 
   // Load drawing first to get the tool type, then dynamically import the editor
   host.loadDrawing().then(async (envelope) => {
-    const tool = envelope?.tool || 'excalidraw';
+    const tool = envelope?.tool || params.get('tool') || 'excalidraw';
     const Editor = await loadEditor(tool);
 
     const collabConfig: CollabConfig = {
