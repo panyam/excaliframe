@@ -115,6 +115,95 @@ describe('ExcalidrawSyncAdapter', () => {
       expect((result!.payload.elements as any[])[0].id).toBe('el-2');
     });
 
+    it('detects in-place mutation (mutateElement style)', () => {
+      // Excalidraw's mutateElement() mutates element objects in place during
+      // drag/resize. The SAME object reference stays in the elements array but
+      // its version/versionNonce fields change. The adapter must detect this
+      // because it stores version snapshots, not object references.
+      const el = makeElement({ id: 'el-1', x: 0, version: 1, versionNonce: 100 });
+      const api = makeMockApi([el]);
+      const adapter = new ExcalidrawSyncAdapter(api);
+
+      adapter.computeOutgoing(); // initial sync — stores version snapshot
+
+      // Simulate in-place mutation: SAME object, changed fields
+      el.x = 50;
+      el.y = 30;
+      el.version = 2;
+      el.versionNonce = 200;
+      // api._state.elements still contains the same `el` reference
+
+      const result = adapter.computeOutgoing();
+      expect(result).not.toBeNull();
+      const elements = result!.payload.elements as any[];
+      expect(elements).toHaveLength(1);
+      expect(elements[0].id).toBe('el-1');
+      expect(elements[0].version).toBe(2);
+      // Verify the serialized data reflects the mutated position
+      const data = JSON.parse(elements[0].data);
+      expect(data.x).toBe(50);
+      expect(data.y).toBe(30);
+    });
+
+    it('handles repeated in-place mutations', () => {
+      // Ensure tracking updates correctly after each flush so subsequent
+      // in-place mutations are also detected (not just the first one).
+      const el = makeElement({ id: 'el-1', x: 0, version: 1, versionNonce: 100 });
+      const api = makeMockApi([el]);
+      const adapter = new ExcalidrawSyncAdapter(api);
+
+      adapter.computeOutgoing(); // initial sync
+
+      // First mutation (drag start)
+      el.x = 10;
+      el.version = 2;
+      el.versionNonce = 200;
+      expect(adapter.computeOutgoing()).not.toBeNull();
+
+      // Second mutation (still dragging) — should also be detected
+      el.x = 20;
+      el.version = 3;
+      el.versionNonce = 300;
+      const result = adapter.computeOutgoing();
+      expect(result).not.toBeNull();
+      expect((result!.payload.elements as any[])[0].version).toBe(3);
+
+      // No change — should return null
+      expect(adapter.computeOutgoing()).toBeNull();
+    });
+
+    it('detects in-place mutation after applyRemote', () => {
+      // After receiving a remote update, ensure in-place local mutations
+      // on the same element are still detected for outgoing sync.
+      const el = makeElement({ id: 'el-1', x: 0, version: 1, versionNonce: 100 });
+      const api = makeMockApi([el]);
+      const adapter = new ExcalidrawSyncAdapter(api);
+
+      adapter.computeOutgoing(); // initial sync
+
+      // Receive remote update that bumps version
+      const remoteEl = makeElement({ id: 'el-1', x: 30, version: 3, versionNonce: 300 });
+      adapter.applyRemote('peer-1', {
+        elements: [{
+          id: 'el-1', version: 3, versionNonce: 300,
+          data: JSON.stringify(remoteEl), deleted: false,
+        }],
+      });
+
+      // No local change — should return null
+      expect(adapter.computeOutgoing()).toBeNull();
+
+      // Now mutate the element in-place locally
+      const currentEl = api._state.elements[0];
+      currentEl.x = 60;
+      currentEl.version = 4;
+      currentEl.versionNonce = 400;
+
+      const result = adapter.computeOutgoing();
+      expect(result).not.toBeNull();
+      expect((result!.payload.elements as any[])[0].version).toBe(4);
+    });
+
     it('detects deleted elements', () => {
       const el = makeElement();
       const api = makeMockApi([el]);

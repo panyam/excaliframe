@@ -140,6 +140,8 @@ export class CollabClient {
   }
 
   private handleEvent(data: any): void {
+    const eventKeys = Object.keys(data).filter(k => k !== 'eventId' && k !== 'fromClientId' && k !== 'serverTimestamp');
+    console.log('[COLLAB] Received event:', eventKeys.join(','), 'from:', data.fromClientId);
     this.options.onEvent?.(data);
 
     // Standard protobuf JSON: oneof fields appear at the top level

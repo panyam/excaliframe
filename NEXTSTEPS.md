@@ -34,6 +34,7 @@ Immediate and near-term action items for Excaliframe.
 - PR #8: Share button, owner lifecycle, join codes, same-origin auto-connect, cross-origin join page
 - Parts 1-2 complete: relay, transport, peer tracking, real-time sync (109 TS tests passing)
 - Part 3 adds: owner-initiated sharing, ownership transfer, session kill, auto-connect
+- Fixed: Excalidraw in-place mutation sync bug (store version snapshots, not element refs)
 - Remaining: smart reconnect (currently disabled), cursor rendering, binary file sync
 
 ### Fix False Positive "Unsaved Changes" Indicator

@@ -69,11 +69,18 @@ export function useSync(
   }, []);
 
   const flushOutgoing = useCallback(() => {
-    if (!adapter || !connection.isConnected) return;
+    if (!adapter || !connection.isConnected) {
+      console.log('[SYNC] flushOutgoing skipped: adapter=%s connected=%s', !!adapter, connection.isConnected);
+      return;
+    }
 
     const update = adapter.computeOutgoing();
-    if (!update) return;
+    if (!update) {
+      console.log('[SYNC] flushOutgoing: no changes to send');
+      return;
+    }
 
+    console.log('[SYNC] flushOutgoing: sending %s', update.type, update.payload);
     // Send using the proto JSON field name matching the update type
     connection.send({ [update.type]: update.payload });
   }, [adapter, connection]);
@@ -98,11 +105,16 @@ export function useSync(
   }, [adapter, connection, cursorThrottleMs]);
 
   const handleEvent = useCallback((event: any) => {
-    if (!adapter) return;
+    if (!adapter) {
+      console.log('[SYNC] handleEvent: no adapter, ignoring', event);
+      return;
+    }
 
     if (event.sceneUpdate) {
+      console.log('[SYNC] handleEvent: sceneUpdate from %s, elements=%d', event.fromClientId, event.sceneUpdate?.elements?.length ?? 0);
       adapter.applyRemote(event.fromClientId ?? '', event.sceneUpdate);
     } else if (event.textUpdate) {
+      console.log('[SYNC] handleEvent: textUpdate from %s', event.fromClientId);
       adapter.applyRemote(event.fromClientId ?? '', event.textUpdate);
     } else if (event.cursorUpdate && event.fromClientId) {
       adapter.applyRemoteCursor({

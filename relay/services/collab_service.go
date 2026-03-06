@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -122,6 +123,7 @@ func (s *CollabService) HandleAction(ctx context.Context, action *pb.CollabActio
 	if action == nil {
 		return nil, fmt.Errorf("nil action")
 	}
+	log.Printf("[RELAY] HandleAction from client=%s type=%T", action.GetClientId(), action.Action)
 	switch action.Action.(type) {
 	case *pb.CollabAction_Join:
 		return s.handleJoin(ctx, action)
@@ -431,6 +433,8 @@ func (s *CollabService) handleBroadcast(ctx context.Context, action *pb.CollabAc
 		return nil, fmt.Errorf("unsupported broadcast action type")
 	}
 
+	targetCount := room.ClientCount() - 1
+	log.Printf("[RELAY] Broadcasting %T from client=%s to %d peers in room=%s", event.Event, clientId, targetCount, room.SessionId)
 	room.BroadcastExcept(event, clientId)
 
 	return nil, nil

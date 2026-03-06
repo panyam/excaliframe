@@ -201,6 +201,7 @@ const ExcalidrawEditor: React.FC<Props> = ({ host, showCancel = true, collabConf
       // timer and prevent outgoing updates from ever being sent.
       const hash = hashElementsVersion(elements);
       if (hash !== lastNotifiedHash.current) {
+        console.log('[EXCAL] Element hash changed: %d → %d, notifying sync', lastNotifiedHash.current, hash);
         lastNotifiedHash.current = hash;
         syncActionsRef.current?.notifyLocalChange();
       }

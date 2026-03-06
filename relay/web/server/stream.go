@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"io"
+	"log"
 	"sync"
 
 	pb "github.com/user/excaliframe/relay/gen/go/excaliframe/v1/models"
@@ -48,6 +49,7 @@ func (s *CollabBidiStream) Send(action *pb.CollabAction) error {
 			s.sessionId = rj.GetSessionId()
 			s.clientId = rj.GetClientId()
 			s.mu.Unlock()
+			log.Printf("[STREAM] Client %s joined session %s, starting bridge goroutine", rj.GetClientId(), rj.GetSessionId())
 
 			// Bridge: forward events from the service client's SendCh to the stream's sendCh
 			if clientCh := s.service.GetClientSendCh(rj.GetSessionId(), rj.GetClientId()); clientCh != nil {
@@ -56,8 +58,10 @@ func (s *CollabBidiStream) Send(action *pb.CollabAction) error {
 						select {
 						case event, ok := <-clientCh:
 							if !ok {
+								log.Printf("[STREAM] Bridge channel closed for client %s", rj.GetClientId())
 								return
 							}
+							log.Printf("[STREAM] Forwarding event %T to client %s", event.Event, rj.GetClientId())
 							select {
 							case s.sendCh <- event:
 							case <-s.ctx.Done():
@@ -68,6 +72,8 @@ func (s *CollabBidiStream) Send(action *pb.CollabAction) error {
 						}
 					}
 				}()
+			} else {
+				log.Printf("[STREAM] WARNING: No client channel found for %s/%s", rj.GetSessionId(), rj.GetClientId())
 			}
 		}
 	}
