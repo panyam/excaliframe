@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file excaliframe/v1/models/collab.proto.
  */
 export const file_excaliframe_v1_models_collab: GenFile = /*@__PURE__*/
-  fileDesc("CiJleGNhbGlmcmFtZS92MS9tb2RlbHMvY29sbGFiLnByb3RvEhVleGNhbGlmcmFtZS52MS5tb2RlbHMi6wMKDENvbGxhYkFjdGlvbhIRCglhY3Rpb25faWQYASABKAkSEQoJY2xpZW50X2lkGAIgASgJEhEKCXRpbWVzdGFtcBgDIAEoAxIvCgRqb2luGAogASgLMh8uZXhjYWxpZnJhbWUudjEubW9kZWxzLkpvaW5Sb29tSAASMQoFbGVhdmUYCyABKAsyIC5leGNhbGlmcmFtZS52MS5tb2RlbHMuTGVhdmVSb29tSAASOQoIcHJlc2VuY2UYDCABKAsyJS5leGNhbGlmcmFtZS52MS5tb2RlbHMuUHJlc2VuY2VVcGRhdGVIABI6CgxzY2VuZV91cGRhdGUYDSABKAsyIi5leGNhbGlmcmFtZS52MS5tb2RlbHMuU2NlbmVVcGRhdGVIABI8Cg1jdXJzb3JfdXBkYXRlGA4gASgLMiMuZXhjYWxpZnJhbWUudjEubW9kZWxzLkN1cnNvclVwZGF0ZUgAEjgKC3RleHRfdXBkYXRlGA8gASgLMiEuZXhjYWxpZnJhbWUudjEubW9kZWxzLlRleHRVcGRhdGVIABJFChJzY2VuZV9pbml0X3JlcXVlc3QYECABKAsyJy5leGNhbGlmcmFtZS52MS5tb2RlbHMuU2NlbmVJbml0UmVxdWVzdEgAQggKBmFjdGlvbiJnCghKb2luUm9vbRISCgpzZXNzaW9uX2lkGAEgASgJEhAKCHVzZXJuYW1lGAIgASgJEgwKBHRvb2wYAyABKAkSEwoLY2xpZW50X3R5cGUYBCABKAkSEgoKYXZhdGFyX3VybBgFIAEoCSIbCglMZWF2ZVJvb20SDgoGcmVhc29uGAEgASgJIjUKDlByZXNlbmNlVXBkYXRlEhEKCWlzX2FjdGl2ZRgBIAEoCBIQCgh1c2VybmFtZRgCIAEoCSJFCgtTY2VuZVVwZGF0ZRI2CghlbGVtZW50cxgBIAMoCzIkLmV4Y2FsaWZyYW1lLnYxLm1vZGVscy5FbGVtZW50VXBkYXRlImIKDUVsZW1lbnRVcGRhdGUSCgoCaWQYASABKAkSDwoHdmVyc2lvbhgCIAEoBRIVCg12ZXJzaW9uX25vbmNlGAMgASgFEgwKBGRhdGEYBCABKAkSDwoHZGVsZXRlZBgFIAEoCCLYAQoMQ3Vyc29yVXBkYXRlEgkKAXgYASABKAISCQoBeRgCIAEoAhIMCgR0b29sGAMgASgJEg4KBmJ1dHRvbhgEIAEoCRJZChRzZWxlY3RlZF9lbGVtZW50X2lkcxgFIAMoCzI7LmV4Y2FsaWZyYW1lLnYxLm1vZGVscy5DdXJzb3JVcGRhdGUuU2VsZWN0ZWRFbGVtZW50SWRzRW50cnkaOQoXU2VsZWN0ZWRFbGVtZW50SWRzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgIOgI4ASJECgpUZXh0VXBkYXRlEgwKBHRleHQYASABKAkSDwoHdmVyc2lvbhgCIAEoBRIXCg9jdXJzb3JfcG9zaXRpb24YAyABKAUiEgoQU2NlbmVJbml0UmVxdWVzdCLfBAoLQ29sbGFiRXZlbnQSEAoIZXZlbnRfaWQYASABKAkSFgoOZnJvbV9jbGllbnRfaWQYAiABKAkSGAoQc2VydmVyX3RpbWVzdGFtcBgDIAEoAxI4Cgtyb29tX2pvaW5lZBgKIAEoCzIhLmV4Y2FsaWZyYW1lLnYxLm1vZGVscy5Sb29tSm9pbmVkSAASOAoLcGVlcl9qb2luZWQYCyABKAsyIS5leGNhbGlmcmFtZS52MS5tb2RlbHMuUGVlckpvaW5lZEgAEjQKCXBlZXJfbGVmdBgMIAEoCzIfLmV4Y2FsaWZyYW1lLnYxLm1vZGVscy5QZWVyTGVmdEgAEjkKCHByZXNlbmNlGA0gASgLMiUuZXhjYWxpZnJhbWUudjEubW9kZWxzLlByZXNlbmNlVXBkYXRlSAASOgoMc2NlbmVfdXBkYXRlGA4gASgLMiIuZXhjYWxpZnJhbWUudjEubW9kZWxzLlNjZW5lVXBkYXRlSAASPAoNY3Vyc29yX3VwZGF0ZRgPIAEoCzIjLmV4Y2FsaWZyYW1lLnYxLm1vZGVscy5DdXJzb3JVcGRhdGVIABI4Cgt0ZXh0X3VwZGF0ZRgQIAEoCzIhLmV4Y2FsaWZyYW1lLnYxLm1vZGVscy5UZXh0VXBkYXRlSAASNgoKc2NlbmVfaW5pdBgRIAEoCzIgLmV4Y2FsaWZyYW1lLnYxLm1vZGVscy5TY2VuZUluaXRIABIyCgVlcnJvchgSIAEoCzIhLmV4Y2FsaWZyYW1lLnYxLm1vZGVscy5FcnJvckV2ZW50SABCBwoFZXZlbnQiYwoKUm9vbUpvaW5lZBIRCgljbGllbnRfaWQYASABKAkSEgoKc2Vzc2lvbl9pZBgCIAEoCRIuCgVwZWVycxgDIAMoCzIfLmV4Y2FsaWZyYW1lLnYxLm1vZGVscy5QZWVySW5mbyJrCghQZWVySW5mbxIRCgljbGllbnRfaWQYASABKAkSEAoIdXNlcm5hbWUYAiABKAkSEgoKYXZhdGFyX3VybBgDIAEoCRITCgtjbGllbnRfdHlwZRgEIAEoCRIRCglpc19hY3RpdmUYBSABKAgiOwoKUGVlckpvaW5lZBItCgRwZWVyGAEgASgLMh8uZXhjYWxpZnJhbWUudjEubW9kZWxzLlBlZXJJbmZvIkEKCFBlZXJMZWZ0EhEKCWNsaWVudF9pZBgBIAEoCRIOCgZyZWFzb24YAiABKAkSEgoKcGVlcl9jb3VudBgDIAEoBSJdCglTY2VuZUluaXQSNgoIZWxlbWVudHMYASADKAsyJC5leGNhbGlmcmFtZS52MS5tb2RlbHMuRWxlbWVudFVwZGF0ZRIYChBiYWNrZ3JvdW5kX2NvbG9yGAIgASgJIisKCkVycm9yRXZlbnQSDAoEY29kZRgBIAEoCRIPCgdtZXNzYWdlGAIgASgJIiQKDkdldFJvb21SZXF1ZXN0EhIKCnNlc3Npb25faWQYASABKAkiaQoPR2V0Um9vbVJlc3BvbnNlEhIKCnNlc3Npb25faWQYASABKAkSLgoFcGVlcnMYAiADKAsyHy5leGNhbGlmcmFtZS52MS5tb2RlbHMuUGVlckluZm8SEgoKY3JlYXRlZF9hdBgDIAEoAyISChBMaXN0Um9vbXNSZXF1ZXN0IkYKEUxpc3RSb29tc1Jlc3BvbnNlEjEKBXJvb21zGAEgAygLMiIuZXhjYWxpZnJhbWUudjEubW9kZWxzLlJvb21TdW1tYXJ5IkkKC1Jvb21TdW1tYXJ5EhIKCnNlc3Npb25faWQYASABKAkSEgoKcGVlcl9jb3VudBgCIAEoBRISCgpjcmVhdGVkX2F0GAMgASgDQt4BChljb20uZXhjYWxpZnJhbWUudjEubW9kZWxzQgtDb2xsYWJQcm90b1ABWj5naXRodWIuY29tL3VzZXIvZXhjYWxpZnJhbWUvcmVsYXkvZ2VuL2dvL2V4Y2FsaWZyYW1lL3YxL21vZGVsc6ICA0VWTaoCFUV4Y2FsaWZyYW1lLlYxLk1vZGVsc8oCFUV4Y2FsaWZyYW1lXFYxXE1vZGVsc+ICIUV4Y2FsaWZyYW1lXFYxXE1vZGVsc1xHUEJNZXRhZGF0YeoCF0V4Y2FsaWZyYW1lOjpWMTo6TW9kZWxzYgZwcm90bzM");
+  fileDesc("CiJleGNhbGlmcmFtZS92MS9tb2RlbHMvY29sbGFiLnByb3RvEhVleGNhbGlmcmFtZS52MS5tb2RlbHMitAQKDENvbGxhYkFjdGlvbhIRCglhY3Rpb25faWQYASABKAkSEQoJY2xpZW50X2lkGAIgASgJEhEKCXRpbWVzdGFtcBgDIAEoAxIvCgRqb2luGAogASgLMh8uZXhjYWxpZnJhbWUudjEubW9kZWxzLkpvaW5Sb29tSAASMQoFbGVhdmUYCyABKAsyIC5leGNhbGlmcmFtZS52MS5tb2RlbHMuTGVhdmVSb29tSAASOQoIcHJlc2VuY2UYDCABKAsyJS5leGNhbGlmcmFtZS52MS5tb2RlbHMuUHJlc2VuY2VVcGRhdGVIABI6CgxzY2VuZV91cGRhdGUYDSABKAsyIi5leGNhbGlmcmFtZS52MS5tb2RlbHMuU2NlbmVVcGRhdGVIABI8Cg1jdXJzb3JfdXBkYXRlGA4gASgLMiMuZXhjYWxpZnJhbWUudjEubW9kZWxzLkN1cnNvclVwZGF0ZUgAEjgKC3RleHRfdXBkYXRlGA8gASgLMiEuZXhjYWxpZnJhbWUudjEubW9kZWxzLlRleHRVcGRhdGVIABJFChJzY2VuZV9pbml0X3JlcXVlc3QYECABKAsyJy5leGNhbGlmcmFtZS52MS5tb2RlbHMuU2NlbmVJbml0UmVxdWVzdEgAEkcKE3NjZW5lX2luaXRfcmVzcG9uc2UYESABKAsyKC5leGNhbGlmcmFtZS52MS5tb2RlbHMuU2NlbmVJbml0UmVzcG9uc2VIAEIICgZhY3Rpb24iogEKCEpvaW5Sb29tEhIKCnNlc3Npb25faWQYASABKAkSEAoIdXNlcm5hbWUYAiABKAkSDAoEdG9vbBgDIAEoCRITCgtjbGllbnRfdHlwZRgEIAEoCRISCgphdmF0YXJfdXJsGAUgASgJEhAKCGlzX293bmVyGAYgASgIEhIKCmJyb3dzZXJfaWQYByABKAkSEwoLY2xpZW50X2hpbnQYCCABKAkiGwoJTGVhdmVSb29tEg4KBnJlYXNvbhgBIAEoCSI1Cg5QcmVzZW5jZVVwZGF0ZRIRCglpc19hY3RpdmUYASABKAgSEAoIdXNlcm5hbWUYAiABKAkiRQoLU2NlbmVVcGRhdGUSNgoIZWxlbWVudHMYASADKAsyJC5leGNhbGlmcmFtZS52MS5tb2RlbHMuRWxlbWVudFVwZGF0ZSJiCg1FbGVtZW50VXBkYXRlEgoKAmlkGAEgASgJEg8KB3ZlcnNpb24YAiABKAUSFQoNdmVyc2lvbl9ub25jZRgDIAEoBRIMCgRkYXRhGAQgASgJEg8KB2RlbGV0ZWQYBSABKAgi2AEKDEN1cnNvclVwZGF0ZRIJCgF4GAEgASgCEgkKAXkYAiABKAISDAoEdG9vbBgDIAEoCRIOCgZidXR0b24YBCABKAkSWQoUc2VsZWN0ZWRfZWxlbWVudF9pZHMYBSADKAsyOy5leGNhbGlmcmFtZS52MS5tb2RlbHMuQ3Vyc29yVXBkYXRlLlNlbGVjdGVkRWxlbWVudElkc0VudHJ5GjkKF1NlbGVjdGVkRWxlbWVudElkc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCDoCOAEiRAoKVGV4dFVwZGF0ZRIMCgR0ZXh0GAEgASgJEg8KB3ZlcnNpb24YAiABKAUSFwoPY3Vyc29yX3Bvc2l0aW9uGAMgASgFIhIKEFNjZW5lSW5pdFJlcXVlc3QiJAoRU2NlbmVJbml0UmVzcG9uc2USDwoHcGF5bG9hZBgBIAEoCSKzBgoLQ29sbGFiRXZlbnQSEAoIZXZlbnRfaWQYASABKAkSFgoOZnJvbV9jbGllbnRfaWQYAiABKAkSGAoQc2VydmVyX3RpbWVzdGFtcBgDIAEoAxI4Cgtyb29tX2pvaW5lZBgKIAEoCzIhLmV4Y2FsaWZyYW1lLnYxLm1vZGVscy5Sb29tSm9pbmVkSAASOAoLcGVlcl9qb2luZWQYCyABKAsyIS5leGNhbGlmcmFtZS52MS5tb2RlbHMuUGVlckpvaW5lZEgAEjQKCXBlZXJfbGVmdBgMIAEoCzIfLmV4Y2FsaWZyYW1lLnYxLm1vZGVscy5QZWVyTGVmdEgAEjkKCHByZXNlbmNlGA0gASgLMiUuZXhjYWxpZnJhbWUudjEubW9kZWxzLlByZXNlbmNlVXBkYXRlSAASOgoMc2NlbmVfdXBkYXRlGA4gASgLMiIuZXhjYWxpZnJhbWUudjEubW9kZWxzLlNjZW5lVXBkYXRlSAASPAoNY3Vyc29yX3VwZGF0ZRgPIAEoCzIjLmV4Y2FsaWZyYW1lLnYxLm1vZGVscy5DdXJzb3JVcGRhdGVIABI4Cgt0ZXh0X3VwZGF0ZRgQIAEoCzIhLmV4Y2FsaWZyYW1lLnYxLm1vZGVscy5UZXh0VXBkYXRlSAASRwoTc2NlbmVfaW5pdF9yZXNwb25zZRgRIAEoCzIoLmV4Y2FsaWZyYW1lLnYxLm1vZGVscy5TY2VuZUluaXRSZXNwb25zZUgAEjIKBWVycm9yGBIgASgLMiEuZXhjYWxpZnJhbWUudjEubW9kZWxzLkVycm9yRXZlbnRIABJFChJzY2VuZV9pbml0X3JlcXVlc3QYEyABKAsyJy5leGNhbGlmcmFtZS52MS5tb2RlbHMuU2NlbmVJbml0UmVxdWVzdEgAEjwKDXNlc3Npb25fZW5kZWQYFCABKAsyIy5leGNhbGlmcmFtZS52MS5tb2RlbHMuU2Vzc2lvbkVuZGVkSAASPAoNb3duZXJfY2hhbmdlZBgVIAEoCzIjLmV4Y2FsaWZyYW1lLnYxLm1vZGVscy5Pd25lckNoYW5nZWRIAEIHCgVldmVudCJ8CgpSb29tSm9pbmVkEhEKCWNsaWVudF9pZBgBIAEoCRISCgpzZXNzaW9uX2lkGAIgASgJEi4KBXBlZXJzGAMgAygLMh8uZXhjYWxpZnJhbWUudjEubW9kZWxzLlBlZXJJbmZvEhcKD293bmVyX2NsaWVudF9pZBgEIAEoCSJ9CghQZWVySW5mbxIRCgljbGllbnRfaWQYASABKAkSEAoIdXNlcm5hbWUYAiABKAkSEgoKYXZhdGFyX3VybBgDIAEoCRITCgtjbGllbnRfdHlwZRgEIAEoCRIRCglpc19hY3RpdmUYBSABKAgSEAoIaXNfb3duZXIYBiABKAgiOwoKUGVlckpvaW5lZBItCgRwZWVyGAEgASgLMh8uZXhjYWxpZnJhbWUudjEubW9kZWxzLlBlZXJJbmZvIkEKCFBlZXJMZWZ0EhEKCWNsaWVudF9pZBgBIAEoCRIOCgZyZWFzb24YAiABKAkSEgoKcGVlcl9jb3VudBgDIAEoBSIrCgpFcnJvckV2ZW50EgwKBGNvZGUYASABKAkSDwoHbWVzc2FnZRgCIAEoCSIeCgxTZXNzaW9uRW5kZWQSDgoGcmVhc29uGAEgASgJIisKDE93bmVyQ2hhbmdlZBIbChNuZXdfb3duZXJfY2xpZW50X2lkGAEgASgJIiQKDkdldFJvb21SZXF1ZXN0EhIKCnNlc3Npb25faWQYASABKAkikAEKD0dldFJvb21SZXNwb25zZRISCgpzZXNzaW9uX2lkGAEgASgJEi4KBXBlZXJzGAIgAygLMh8uZXhjYWxpZnJhbWUudjEubW9kZWxzLlBlZXJJbmZvEhIKCmNyZWF0ZWRfYXQYAyABKAMSFwoPb3duZXJfY2xpZW50X2lkGAQgASgJEgwKBHRvb2wYBSABKAkiEgoQTGlzdFJvb21zUmVxdWVzdCJGChFMaXN0Um9vbXNSZXNwb25zZRIxCgVyb29tcxgBIAMoCzIiLmV4Y2FsaWZyYW1lLnYxLm1vZGVscy5Sb29tU3VtbWFyeSJJCgtSb29tU3VtbWFyeRISCgpzZXNzaW9uX2lkGAEgASgJEhIKCnBlZXJfY291bnQYAiABKAUSEgoKY3JlYXRlZF9hdBgDIAEoA0LeAQoZY29tLmV4Y2FsaWZyYW1lLnYxLm1vZGVsc0ILQ29sbGFiUHJvdG9QAVo+Z2l0aHViLmNvbS91c2VyL2V4Y2FsaWZyYW1lL3JlbGF5L2dlbi9nby9leGNhbGlmcmFtZS92MS9tb2RlbHOiAgNFVk2qAhVFeGNhbGlmcmFtZS5WMS5Nb2RlbHPKAhVFeGNhbGlmcmFtZVxWMVxNb2RlbHPiAiFFeGNhbGlmcmFtZVxWMVxNb2RlbHNcR1BCTWV0YWRhdGHqAhdFeGNhbGlmcmFtZTo6VjE6Ok1vZGVsc2IGcHJvdG8z");
 
 /**
  * @generated from message excaliframe.v1.models.CollabAction
@@ -78,6 +78,12 @@ export type CollabAction = Message<"excaliframe.v1.models.CollabAction"> & {
      */
     value: SceneInitRequest;
     case: "sceneInitRequest";
+  } | {
+    /**
+     * @generated from field: excaliframe.v1.models.SceneInitResponse scene_init_response = 17;
+     */
+    value: SceneInitResponse;
+    case: "sceneInitResponse";
   } | { case: undefined; value?: undefined };
 };
 
@@ -93,6 +99,8 @@ export const CollabActionSchema: GenMessage<CollabAction> = /*@__PURE__*/
  */
 export type JoinRoom = Message<"excaliframe.v1.models.JoinRoom"> & {
   /**
+   * empty = relay generates one (owner creating new session)
+   *
    * @generated from field: string session_id = 1;
    */
   sessionId: string;
@@ -120,6 +128,25 @@ export type JoinRoom = Message<"excaliframe.v1.models.JoinRoom"> & {
    * @generated from field: string avatar_url = 5;
    */
   avatarUrl: string;
+
+  /**
+   * @generated from field: bool is_owner = 6;
+   */
+  isOwner: boolean;
+
+  /**
+   * localStorage UUID for ownership transfer
+   *
+   * @generated from field: string browser_id = 7;
+   */
+  browserId: string;
+
+  /**
+   * opaque hint (e.g. browserId:drawingId) for session reuse
+   *
+   * @generated from field: string client_hint = 8;
+   */
+  clientHint: string;
 };
 
 /**
@@ -169,7 +196,7 @@ export const PresenceUpdateSchema: GenMessage<PresenceUpdate> = /*@__PURE__*/
   messageDesc(file_excaliframe_v1_models_collab, 3);
 
 /**
- * Part 2 messages (defined now, implemented later):
+ * Part 2 messages:
  *
  * @generated from message excaliframe.v1.models.SceneUpdate
  */
@@ -304,6 +331,27 @@ export const SceneInitRequestSchema: GenMessage<SceneInitRequest> = /*@__PURE__*
   messageDesc(file_excaliframe_v1_models_collab, 8);
 
 /**
+ * Tool-agnostic response to SceneInitRequest. Payload is a JSON blob
+ * whose schema is owned by each tool's SyncAdapter (Excalidraw elements,
+ * Mermaid text, etc.).
+ *
+ * @generated from message excaliframe.v1.models.SceneInitResponse
+ */
+export type SceneInitResponse = Message<"excaliframe.v1.models.SceneInitResponse"> & {
+  /**
+   * @generated from field: string payload = 1;
+   */
+  payload: string;
+};
+
+/**
+ * Describes the message excaliframe.v1.models.SceneInitResponse.
+ * Use `create(SceneInitResponseSchema)` to create a new message.
+ */
+export const SceneInitResponseSchema: GenMessage<SceneInitResponse> = /*@__PURE__*/
+  messageDesc(file_excaliframe_v1_models_collab, 9);
+
+/**
  * @generated from message excaliframe.v1.models.CollabEvent
  */
 export type CollabEvent = Message<"excaliframe.v1.models.CollabEvent"> & {
@@ -371,16 +419,34 @@ export type CollabEvent = Message<"excaliframe.v1.models.CollabEvent"> & {
     case: "textUpdate";
   } | {
     /**
-     * @generated from field: excaliframe.v1.models.SceneInit scene_init = 17;
+     * @generated from field: excaliframe.v1.models.SceneInitResponse scene_init_response = 17;
      */
-    value: SceneInit;
-    case: "sceneInit";
+    value: SceneInitResponse;
+    case: "sceneInitResponse";
   } | {
     /**
      * @generated from field: excaliframe.v1.models.ErrorEvent error = 18;
      */
     value: ErrorEvent;
     case: "error";
+  } | {
+    /**
+     * @generated from field: excaliframe.v1.models.SceneInitRequest scene_init_request = 19;
+     */
+    value: SceneInitRequest;
+    case: "sceneInitRequest";
+  } | {
+    /**
+     * @generated from field: excaliframe.v1.models.SessionEnded session_ended = 20;
+     */
+    value: SessionEnded;
+    case: "sessionEnded";
+  } | {
+    /**
+     * @generated from field: excaliframe.v1.models.OwnerChanged owner_changed = 21;
+     */
+    value: OwnerChanged;
+    case: "ownerChanged";
   } | { case: undefined; value?: undefined };
 };
 
@@ -389,7 +455,7 @@ export type CollabEvent = Message<"excaliframe.v1.models.CollabEvent"> & {
  * Use `create(CollabEventSchema)` to create a new message.
  */
 export const CollabEventSchema: GenMessage<CollabEvent> = /*@__PURE__*/
-  messageDesc(file_excaliframe_v1_models_collab, 9);
+  messageDesc(file_excaliframe_v1_models_collab, 10);
 
 /**
  * @generated from message excaliframe.v1.models.RoomJoined
@@ -409,6 +475,11 @@ export type RoomJoined = Message<"excaliframe.v1.models.RoomJoined"> & {
    * @generated from field: repeated excaliframe.v1.models.PeerInfo peers = 3;
    */
   peers: PeerInfo[];
+
+  /**
+   * @generated from field: string owner_client_id = 4;
+   */
+  ownerClientId: string;
 };
 
 /**
@@ -416,7 +487,7 @@ export type RoomJoined = Message<"excaliframe.v1.models.RoomJoined"> & {
  * Use `create(RoomJoinedSchema)` to create a new message.
  */
 export const RoomJoinedSchema: GenMessage<RoomJoined> = /*@__PURE__*/
-  messageDesc(file_excaliframe_v1_models_collab, 10);
+  messageDesc(file_excaliframe_v1_models_collab, 11);
 
 /**
  * @generated from message excaliframe.v1.models.PeerInfo
@@ -446,6 +517,11 @@ export type PeerInfo = Message<"excaliframe.v1.models.PeerInfo"> & {
    * @generated from field: bool is_active = 5;
    */
   isActive: boolean;
+
+  /**
+   * @generated from field: bool is_owner = 6;
+   */
+  isOwner: boolean;
 };
 
 /**
@@ -453,7 +529,7 @@ export type PeerInfo = Message<"excaliframe.v1.models.PeerInfo"> & {
  * Use `create(PeerInfoSchema)` to create a new message.
  */
 export const PeerInfoSchema: GenMessage<PeerInfo> = /*@__PURE__*/
-  messageDesc(file_excaliframe_v1_models_collab, 11);
+  messageDesc(file_excaliframe_v1_models_collab, 12);
 
 /**
  * @generated from message excaliframe.v1.models.PeerJoined
@@ -470,7 +546,7 @@ export type PeerJoined = Message<"excaliframe.v1.models.PeerJoined"> & {
  * Use `create(PeerJoinedSchema)` to create a new message.
  */
 export const PeerJoinedSchema: GenMessage<PeerJoined> = /*@__PURE__*/
-  messageDesc(file_excaliframe_v1_models_collab, 12);
+  messageDesc(file_excaliframe_v1_models_collab, 13);
 
 /**
  * @generated from message excaliframe.v1.models.PeerLeft
@@ -497,28 +573,6 @@ export type PeerLeft = Message<"excaliframe.v1.models.PeerLeft"> & {
  * Use `create(PeerLeftSchema)` to create a new message.
  */
 export const PeerLeftSchema: GenMessage<PeerLeft> = /*@__PURE__*/
-  messageDesc(file_excaliframe_v1_models_collab, 13);
-
-/**
- * @generated from message excaliframe.v1.models.SceneInit
- */
-export type SceneInit = Message<"excaliframe.v1.models.SceneInit"> & {
-  /**
-   * @generated from field: repeated excaliframe.v1.models.ElementUpdate elements = 1;
-   */
-  elements: ElementUpdate[];
-
-  /**
-   * @generated from field: string background_color = 2;
-   */
-  backgroundColor: string;
-};
-
-/**
- * Describes the message excaliframe.v1.models.SceneInit.
- * Use `create(SceneInitSchema)` to create a new message.
- */
-export const SceneInitSchema: GenMessage<SceneInit> = /*@__PURE__*/
   messageDesc(file_excaliframe_v1_models_collab, 14);
 
 /**
@@ -544,6 +598,40 @@ export const ErrorEventSchema: GenMessage<ErrorEvent> = /*@__PURE__*/
   messageDesc(file_excaliframe_v1_models_collab, 15);
 
 /**
+ * @generated from message excaliframe.v1.models.SessionEnded
+ */
+export type SessionEnded = Message<"excaliframe.v1.models.SessionEnded"> & {
+  /**
+   * @generated from field: string reason = 1;
+   */
+  reason: string;
+};
+
+/**
+ * Describes the message excaliframe.v1.models.SessionEnded.
+ * Use `create(SessionEndedSchema)` to create a new message.
+ */
+export const SessionEndedSchema: GenMessage<SessionEnded> = /*@__PURE__*/
+  messageDesc(file_excaliframe_v1_models_collab, 16);
+
+/**
+ * @generated from message excaliframe.v1.models.OwnerChanged
+ */
+export type OwnerChanged = Message<"excaliframe.v1.models.OwnerChanged"> & {
+  /**
+   * @generated from field: string new_owner_client_id = 1;
+   */
+  newOwnerClientId: string;
+};
+
+/**
+ * Describes the message excaliframe.v1.models.OwnerChanged.
+ * Use `create(OwnerChangedSchema)` to create a new message.
+ */
+export const OwnerChangedSchema: GenMessage<OwnerChanged> = /*@__PURE__*/
+  messageDesc(file_excaliframe_v1_models_collab, 17);
+
+/**
  * @generated from message excaliframe.v1.models.GetRoomRequest
  */
 export type GetRoomRequest = Message<"excaliframe.v1.models.GetRoomRequest"> & {
@@ -558,7 +646,7 @@ export type GetRoomRequest = Message<"excaliframe.v1.models.GetRoomRequest"> & {
  * Use `create(GetRoomRequestSchema)` to create a new message.
  */
 export const GetRoomRequestSchema: GenMessage<GetRoomRequest> = /*@__PURE__*/
-  messageDesc(file_excaliframe_v1_models_collab, 16);
+  messageDesc(file_excaliframe_v1_models_collab, 18);
 
 /**
  * @generated from message excaliframe.v1.models.GetRoomResponse
@@ -578,6 +666,18 @@ export type GetRoomResponse = Message<"excaliframe.v1.models.GetRoomResponse"> &
    * @generated from field: int64 created_at = 3;
    */
   createdAt: bigint;
+
+  /**
+   * @generated from field: string owner_client_id = 4;
+   */
+  ownerClientId: string;
+
+  /**
+   * "excalidraw" | "mermaid"
+   *
+   * @generated from field: string tool = 5;
+   */
+  tool: string;
 };
 
 /**
@@ -585,7 +685,7 @@ export type GetRoomResponse = Message<"excaliframe.v1.models.GetRoomResponse"> &
  * Use `create(GetRoomResponseSchema)` to create a new message.
  */
 export const GetRoomResponseSchema: GenMessage<GetRoomResponse> = /*@__PURE__*/
-  messageDesc(file_excaliframe_v1_models_collab, 17);
+  messageDesc(file_excaliframe_v1_models_collab, 19);
 
 /**
  * @generated from message excaliframe.v1.models.ListRoomsRequest
@@ -598,7 +698,7 @@ export type ListRoomsRequest = Message<"excaliframe.v1.models.ListRoomsRequest">
  * Use `create(ListRoomsRequestSchema)` to create a new message.
  */
 export const ListRoomsRequestSchema: GenMessage<ListRoomsRequest> = /*@__PURE__*/
-  messageDesc(file_excaliframe_v1_models_collab, 18);
+  messageDesc(file_excaliframe_v1_models_collab, 20);
 
 /**
  * @generated from message excaliframe.v1.models.ListRoomsResponse
@@ -615,7 +715,7 @@ export type ListRoomsResponse = Message<"excaliframe.v1.models.ListRoomsResponse
  * Use `create(ListRoomsResponseSchema)` to create a new message.
  */
 export const ListRoomsResponseSchema: GenMessage<ListRoomsResponse> = /*@__PURE__*/
-  messageDesc(file_excaliframe_v1_models_collab, 19);
+  messageDesc(file_excaliframe_v1_models_collab, 21);
 
 /**
  * @generated from message excaliframe.v1.models.RoomSummary
@@ -642,5 +742,5 @@ export type RoomSummary = Message<"excaliframe.v1.models.RoomSummary"> & {
  * Use `create(RoomSummarySchema)` to create a new message.
  */
 export const RoomSummarySchema: GenMessage<RoomSummary> = /*@__PURE__*/
-  messageDesc(file_excaliframe_v1_models_collab, 20);
+  messageDesc(file_excaliframe_v1_models_collab, 22);
 

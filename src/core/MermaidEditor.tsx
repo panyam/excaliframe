@@ -1,11 +1,15 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { EditorHost, DrawingEnvelope } from './types';
 import { useAutoSave } from './useAutoSave';
 import AutoSaveToggle from './AutoSaveToggle';
 import { CollabConfig } from '../collab/types';
 import { useCollaboration } from '../collab/useCollaboration';
-import CollabPanel from '../collab/CollabPanel';
+import { useSync } from '../collab/sync/useSync';
+import { MermaidSyncAdapter } from '../collab/adapters/MermaidSyncAdapter';
+import type { SyncActions, SyncConnection } from '../collab/sync/SyncAdapter';
+import SharePanel from '../collab/SharePanel';
 import CollabBadge from '../collab/CollabBadge';
+import { resolveRelayUrl } from '../collab/url-params';
 
 interface Props {
   host: EditorHost;
@@ -47,9 +51,16 @@ const MermaidEditor: React.FC<Props> = ({ host, showCancel = true, collabConfig 
   const lastValidSvg = useRef<string>('');
   const dividerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [leftWidth, setLeftWidth] = useState(50); // percentage
+  const [leftWidth, setLeftWidth] = useState(() => {
+    const saved = localStorage.getItem('excaliframe:mermaidSplitPct');
+    return saved ? Number(saved) : 50;
+  });
 
   const isDirty = code !== initialCode;
+
+  // Keep a ref so the sync adapter's getCode closure always reads latest
+  const codeRef = useRef(code);
+  codeRef.current = code;
 
   // Load mermaid library
   useEffect(() => {
@@ -143,9 +154,46 @@ const MermaidEditor: React.FC<Props> = ({ host, showCancel = true, collabConfig 
     onSave: saveDrawing,
   });
 
-  // Collaboration
-  const [collabState, collabActions] = useCollaboration('mermaid');
+  // Collaboration — ref-based bridge so useSync and useCollaboration don't know about each other
+  const syncAdapterRef = useRef<MermaidSyncAdapter | null>(null);
+  const syncActionsRef = useRef<SyncActions | null>(null);
+
+  const onCollabEvent = useCallback((event: any) => {
+    syncActionsRef.current?.handleEvent(event);
+  }, []);
+  const [collabState, collabActions] = useCollaboration('mermaid', onCollabEvent);
+
+  // Sync adapter — created once after drawing is loaded
+  const [syncAdapter, setSyncAdapter] = useState<MermaidSyncAdapter | null>(null);
+  useEffect(() => {
+    if (!isLoading && !syncAdapterRef.current) {
+      const adapter = new MermaidSyncAdapter(() => codeRef.current, setCode);
+      syncAdapterRef.current = adapter;
+      setSyncAdapter(adapter);
+    }
+  }, [isLoading]);
+
+  const syncConnection = useMemo<SyncConnection>(() => ({
+    isConnected: collabState.isConnected,
+    clientId: collabState.clientId,
+    isOwner: collabState.isOwner,
+    peers: collabState.peers,
+    send: collabActions.send,
+  }), [collabState.isConnected, collabState.clientId, collabState.isOwner, collabState.peers, collabActions.send]);
+
+  const [, syncActions] = useSync(syncAdapter, syncConnection);
+  syncActionsRef.current = syncActions;
+
   const [showCollabPanel, setShowCollabPanel] = useState(!!collabConfig?.initialRelayUrl);
+
+  // Auto-connect as follower when collabConfig.autoJoin is set
+  useEffect(() => {
+    if (collabConfig?.autoJoin && !collabState.isConnected && !collabState.isConnecting) {
+      const relayUrl = collabConfig.autoJoinRelayUrl || '/relay';
+      const sessionId = collabConfig.autoJoinSessionId || '';
+      collabActions.connect(resolveRelayUrl(relayUrl), sessionId, '', false, collabConfig.drawingId);
+    }
+  }, [collabConfig?.autoJoin]);
 
   const handleCancel = useCallback(() => {
     if (isDirty) {
@@ -216,6 +264,14 @@ const MermaidEditor: React.FC<Props> = ({ host, showCancel = true, collabConfig 
         isDragging = false;
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
+        // Persist split position
+        const rect = container.getBoundingClientRect();
+        // leftWidth is stale in this closure, so read from DOM
+        const codePane = container.querySelector('.mermaid-editor__code') as HTMLElement;
+        if (codePane) {
+          const pct = (codePane.offsetWidth / rect.width) * 100;
+          localStorage.setItem('excaliframe:mermaidSplitPct', String(Math.round(pct)));
+        }
       }
     };
 
@@ -242,16 +298,22 @@ const MermaidEditor: React.FC<Props> = ({ host, showCancel = true, collabConfig 
 
   const editorPane = (
     <div className="mermaid-editor" ref={containerRef}>
-      <div className="mermaid-editor__code" style={{ width: `${leftWidth}%` }}>
+      <div className="mermaid-editor__code" style={{ width: `calc(${leftWidth}% - 3px)` }}>
         <textarea
           value={code}
-          onChange={(e) => setCode(e.target.value)}
+          onChange={(e) => {
+            setCode(e.target.value);
+            const adapter = syncAdapterRef.current;
+            if (adapter && !adapter.isApplyingRemote) {
+              syncActionsRef.current?.notifyLocalChange();
+            }
+          }}
           onKeyDown={handleTextareaKeyDown}
           spellCheck={false}
         />
       </div>
       <div className="mermaid-editor__divider" ref={dividerRef} />
-      <div className="mermaid-editor__preview" style={{ width: `${100 - leftWidth}%` }}>
+      <div className="mermaid-editor__preview" style={{ width: `calc(${100 - leftWidth}% - 3px)` }}>
         <div ref={previewRef} className="mermaid-editor__preview-content" />
         {error && (
           <div className="mermaid-editor__error">{error}</div>
@@ -292,7 +354,7 @@ const MermaidEditor: React.FC<Props> = ({ host, showCancel = true, collabConfig 
           </div>
         </div>
         {showCollabPanel && (
-          <CollabPanel state={collabState} actions={collabActions} tool="mermaid"
+          <SharePanel state={collabState} actions={collabActions} tool="mermaid"
             drawingId={collabConfig?.drawingId ?? ''} onClose={() => setShowCollabPanel(false)} />
         )}
         <div style={{ flex: 1, overflow: 'hidden' }}>
@@ -309,7 +371,7 @@ const MermaidEditor: React.FC<Props> = ({ host, showCancel = true, collabConfig 
       <div className="fixed bottom-4 right-4 z-[1000] flex flex-col items-end gap-2">
         {showCollabPanel && (
           <div className="bg-white/95 dark:bg-gray-800/95 rounded-lg p-3 shadow-lg min-w-[280px]">
-            <CollabPanel state={collabState} actions={collabActions} tool="mermaid"
+            <SharePanel state={collabState} actions={collabActions} tool="mermaid"
             drawingId={collabConfig?.drawingId ?? ''} onClose={() => setShowCollabPanel(false)} />
           </div>
         )}

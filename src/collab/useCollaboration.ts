@@ -1,17 +1,22 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { CollabClient } from './CollabClient';
+import { getBrowserId } from './browserId';
 import type { PeerInfo } from './types';
 
 export interface CollabState {
   isConnected: boolean;
   isConnecting: boolean;
   clientId: string;
+  sessionId: string;
   peers: Map<string, PeerInfo>;
   error: string | null;
+  isOwner: boolean;
+  ownerClientId: string;
 }
 
 export interface CollabActions {
-  connect: (relayUrl: string, sessionId: string, username: string) => void;
+  /** Connect to relay. sessionId empty = relay generates one (owner). drawingId used to build hint for session reuse. */
+  connect: (relayUrl: string, sessionId: string, username: string, isOwner?: boolean, drawingId?: string) => void;
   disconnect: () => void;
   send: (action: Record<string, unknown>) => void;
 }
@@ -24,16 +29,22 @@ export function useCollaboration(
     isConnected: false,
     isConnecting: false,
     clientId: '',
+    sessionId: '',
     peers: new Map(),
     error: null,
+    isOwner: false,
+    ownerClientId: '',
   });
 
   const clientRef = useRef<CollabClient | null>(null);
 
-  const connect = useCallback((relayUrl: string, sessionId: string, username: string) => {
+  const connect = useCallback((relayUrl: string, sessionId: string, username: string, isOwner: boolean = false, drawingId?: string) => {
     // Persist to localStorage
     localStorage.setItem('excaliframe:lastRelayUrl', relayUrl);
-    localStorage.setItem('excaliframe:lastUsername', username);
+    if (username) localStorage.setItem('excaliframe:lastUsername', username);
+
+    const browserId = getBrowserId();
+    const clientHint = drawingId ? `${browserId}:${drawingId}` : '';
 
     const client = new CollabClient({
       onConnect: (clientId) => {
@@ -57,13 +68,57 @@ export function useCollaboration(
         setState(s => ({ ...s, error: err.message }));
       },
       onDisconnect: () => {
-        setState(s => ({ ...s, isConnected: false, clientId: '', peers: new Map() }));
+        if (isOwner && drawingId) {
+          localStorage.removeItem(`excaliframe:activeSession:${drawingId}`);
+        }
+        setState(s => ({ ...s, isConnected: false, isConnecting: false, clientId: '', sessionId: '', peers: new Map(), isOwner: false, ownerClientId: '' }));
       },
-      onEvent: onEvent,
+      onSessionEnded: () => {
+        setState(s => ({
+          ...s,
+          isConnected: false,
+          isConnecting: false,
+          clientId: '',
+          sessionId: '',
+          peers: new Map(),
+          isOwner: false,
+          ownerClientId: '',
+          error: 'The owner ended the sharing session',
+        }));
+      },
+      onOwnerChanged: (newOwnerClientId) => {
+        setState(s => ({
+          ...s,
+          ownerClientId: newOwnerClientId,
+          isOwner: s.clientId === newOwnerClientId,
+        }));
+      },
+      onEvent: (event) => {
+        // Extract ownerClientId and sessionId from RoomJoined
+        if (event.roomJoined) {
+          const ownerClientId = event.roomJoined.ownerClientId || '';
+          const returnedSessionId = event.roomJoined.sessionId || sessionId;
+          setState(s => ({
+            ...s,
+            sessionId: returnedSessionId,
+            ownerClientId,
+            isOwner: s.clientId === ownerClientId || isOwner,
+          }));
+          // Store session mappings in localStorage for same-origin auto-connect and join code reuse
+          if (drawingId && returnedSessionId) {
+            localStorage.setItem(`excaliframe:sessionDrawing:${returnedSessionId}`, drawingId);
+            if (isOwner) {
+              localStorage.setItem(`excaliframe:activeSession:${drawingId}`, returnedSessionId);
+            }
+          }
+        }
+        onEvent?.(event);
+      },
     });
 
     clientRef.current = client;
-    client.connect(relayUrl, sessionId, username, tool);
+    setState(s => ({ ...s, isConnecting: true, error: null }));
+    client.connect(relayUrl, sessionId, username, tool, isOwner, browserId, clientHint);
   }, [tool, onEvent]);
 
   const disconnect = useCallback(() => {
@@ -72,6 +127,13 @@ export function useCollaboration(
 
   const send = useCallback((action: Record<string, unknown>) => {
     clientRef.current?.send(action);
+  }, []);
+
+  // Disconnect on unmount (page refresh, navigation, etc.)
+  useEffect(() => {
+    return () => {
+      clientRef.current?.disconnect();
+    };
   }, []);
 
   return [state, { connect, disconnect, send }];

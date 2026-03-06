@@ -13,8 +13,14 @@ const PeopleIcon: React.FC<{ size?: number }> = ({ size = 16 }) => (
   </svg>
 );
 
+const ShareIcon: React.FC<{ size?: number }> = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className="align-middle">
+    <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z" />
+  </svg>
+);
+
 const CollabBadge: React.FC<CollabBadgeProps> = ({ state, onClick }) => {
-  const { isConnected, isConnecting, error, peers } = state;
+  const { isConnected, isConnecting, error, peers, isOwner } = state;
 
   let content: React.ReactNode;
   let title: string;
@@ -31,11 +37,13 @@ const CollabBadge: React.FC<CollabBadgeProps> = ({ state, onClick }) => {
   } else if (isConnected) {
     const count = peers.size;
     content = <><span className="mr-1">{count}</span><PeopleIcon /></>;
-    title = `${count} peer${count !== 1 ? 's' : ''}`;
-    colorClasses = 'bg-green-500/10 text-green-600 dark:text-green-400';
+    title = isOwner ? `Sharing — ${count} peer${count !== 1 ? 's' : ''}` : `Connected — ${count} peer${count !== 1 ? 's' : ''}`;
+    colorClasses = isOwner
+      ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
+      : 'bg-green-500/10 text-green-600 dark:text-green-400';
   } else {
-    content = <PeopleIcon size={18} />;
-    title = 'Collaborate';
+    content = <><ShareIcon size={16} /> <span className="ml-1">Share</span></>;
+    title = 'Share this drawing';
     colorClasses = 'bg-black/5 dark:bg-white/10 text-gray-600 dark:text-gray-300';
   }
 

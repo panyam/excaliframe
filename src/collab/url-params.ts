@@ -34,3 +34,31 @@ export function buildConnectUrl(pageUrl: string, relayUrl: string): string {
   url.searchParams.set('connect', relayUrl);
   return url.toString();
 }
+
+/**
+ * Encode a join code: base64url(relayWsUrl):sessionId
+ * Used for cross-origin sharing via /join/<code> URLs.
+ */
+export function encodeJoinCode(relayUrl: string, sessionId: string): string {
+  const encoded = btoa(relayUrl).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return `${encoded}:${sessionId}`;
+}
+
+/**
+ * Decode a join code back to relay URL and session ID.
+ * Returns null if the code is malformed.
+ */
+export function decodeJoinCode(code: string): { relayUrl: string; sessionId: string } | null {
+  const colonIdx = code.indexOf(':');
+  if (colonIdx < 0) return null;
+  const b64 = code.substring(0, colonIdx);
+  const sessionId = code.substring(colonIdx + 1);
+  if (!sessionId) return null;
+  try {
+    const padded = b64.replace(/-/g, '+').replace(/_/g, '/');
+    const relayUrl = atob(padded);
+    return { relayUrl, sessionId };
+  } catch {
+    return null;
+  }
+}

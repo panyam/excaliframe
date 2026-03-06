@@ -262,7 +262,7 @@ describe('CollabClient', () => {
     beforeEach(() => { vi.useFakeTimers(); });
     afterEach(() => { vi.useRealTimers(); });
 
-    it('attempts reconnect after unexpected disconnect', async () => {
+    it('does not reconnect after unexpected disconnect', async () => {
       const { client, controllers } = createTestClient();
       client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
       const ctrl = controllers[0];
@@ -273,60 +273,11 @@ describe('CollabClient', () => {
       });
 
       ctrl.simulateClose(1006);
-      await vi.advanceTimersByTimeAsync(1000);
-
-      expect(controllers).toHaveLength(2); // new GRPCWSClient created
-    });
-
-    it('uses exponential backoff (1s, 2s, 4s)', async () => {
-      const { client, controllers } = createTestClient();
-      client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
-      controllers[0].simulateOpen();
-      await vi.advanceTimersByTimeAsync(0);
-      controllers[0].simulateMessage({
-        roomJoined: { clientId: 'c1', sessionId: 's1', peers: [] },
-      });
-
-      // First unexpected close
-      controllers[0].simulateClose(1006);
-      await vi.advanceTimersByTimeAsync(1000); // 1s
-      expect(controllers).toHaveLength(2);
-
-      // Second failure
-      controllers[1].simulateClose(1006);
-      await vi.advanceTimersByTimeAsync(1000); // not enough
-      expect(controllers).toHaveLength(2);
-      await vi.advanceTimersByTimeAsync(1000); // 2s total
-      expect(controllers).toHaveLength(3);
-
-      // Third failure
-      controllers[2].simulateClose(1006);
-      await vi.advanceTimersByTimeAsync(3000); // not enough
-      expect(controllers).toHaveLength(3);
-      await vi.advanceTimersByTimeAsync(1000); // 4s total
-      expect(controllers).toHaveLength(4);
-    });
-
-    it('stops reconnecting after maxRetries', async () => {
-      const { client, controllers } = createTestClient({ maxRetries: 2 });
-      client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
-      controllers[0].simulateOpen();
-      await vi.advanceTimersByTimeAsync(0);
-      controllers[0].simulateMessage({
-        roomJoined: { clientId: 'c1', sessionId: 's1', peers: [] },
-      });
-
-      controllers[0].simulateClose(1006);
-      await vi.advanceTimersByTimeAsync(1000);
-      expect(controllers).toHaveLength(2);
-
-      controllers[1].simulateClose(1006);
-      await vi.advanceTimersByTimeAsync(2000);
-      expect(controllers).toHaveLength(3);
-
-      controllers[2].simulateClose(1006);
       await vi.advanceTimersByTimeAsync(60000);
-      expect(controllers).toHaveLength(3); // no more retries
+
+      // Auto-reconnect is disabled — no new connection should be created
+      expect(controllers).toHaveLength(1);
+      expect(client.isConnected).toBe(false);
     });
 
     it('does not reconnect after explicit disconnect', async () => {

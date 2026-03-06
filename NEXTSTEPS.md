@@ -30,9 +30,12 @@ Immediate and near-term action items for Excaliframe.
 
 ## In Progress
 
-### Real-Time Collaboration — Part 2 Prep
-- Part 1/1.5 complete: relay embedded, opt-in UI, dark mode theming, 67 TS tests passing
-- **Part 2** (element sync, cursors, text sync) layers on top — next major feature
+### Real-Time Collaboration — Part 3 (Share-Based Collab)
+- PR #8: Share button, owner lifecycle, join codes, same-origin auto-connect, cross-origin join page
+- Parts 1-2 complete: relay, transport, peer tracking, real-time sync (109 TS tests passing)
+- Part 3 adds: owner-initiated sharing, ownership transfer, session kill, auto-connect
+- Fixed: Excalidraw in-place mutation sync bug (store version snapshots, not element refs)
+- Remaining: smart reconnect (currently disabled), cursor rendering, binary file sync
 
 ### Fix False Positive "Unsaved Changes" Indicator
 - When loading an existing drawing, "Unsaved changes" appears immediately without user interaction
@@ -101,3 +104,5 @@ Immediate and near-term action items for Excaliframe.
 - [x] Collab Part 1 — connection infrastructure: Go relay, CollabClient with GRPCWSClient, TDD tests
 - [x] Collab Part 1.5 — embed relay in site server (`/relay/`), opt-in collab UI (dialog with relay server list, people icon badge, peer count), `?connect=` param, session ID = drawing ID, localStorage persistence
 - [x] Tailwind dark mode for editor chrome — CollabPanel, CollabBadge, AutoSaveToggle, loading spinners, status badges, popover containers all use Tailwind with `dark:` variants
+- [x] Collab Part 2 — sync engine: ExcalidrawSyncAdapter, MermaidSyncAdapter, useSync hook, SceneInit, debounced outgoing, element reconciliation
+- [x] Collab Part 3 (in progress) — share-based UX: SharePanel, owner lifecycle, join codes, auto-connect, browserId, room validation

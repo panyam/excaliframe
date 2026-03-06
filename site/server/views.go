@@ -1,7 +1,9 @@
 package server
 
 import (
+	"encoding/base64"
 	"net/http"
+	"strings"
 
 	goal "github.com/panyam/goapplib"
 )
@@ -188,6 +190,46 @@ func (p *PlaygroundEditPage) Load(r *http.Request, w http.ResponseWriter, app *g
 	return nil, false
 }
 
+// JoinPage handles /join/{code} — decodes the join code client-side and redirects
+// to the correct editor page.
+type JoinPage struct {
+	goal.BasePage
+	Header   Header
+	JoinCode string
+}
+
+func (p *JoinPage) Load(r *http.Request, w http.ResponseWriter, app *goal.App[*ExcaliframeApp]) (error, bool) {
+	p.JoinCode = r.PathValue("code")
+	if p.JoinCode == "" {
+		http.Redirect(w, r, "/", http.StatusFound)
+		return nil, true
+	}
+	p.Title = "Join Session - Excaliframe"
+	p.DisableSplashScreen = true
+	p.CustomHeader = false
+	p.Header.AppName = app.Context.AppName
+	return nil, false
+}
+
+// decodeJoinCode decodes a join code of the form base64url(relayUrl):sessionId.
+// Returns the relay URL, session ID, and whether decoding succeeded.
+func decodeJoinCode(code string) (relayUrl, sessionId string, ok bool) {
+	colonIdx := strings.Index(code, ":")
+	if colonIdx < 0 {
+		return "", "", false
+	}
+	b64 := code[:colonIdx]
+	sessionId = code[colonIdx+1:]
+	if sessionId == "" {
+		return "", "", false
+	}
+	decoded, err := base64.RawURLEncoding.DecodeString(b64)
+	if err != nil {
+		return "", "", false
+	}
+	return string(decoded), sessionId, true
+}
+
 // SetupRoutes registers all page routes
 func SetupRoutes(app *goal.App[*ExcaliframeApp]) *http.ServeMux {
 	mux := http.NewServeMux()
@@ -223,6 +265,11 @@ func SetupRoutes(app *goal.App[*ExcaliframeApp]) *http.ServeMux {
 	mux.HandleFunc("/docs", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/docs/", http.StatusMovedPermanently)
 	})
+	// Join page: /join/{code} decodes the join code client-side and redirects
+	// to the correct editor page. Also handles /join/ (no code) with a paste form.
+	goal.Register[*JoinPage](app, mux, "/join/{code}")
+	goal.Register[*JoinPage](app, mux, "/join/")
+
 	// Redirect old /playground/ URLs to root
 	mux.HandleFunc("/playground/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/", http.StatusMovedPermanently)

@@ -8,6 +8,7 @@
 .mermaid-editor__code {
   display: flex;
   flex-direction: column;
+  flex: none;
   min-width: 0;
   overflow: hidden;
 }
@@ -48,6 +49,7 @@
 .mermaid-editor__preview {
   display: flex;
   flex-direction: column;
+  flex: none;
   min-width: 0;
   overflow: auto;
   background: #fff;

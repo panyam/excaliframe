@@ -27,6 +27,7 @@ func (h *ApiHandler) SetupRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /health", h.HandleHealth)
 	mux.HandleFunc("GET /api/v1/rooms", h.HandleListRooms)
 	mux.HandleFunc("GET /api/v1/rooms/{session_id}", h.HandleGetRoom)
+	mux.HandleFunc("GET /api/v1/session-by-hint", h.HandleSessionByHint)
 
 	// WebSocket bidi endpoint using servicekit grpcws
 	wsHandler := grpcws.NewBidiStreamHandler(
@@ -63,6 +64,29 @@ func (h *ApiHandler) HandleGetRoom(w http.ResponseWriter, r *http.Request) {
 	resp, err := h.app.Service.GetRoom(r.Context(), &pb.GetRoomRequest{SessionId: sessionId})
 	if err != nil || resp == nil {
 		http.Error(w, `{"error":"room not found"}`, http.StatusNotFound)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
+}
+
+// HandleSessionByHint looks up an active session by client hint.
+// GET /api/v1/session-by-hint?hint=<browserId:drawingId>
+func (h *ApiHandler) HandleSessionByHint(w http.ResponseWriter, r *http.Request) {
+	hint := r.URL.Query().Get("hint")
+	if hint == "" {
+		http.Error(w, `{"error":"hint parameter required"}`, http.StatusBadRequest)
+		return
+	}
+	sessionId := h.app.Service.FindSessionByHint(hint)
+	if sessionId == "" {
+		http.Error(w, `{"error":"no session for hint"}`, http.StatusNotFound)
+		return
+	}
+	// Return the room info for this session
+	resp, err := h.app.Service.GetRoom(r.Context(), &pb.GetRoomRequest{SessionId: sessionId})
+	if err != nil || resp == nil {
+		http.Error(w, `{"error":"session expired"}`, http.StatusNotFound)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")

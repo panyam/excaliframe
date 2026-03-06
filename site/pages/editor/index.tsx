@@ -5,6 +5,7 @@ import { EditorHost } from '@excaliframe/core/types';
 import { WebEditorHost } from '@excaliframe/hosts/web';
 import { PlaygroundStore } from '@excaliframe/hosts/playground-store';
 import { parseConnectParam } from '@excaliframe/collab/url-params';
+import { getBrowserId } from '@excaliframe/collab/browserId';
 import { CollabConfig } from '@excaliframe/collab/types';
 import './styles.css';
 
@@ -32,6 +33,33 @@ async function loadEditor(tool: string): Promise<EditorComponent> {
   }
 }
 
+/** Check if there's an active sharing session for this drawing.
+ *  Uses localStorage (shared across same-origin tabs) where the owner
+ *  stores the relay-generated sessionId after starting a share. */
+function findActiveSession(drawingId: string): string | null {
+  return localStorage.getItem(`excaliframe:activeSession:${drawingId}`);
+}
+
+/** Validate that a room actually exists on the relay before auto-connecting.
+ *  Clears stale localStorage entry if the room is gone (e.g. after server restart). */
+async function validateRoom(drawingId: string, sessionId: string): Promise<boolean> {
+  try {
+    const resp = await fetch(`/relay/api/v1/rooms/${sessionId}`);
+    if (!resp.ok) {
+      localStorage.removeItem(`excaliframe:activeSession:${drawingId}`);
+      return false;
+    }
+    const data = await resp.json();
+    if (!data.peers || data.peers.length === 0) {
+      localStorage.removeItem(`excaliframe:activeSession:${drawingId}`);
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 const drawingId = window.PLAYGROUND_DRAWING_ID;
 if (!drawingId) {
   window.location.href = '/';
@@ -42,15 +70,36 @@ if (!drawingId) {
   // Parse ?connect=<relay-url> — auto-opens dialog (but doesn't auto-connect)
   const connectRelay = parseConnectParam(window.location.search);
 
-  const collabConfig: CollabConfig = {
-    drawingId,
-    initialRelayUrl: connectRelay || undefined,
-  };
+  // Parse ?autoJoin=1&relay=<url> — from /join/<code> redirect
+  const params = new URLSearchParams(window.location.search);
+  const autoJoinParam = params.get('autoJoin') === '1';
+  const relayParam = params.get('relay');
 
   // Load drawing first to get the tool type, then dynamically import the editor
   host.loadDrawing().then(async (envelope) => {
-    const tool = envelope?.tool || 'excalidraw';
+    const tool = envelope?.tool || params.get('tool') || 'excalidraw';
     const Editor = await loadEditor(tool);
+
+    const collabConfig: CollabConfig = {
+      drawingId,
+      initialRelayUrl: connectRelay || undefined,
+    };
+
+    // Auto-join from /join/<code> redirect
+    if (autoJoinParam) {
+      collabConfig.autoJoin = true;
+      collabConfig.autoJoinRelayUrl = relayParam || '/relay';
+      collabConfig.autoJoinSessionId = params.get('session') || undefined;
+    }
+    // Same-origin auto-connect: validate room is still alive before joining
+    else if (!connectRelay) {
+      const activeSessionId = findActiveSession(drawingId);
+      if (activeSessionId && await validateRoom(drawingId, activeSessionId)) {
+        collabConfig.autoJoin = true;
+        collabConfig.autoJoinRelayUrl = '/relay';
+        collabConfig.autoJoinSessionId = activeSessionId;
+      }
+    }
 
     const root = ReactDOM.createRoot(document.getElementById('playground-root')!);
     root.render(<Editor host={host} showCancel={false} collabConfig={collabConfig} />);
