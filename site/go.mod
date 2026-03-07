@@ -16,7 +16,7 @@ require (
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
-	github.com/panyam/gocurrent v0.0.9 // indirect
+	github.com/panyam/gocurrent v0.0.11 // indirect
 	github.com/panyam/goutils v0.1.13 // indirect
 	github.com/panyam/servicekit v0.0.4 // indirect
 	golang.org/x/net v0.48.0 // indirect
