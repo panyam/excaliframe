@@ -88,30 +88,20 @@ excaliframe/
 │   │   ├── index.html              # HTML template
 │   │   └── styles.css
 │   ├── collab/                      # Real-time collaboration client
-│   │   ├── gen/                     # Generated protobuf-es TypeScript types
 │   │   ├── adapters/                # Tool-specific sync adapters
 │   │   │   ├── ExcalidrawSyncAdapter.ts  # Excalidraw diff/merge/cursor impl
 │   │   │   └── MermaidSyncAdapter.ts     # Mermaid text sync adapter
 │   │   ├── sync/                    # Tool-agnostic sync orchestration
-│   │   │   ├── SyncAdapter.ts       # SyncAdapter interface, CursorData, PeerCursor types
+│   │   │   ├── SyncAdapter.ts       # Re-exports from @panyam/massrelay/sync
 │   │   │   └── useSync.ts           # Debounced outgoing, throttled cursors, event routing
-│   │   ├── CollabClient.ts          # Framework-agnostic WebSocket client
+│   │   ├── CollabClient.ts          # Re-exports from @panyam/massrelay/client
 │   │   ├── useCollaboration.ts      # React hook for connection state
 │   │   ├── SharePanel.tsx           # Share dialog (relay servers, peer list with colored dots)
 │   │   ├── CollabBadge.tsx          # People icon badge with peer count
 │   │   ├── peerColors.ts            # 8-color palette, getPeerColor(), getPeerLabel()
-│   │   ├── url-params.ts            # parseConnectParam, buildConnectUrl, resolveRelayUrl
+│   │   ├── url-params.ts            # Re-exports from @panyam/massrelay/url
 │   │   └── types.ts                 # CollabConfig, RelayServerOption, proto re-exports
 │   └── version.ts                  # Auto-generated version info
-│
-├── relay/                           # Collaboration relay server (Go)
-│   ├── protos/                      # Protobuf definitions (buf.yaml, buf.gen.yaml)
-│   │   └── excaliframe/v1/          # models/collab.proto, services/collab.proto
-│   ├── gen/go/                      # Generated Go protobuf + Connect-RPC + gRPC
-│   ├── services/                    # CollabService, Room management
-│   ├── web/server/                  # HTTP/WebSocket API (servicekit)
-│   ├── main.go                      # Entry point
-│   └── go.mod
 │
 ├── static/                         # Webpack build output (Forge resources)
 │   ├── editor/                     # Editor bundle (served by Forge)
@@ -268,6 +258,7 @@ Each boot module is a webpack async chunk that imports the tool's core editor + 
 |-------|-----------|
 | Frontend | React 18, TypeScript 5 |
 | Diagramming | @excalidraw/excalidraw 0.18, mermaid 11 |
+| Collaboration | @panyam/massrelay (relay server + vanilla TS client) |
 | Confluence API | @forge/bridge 4, @forge/api 4 |
 | Bundler | Rspack (default), Webpack 5 (fallback) — multi-config: editor + renderer |
 | Build | npm + Makefile |
@@ -411,14 +402,23 @@ Excaliframe supports optional real-time collaboration via an external relay serv
 
 | Layer | Component | Location | Description |
 |-------|-----------|----------|-------------|
-| **Proto** | Message types | `relay/protos/excaliframe/v1/` | CollabAction (client→server), CollabEvent (server→client), oneof discriminated unions |
-| **Relay** | CollabService | `relay/services/` | Room management, action dispatch, peer lifecycle |
-| **Relay** | WebSocket API | `relay/web/server/` | servicekit `grpcws.BidiStreamHandler` for WS bidi, Connect-RPC for unary |
-| **Client** | CollabClient | `src/collab/CollabClient.ts` | Framework-agnostic WebSocket client (no React dependency) |
+| **Proto** | Message types | `@panyam/massrelay` (`massrelay/protos/`) | CollabAction (client→server), CollabEvent (server→client), oneof discriminated unions |
+| **Relay** | CollabService | `massrelay/services/` | Room management, action dispatch, peer lifecycle |
+| **Relay** | WebSocket API | `massrelay/web/server/` | servicekit `grpcws.BidiStreamHandler` for WS bidi, Connect-RPC for unary |
+| **Client** | CollabClient | `@panyam/massrelay/client` | Framework-agnostic WebSocket client (vanilla TS, no React) |
+| **Client** | SyncAdapter | `@panyam/massrelay/sync` | Tool-agnostic sync interface (vanilla TS) |
+| **Client** | url-params | `@panyam/massrelay/url` | `parseConnectParam` / `buildConnectUrl` / `resolveRelayUrl` |
 | **Client** | useCollaboration | `src/collab/useCollaboration.ts` | React hook wrapping CollabClient for state management |
-| **Client** | CollabPanel/Badge | `src/collab/CollabPanel.tsx`, `CollabBadge.tsx` | Opt-in dialog UI with relay server list and peer status icon |
+| **Client** | SharePanel/Badge | `src/collab/SharePanel.tsx`, `CollabBadge.tsx` | Opt-in dialog UI with relay server list and peer status icon |
 | **Client** | peerColors | `src/collab/peerColors.ts` | 8-color palette for peer identification (cursors, dots) |
-| **Client** | url-params | `src/collab/url-params.ts` | `parseConnectParam` / `buildConnectUrl` / `resolveRelayUrl` |
+
+### Massrelay (External Library)
+
+The relay server and generic TS client code live in the standalone [`massrelay`](https://github.com/panyam/massrelay) library (`github.com/panyam/massrelay`). Massrelay is tool-agnostic — it has zero Excalidraw/Mermaid-specific logic. All domain knowledge lives in excaliframe's `SyncAdapter` implementations.
+
+- **Go module**: `github.com/panyam/massrelay` — relay server, proto definitions, generated Go/TS stubs
+- **npm package**: `@panyam/massrelay` — CollabClient, SyncAdapter interface, url-params, proto types
+- **Local dev**: `~/newstack/massrelay`, with `replace` directive in `site/go.mod`
 
 ### Embedded Relay
 
@@ -426,6 +426,7 @@ The site server embeds the relay at `/relay/` — single server for dev and test
 
 ```go
 // site/main.go
+import relayserver "github.com/panyam/massrelay/web/server"
 relayApp := relayserver.NewRelayApp()
 relayApp.Init()
 mux.Handle("/relay/", http.StripPrefix("/relay", relayApp))
@@ -440,7 +441,7 @@ Messages use protobuf definitions with JSON-over-WebSocket transport (servicekit
 - **CollabAction** (client→server): oneof `JoinRoom`, `LeaveRoom`, `PresenceUpdate`, `SceneUpdate`, `CursorUpdate`, `TextUpdate`
 - **CollabEvent** (server→client): oneof `RoomJoined`, `PeerJoined`, `PeerLeft`, `PresenceUpdate`, `SceneUpdate`, `CursorUpdate`, `TextUpdate`, `SceneInit`, `ErrorEvent`
 
-Generated code: Go in `relay/gen/go/`, TypeScript in `src/collab/gen/`.
+Generated code: Go in `massrelay/gen/go/`, TypeScript in `@panyam/massrelay` npm package.
 
 ### Programmatic Control
 

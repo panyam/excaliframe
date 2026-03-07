@@ -6,11 +6,11 @@ toolchain go1.24.6
 
 require (
 	github.com/panyam/goapplib v0.0.34
+	github.com/panyam/massrelay v0.0.0-00010101000000-000000000000
 	github.com/panyam/templar v0.0.29
-	github.com/user/excaliframe/relay v0.0.0-00010101000000-000000000000
 )
 
-replace github.com/user/excaliframe/relay => ../relay
+replace github.com/panyam/massrelay => ../../../newstack/massrelay
 
 require (
 	github.com/felixge/httpsnoop v1.0.4 // indirect

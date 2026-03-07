@@ -78,9 +78,10 @@ Architecture uses `DrawingEnvelope.tool` field to identify diagram type. Host ad
 | Milestone | Status |
 |-----------|--------|
 | Proto definitions (CollabAction/CollabEvent, buf code gen) | Done |
-| Relay server (Go + servicekit, WebSocket bidi, rooms) | In Progress |
-| Browser client (CollabClient, framework-agnostic) | In Progress |
-| React hooks + UI (useCollaboration, CollabPanel, CollabBadge) | In Progress |
+| Extract relay into standalone massrelay library | Done |
+| Relay server (Go + servicekit, WebSocket bidi, rooms) | Done |
+| Browser client (CollabClient, framework-agnostic) | Done |
+| React hooks + UI (useCollaboration, SharePanel, CollabBadge) | Done |
 | Test suite (TDD — 63 TS + ~30 Go tests) | Done |
 | `make test` unified test runner | Done |
 | Editor integration (optional `collab` prop, URL params) | Done |

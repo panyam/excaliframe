@@ -31,8 +31,9 @@ Immediate and near-term action items for Excaliframe.
 ## In Progress
 
 ### Real-Time Collaboration — Remaining Work
-- Parts 1-3 complete: relay, transport, peer tracking, real-time sync, share UX, cursor tracking (125 TS tests passing)
-- Cursor tracking for Excalidraw: done (native collaborator rendering, colored peer labels, throttled broadcasts)
+- Parts 1-4 complete: relay, transport, peer tracking, real-time sync, share UX, cursor tracking (125 TS tests passing)
+- Relay server and generic TS client extracted to [`massrelay`](https://github.com/panyam/massrelay) — npm: `@panyam/massrelay`
+- Excaliframe imports massrelay via npm package; local collab files are thin re-exports
 - Mermaid cursor tracking: deferred — see [#9](https://github.com/panyam/excaliframe/issues/9)
 - Remaining: smart reconnect (currently disabled), binary file sync
 
@@ -108,3 +109,4 @@ Immediate and near-term action items for Excaliframe.
 - [x] Collab Part 4 — cursor tracking: Excalidraw native collaborator rendering, peer colors (8-color palette), throttled broadcasts (50ms), colored peer dots in SharePanel, room validation
 - [x] EditorChrome refactor — extracted all chrome concerns (collab hooks, autosave, keyboard shortcuts, dirty badges, layout branches) into `EditorChrome` wrapper. Editors are now pure `forwardRef` content components with `EditorHandle` imperative interface.
 - [x] Floating Toolbar + Save Toast — web/playground layout consolidated: `FloatingToolbar` (gear-icon menu with Save, Share/Collab, Auto-save toggle, click-outside dismiss, inline SharePanel) and `SaveToast` (auto-dismissing color-coded save-status pill). Replaces three scattered fixed-position elements with two composable components. `toolbarPosition` prop on `EditorChrome`. Forge layout unchanged.
+- [x] Extract relay into standalone `massrelay` library — Go relay server + vanilla TS client (`CollabClient`, `SyncAdapter`, `url-params`, proto types) at `github.com/panyam/massrelay`, published to npm as `@panyam/massrelay`. Excaliframe collab files become thin re-exports. `relay/` and `src/collab/gen/` deleted.

@@ -11,7 +11,7 @@ import (
 	goal "github.com/panyam/goapplib"
 	tmplr "github.com/panyam/templar"
 	"excaliframe-site/server"
-	relayserver "github.com/user/excaliframe/relay/web/server"
+	relayserver "github.com/panyam/massrelay/web/server"
 )
 
 // canonicalRedirectMiddleware redirects www to non-www and http to https

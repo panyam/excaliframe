@@ -24,7 +24,7 @@ export type {
   ListRoomsRequest,
   ListRoomsResponse,
   RoomSummary,
-} from './gen/excaliframe/v1/models/collab_pb';
+} from '@panyam/massrelay/models';
 
 // Re-export schemas for creating proto message instances
 export {
@@ -44,7 +44,7 @@ export {
   TextUpdateSchema,
   SceneInitRequestSchema,
   SceneInitResponseSchema,
-} from './gen/excaliframe/v1/models/collab_pb';
+} from '@panyam/massrelay/models';
 
 // App-level config types (not proto messages)
 
