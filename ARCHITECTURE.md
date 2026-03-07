@@ -65,6 +65,8 @@ excaliframe/
 │   │   ├── types.ts                # DrawingEnvelope, EditorHost, RendererHost interfaces
 │   │   ├── EditorHandle.ts         # EditorHandle + EditorStateCallbacks interfaces
 │   │   ├── EditorChrome.tsx        # Chrome wrapper (collab, autosave, shortcuts, layout)
+│   │   ├── FloatingToolbar.tsx     # Gear-icon expandable menu (save, share, auto-save)
+│   │   ├── SaveToast.tsx           # Auto-dismissing save-status pill (web/playground)
 │   │   ├── ExcalidrawEditor.tsx    # Excalidraw editor (forwardRef, pure content)
 │   │   ├── ExcalidrawRenderer.tsx  # Excalidraw renderer (accepts RendererHost prop)
 │   │   ├── MermaidEditor.tsx       # Mermaid split-pane editor (forwardRef, pure content)
@@ -344,7 +346,14 @@ Module resolution uses `resolve.modules` to pin all packages to `site/node_modul
 
 **Tool selection**: New drawings show a tool selection modal with Excalidraw and Mermaid options. The tool ID is stored in `DrawingEnvelope.tool`.
 
-**Editor UI modes**: The `EditorChrome` wrapper component (`src/core/EditorChrome.tsx`) owns all "chrome" concerns — collab hooks, auto-save, keyboard shortcuts, dirty badges, and layout. It accepts a `showCancel` prop: in Forge mode (`showCancel=true`), a top toolbar shows Save/Cancel buttons; in web/playground mode (`showCancel=false`), there is no toolbar — save is via Cmd/Ctrl+S with a floating dirty indicator. Editors (`ExcalidrawEditor`, `MermaidEditor`) are pure content components that expose an `EditorHandle` imperative interface (`save()`, `canClose()`) via `forwardRef` and communicate state changes via `EditorStateCallbacks` props.
+**Editor UI modes**: The `EditorChrome` wrapper component (`src/core/EditorChrome.tsx`) owns all "chrome" concerns — collab hooks, auto-save, keyboard shortcuts, dirty badges, and layout. It accepts a `showCancel` prop to select the layout branch:
+
+- **Forge mode** (`showCancel=true`): A top toolbar with Save/Cancel buttons, inline dirty indicator, and CollabBadge. Uses inline styles (no Tailwind in Forge host).
+- **Web/playground mode** (`showCancel=false`): No toolbar. Instead uses two floating components:
+  - `FloatingToolbar` (`src/core/FloatingToolbar.tsx`) — a gear-icon button that expands into a vertical menu with Save, Share/Collab (inline SharePanel with back-arrow navigation), and Auto-save toggle. Click-outside dismisses the panel. A small indigo dot on the gear icon indicates an active collab connection. The `toolbarPosition` prop controls placement (`bottom-right` by default, also `bottom-left`, `top-right`, `top-left`). Panel direction adapts: menu renders above the button for bottom positions, below for top positions.
+  - `SaveToast` (`src/core/SaveToast.tsx`) — an auto-dismissing color-coded pill showing save status: green "Saved" (auto-hides after 2s), blue "Saving...", amber "Auto-saving...", or red "Unsaved changes". Positioned on the opposite horizontal side from the toolbar (e.g., toolbar bottom-right puts toast bottom-left).
+
+Editors (`ExcalidrawEditor`, `MermaidEditor`) are pure content components that expose an `EditorHandle` imperative interface (`save()`, `canClose()`) via `forwardRef` and communicate state changes via `EditorStateCallbacks` props.
 
 **Editable drawing title**: In the playground editor, users can click the drawing title in the site header (after "Excaliframe /") to rename it inline. The title persists immediately to IndexedDB via `WebEditorHost.setTitle()`, independently of the drawing save cycle.
 
@@ -529,6 +538,8 @@ src/
 │   ├── DrawingTitle.tsx            # Inline-editable title (shared across all tools)
 │   ├── EditorHandle.ts             # EditorHandle + EditorStateCallbacks interfaces
 │   ├── EditorChrome.tsx            # Chrome wrapper (collab, autosave, shortcuts, layout)
+│   ├── FloatingToolbar.tsx         # Gear-icon expandable menu (web/playground)
+│   ├── SaveToast.tsx               # Auto-dismissing save-status pill (web/playground)
 │   ├── ExcalidrawEditor.tsx        # Excalidraw editor (forwardRef, pure content)
 │   ├── ExcalidrawRenderer.tsx      # Excalidraw-specific renderer
 │   ├── MermaidEditor.tsx           # Mermaid split-pane editor (forwardRef, pure content)

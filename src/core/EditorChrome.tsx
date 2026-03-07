@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { VERSION } from '../version';
 import { EditorHost } from './types';
-import { useAutoSave, AutoSaveStatus } from './useAutoSave';
-import AutoSaveToggle from './AutoSaveToggle';
+import { useAutoSave } from './useAutoSave';
 import { CollabConfig } from '../collab/types';
 import { useCollaboration } from '../collab/useCollaboration';
 import { useSync } from '../collab/sync/useSync';
@@ -11,12 +10,25 @@ import SharePanel from '../collab/SharePanel';
 import CollabBadge from '../collab/CollabBadge';
 import { resolveRelayUrl } from '../collab/url-params';
 import type { EditorHandle, EditorStateCallbacks } from './EditorHandle';
+import FloatingToolbar from './FloatingToolbar';
+import type { ToolbarPosition } from './FloatingToolbar';
+import SaveToast from './SaveToast';
+import type { ToastPosition } from './SaveToast';
+
+const OPPOSITE_HORIZONTAL: Record<ToolbarPosition, ToastPosition> = {
+  'bottom-right': 'bottom-left',
+  'bottom-left': 'bottom-right',
+  'top-right': 'top-left',
+  'top-left': 'top-right',
+};
 
 export interface EditorChromeProps {
   host: EditorHost;
   tool: 'excalidraw' | 'mermaid';
   showCancel?: boolean;
   collabConfig?: CollabConfig;
+  /** Position of the floating toolbar in web mode. Default 'bottom-right'. */
+  toolbarPosition?: ToolbarPosition;
   children: (props: {
     ref: React.Ref<EditorHandle>;
     stateCallbacks: EditorStateCallbacks;
@@ -30,6 +42,7 @@ const EditorChrome: React.FC<EditorChromeProps> = ({
   tool,
   showCancel = true,
   collabConfig,
+  toolbarPosition = 'bottom-right',
   children,
 }) => {
   const editorRef = useRef<EditorHandle>(null);
@@ -201,49 +214,30 @@ const EditorChrome: React.FC<EditorChromeProps> = ({
   }
 
   // Web/playground floating layout
+  const toastPosition = OPPOSITE_HORIZONTAL[toolbarPosition];
+
   return (
     <div className="h-full w-full relative bg-white dark:bg-gray-900">
       <div className={`w-full h-full ${tool === 'excalidraw' ? 'excalidraw-wrapper' : ''}`}>
         {childContent}
       </div>
-      <div className="fixed bottom-4 right-4 z-[1000] flex flex-col items-end gap-2">
-        {showCollabPanel && (
-          <div className="bg-white/95 dark:bg-gray-800/95 rounded-lg p-3 shadow-lg min-w-[280px]">
-            <SharePanel state={collabState} actions={collabActions} tool={tool}
-              drawingId={collabConfig?.drawingId ?? ''} onClose={() => setShowCollabPanel(false)} />
-          </div>
-        )}
-        <CollabBadge state={collabState} onClick={() => setShowCollabPanel(!showCollabPanel)} />
-      </div>
-      {(() => {
-        let badgeText: string | null = null;
-        let badgeBg = 'rgba(222, 53, 11, 0.9)';
-
-        if (autoSaveStatus === 'saved') {
-          badgeText = 'Saved';
-          badgeBg = 'rgba(0, 135, 90, 0.9)';
-        } else if (autoSaveStatus === 'saving') {
-          badgeText = 'Saving\u2026';
-          badgeBg = 'rgba(0, 82, 204, 0.9)';
-        } else if (isDirty && autoSaveEnabled) {
-          badgeText = 'Auto-saving\u2026';
-          badgeBg = 'rgba(255, 171, 0, 0.9)';
-        } else if (isDirty) {
-          badgeText = 'Unsaved changes \u2014 \u2318S to save';
-        }
-
-        return badgeText ? (
-          <div className="fixed bottom-4 left-4 px-3.5 py-1.5 text-white rounded-full text-xs font-medium z-[1000] pointer-events-none shadow-md"
-            style={{ backgroundColor: badgeBg }}>
-            {badgeText}
-          </div>
-        ) : null;
-      })()}
-      {tool === 'mermaid' && (
-        <div className="fixed bottom-4 right-[70px] z-[1000] bg-white/90 dark:bg-gray-800/90 rounded-lg px-2.5 py-1 shadow-md">
-          <AutoSaveToggle enabled={autoSaveEnabled} onChange={setAutoSaveEnabled} />
-        </div>
-      )}
+      <FloatingToolbar
+        position={toolbarPosition}
+        onSave={handleSave}
+        isSaving={isSaving}
+        autoSaveEnabled={autoSaveEnabled}
+        onAutoSaveChange={setAutoSaveEnabled}
+        collabState={collabState}
+        collabActions={collabActions}
+        tool={tool}
+        drawingId={collabConfig?.drawingId ?? ''}
+      />
+      <SaveToast
+        status={autoSaveStatus}
+        isDirty={isDirty}
+        autoSaveEnabled={autoSaveEnabled}
+        position={toastPosition}
+      />
     </div>
   );
 };

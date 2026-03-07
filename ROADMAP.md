@@ -28,6 +28,7 @@ Make Excaliframe the go-to lightweight diagramming toolkit for Confluence and th
 | Editable drawing title in playground editor | Done |
 | Playground as landing page (drawing list at `/`) | Done |
 | Rspack migration (5-10x faster builds, webpack fallback) | Done |
+| Floating Toolbar + Save Toast (playground editor UX) | Done |
 | GitHub Actions CI (build, lint, audit) | TODO |
 | Atlassian Marketplace submission | TODO |
 | SBOM generation on releases | TODO |
