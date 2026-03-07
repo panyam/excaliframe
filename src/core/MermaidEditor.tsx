@@ -178,7 +178,9 @@ const MermaidEditor = forwardRef<EditorHandle, MermaidEditorProps>(
   }, []);
 
   // Resizable divider drag handling
+  // Runs after loading completes so refs are attached to the DOM
   useEffect(() => {
+    if (isLoading) return;
     const divider = dividerRef.current;
     const container = containerRef.current;
     if (!divider || !container) return;
@@ -196,7 +198,8 @@ const MermaidEditor = forwardRef<EditorHandle, MermaidEditorProps>(
       if (!isDragging) return;
       const rect = container.getBoundingClientRect();
       const pct = ((e.clientX - rect.left) / rect.width) * 100;
-      setLeftWidth(Math.min(80, Math.max(20, pct)));
+      const clamped = Math.min(80, Math.max(20, pct));
+      setLeftWidth(clamped);
     };
 
     const onMouseUp = () => {
@@ -221,7 +224,7 @@ const MermaidEditor = forwardRef<EditorHandle, MermaidEditorProps>(
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
     };
-  }, []);
+  }, [isLoading]);
 
   if (isLoading) {
     return (
