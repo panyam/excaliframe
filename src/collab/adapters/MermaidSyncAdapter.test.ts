@@ -98,6 +98,24 @@ describe('MermaidSyncAdapter', () => {
       adapter.applyRemote('peer-1', { version: 5 });
       expect(setCode).not.toHaveBeenCalled();
     });
+
+    it('ignores non-string text field', () => {
+      const { adapter, setCode } = makeAdapter('initial');
+      adapter.applyRemote('peer-1', { text: 42 as any, version: 5 });
+      expect(setCode).not.toHaveBeenCalled();
+    });
+
+    it('ignores null text field', () => {
+      const { adapter, setCode } = makeAdapter('initial');
+      adapter.applyRemote('peer-1', { text: null as any, version: 5 });
+      expect(setCode).not.toHaveBeenCalled();
+    });
+
+    it('ignores object text field', () => {
+      const { adapter, setCode } = makeAdapter('initial');
+      adapter.applyRemote('peer-1', { text: { foo: 'bar' } as any, version: 5 });
+      expect(setCode).not.toHaveBeenCalled();
+    });
   });
 
   describe('getSceneSnapshot / applySceneInit', () => {

@@ -16,6 +16,18 @@
                     Join
                 </button>
             </div>
+            <!-- Password prompt (shown when room is encrypted) -->
+            <div id="password-section" class="hidden mt-3">
+                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">This session is encrypted. Enter the password:</label>
+                <div class="flex gap-2">
+                    <input id="password-input" type="text" placeholder="Session password"
+                        class="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono" />
+                    <button id="password-join-btn"
+                        class="px-4 py-2 text-sm font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                        Join
+                    </button>
+                </div>
+            </div>
             <div id="join-error" class="hidden mt-3 px-2.5 py-1.5 text-xs rounded-md bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800"></div>
         </div>
     </div>
@@ -27,6 +39,12 @@
     var input = document.getElementById('join-input');
     var btn = document.getElementById('join-btn');
     var errEl = document.getElementById('join-error');
+    var passwordSection = document.getElementById('password-section');
+    var passwordInput = document.getElementById('password-input');
+    var passwordJoinBtn = document.getElementById('password-join-btn');
+
+    // Pending join state (set when room is encrypted, waiting for password)
+    var pendingJoin = null;
 
     if (prefill) {
         input.value = prefill;
@@ -46,8 +64,22 @@
         }
     });
 
+    passwordJoinBtn.addEventListener('click', function() {
+        if (pendingJoin && passwordInput.value.trim()) {
+            completeJoin(pendingJoin, passwordInput.value.trim());
+        }
+    });
+
+    passwordInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && pendingJoin && passwordInput.value.trim()) {
+            completeJoin(pendingJoin, passwordInput.value.trim());
+        }
+    });
+
     function processCode(raw) {
         errEl.classList.add('hidden');
+        passwordSection.classList.add('hidden');
+        pendingJoin = null;
 
         // Extract code from full URL if pasted (e.g. https://host/join/CODE)
         var code = raw;
@@ -77,22 +109,41 @@
             return;
         }
 
-        // First visit: fetch room info from relay for tool type, create new drawing
+        // First visit: fetch room info from relay for tool type + encryption status
         btn.disabled = true;
         btn.textContent = 'Joining\u2026';
         fetch('/relay/api/v1/rooms/' + encodeURIComponent(sessionId))
             .then(function(r) { return r.ok ? r.json() : Promise.reject('not found'); })
             .then(function(room) {
                 var tool = room.tool || 'excalidraw';
-                var newDrawingId = crypto.randomUUID();
-                localStorage.setItem('excaliframe:sessionDrawing:' + sessionId, newDrawingId);
-                redirectToEditor(newDrawingId, relayUrl, sessionId, tool);
+                var joinInfo = { relayUrl: relayUrl, sessionId: sessionId, tool: tool, encrypted: !!room.encrypted };
+
+                if (joinInfo.encrypted) {
+                    // Show password prompt — don't redirect yet
+                    pendingJoin = joinInfo;
+                    passwordSection.classList.remove('hidden');
+                    passwordInput.focus();
+                    btn.disabled = false;
+                    btn.textContent = 'Join';
+                } else {
+                    completeJoin(joinInfo, null);
+                }
             })
             .catch(function() {
                 btn.disabled = false;
                 btn.textContent = 'Join';
                 showError('Session not found or has ended.');
             });
+    }
+
+    function completeJoin(joinInfo, password) {
+        var newDrawingId = crypto.randomUUID();
+        localStorage.setItem('excaliframe:sessionDrawing:' + joinInfo.sessionId, newDrawingId);
+        // Store password in sessionStorage so the editor can read it on load
+        if (password) {
+            sessionStorage.setItem('excaliframe:joinPassword:' + joinInfo.sessionId, password);
+        }
+        redirectToEditor(newDrawingId, joinInfo.relayUrl, joinInfo.sessionId, joinInfo.tool);
     }
 
     function redirectToEditor(drawingId, relay, session, tool) {

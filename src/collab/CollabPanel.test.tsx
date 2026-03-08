@@ -10,8 +10,13 @@ function makeState(overrides: Partial<CollabState> = {}): CollabState {
     isConnected: false,
     isConnecting: false,
     clientId: '',
+    sessionId: '',
     peers: new Map(),
     error: null,
+    isOwner: false,
+    ownerClientId: '',
+    roomEncrypted: false,
+    maxPeers: 0,
     ...overrides,
   };
 }
@@ -21,6 +26,7 @@ function makeActions(overrides: Partial<CollabActions> = {}): CollabActions {
     connect: vi.fn(),
     disconnect: vi.fn(),
     send: vi.fn(),
+    notifyCredentialsChanged: vi.fn(),
     ...overrides,
   };
 }

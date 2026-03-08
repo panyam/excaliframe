@@ -31,11 +31,12 @@ Immediate and near-term action items for Excaliframe.
 ## In Progress
 
 ### Real-Time Collaboration — Remaining Work
-- Parts 1-4 complete: relay, transport, peer tracking, real-time sync, share UX, cursor tracking (139 TS tests passing)
+- Parts 1-5 complete: relay, transport, peer tracking, real-time sync, share UX, cursor tracking, security hardening (196 TS tests passing)
 - Relay server and generic TS client extracted to [`massrelay`](https://github.com/panyam/massrelay) — npm: `@panyam/massrelay`
 - Excaliframe imports massrelay via npm package; local collab files are thin re-exports
 - Mermaid cursor tracking: implemented — pills at bottom of code pane + inline cursor overlay ([#9](https://github.com/panyam/excaliframe/issues/9))
-- Remaining: smart reconnect (currently disabled), binary file sync
+- Security hardening: participant limits (10/room), multi-layer rate limiting, password-based E2EE (AES-256-GCM), protocol versioning
+- Remaining: smart reconnect (currently disabled), binary file sync, `ws://` URL warning
 
 ### Fix False Positive "Unsaved Changes" Indicator
 - When loading an existing drawing, "Unsaved changes" appears immediately without user interaction
@@ -110,3 +111,6 @@ Immediate and near-term action items for Excaliframe.
 - [x] EditorChrome refactor — extracted all chrome concerns (collab hooks, autosave, keyboard shortcuts, dirty badges, layout branches) into `EditorChrome` wrapper. Editors are now pure `forwardRef` content components with `EditorHandle` imperative interface.
 - [x] Floating Toolbar + Save Toast — web/playground layout consolidated: `FloatingToolbar` (gear-icon menu with Save, Share/Collab, Auto-save toggle, click-outside dismiss, inline SharePanel) and `SaveToast` (auto-dismissing color-coded save-status pill). Replaces three scattered fixed-position elements with two composable components. `toolbarPosition` prop on `EditorChrome`. Forge layout unchanged.
 - [x] Extract relay into standalone `massrelay` library — Go relay server + vanilla TS client (`CollabClient`, `SyncAdapter`, `url-params`, proto types) at `github.com/panyam/massrelay`, published to npm as `@panyam/massrelay`. Excaliframe collab files become thin re-exports. `relay/` and `src/collab/gen/` deleted.
+- [x] Collab Part 5 — relay hardening: participant limits (10/room default, graceful ROOM_FULL ErrorEvent), multi-layer rate limiting (global 100/s, per-IP 5/s, per-client 30msg/s, 1MB max message), protocol versioning (v2), adapter robustness (try/catch on JSON.parse), password-based E2EE (AES-256-GCM, PBKDF2 key derivation, optional per-session password)
+- [x] E2EE UX: SharePanel password field with auto-generate, JoinPage password prompt for encrypted rooms, EditorChrome key derivation, useSync encrypt/decrypt layer, CredentialsChanged broadcast
+- [x] Security doc (docs/SECURITY.md) updated with E2EE section, rate limiting mitigations, updated threat analysis

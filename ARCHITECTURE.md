@@ -93,10 +93,11 @@ excaliframe/
 │   │   │   └── MermaidSyncAdapter.ts     # Mermaid text sync adapter
 │   │   ├── sync/                    # Tool-agnostic sync orchestration
 │   │   │   ├── SyncAdapter.ts       # Re-exports from @panyam/massrelay/sync
-│   │   │   └── useSync.ts           # Debounced outgoing, throttled cursors, event routing
+│   │   │   └── useSync.ts           # Debounced outgoing, throttled cursors, event routing, E2EE encrypt/decrypt
 │   │   ├── CollabClient.ts          # Re-exports from @panyam/massrelay/client
+│   │   ├── crypto.ts                # E2EE: PBKDF2 key derivation, AES-256-GCM encrypt/decrypt, password generation
 │   │   ├── useCollaboration.ts      # React hook for connection state
-│   │   ├── SharePanel.tsx           # Share dialog (relay servers, peer list with colored dots)
+│   │   ├── SharePanel.tsx           # Share dialog (relay servers, password, peer list with colored dots)
 │   │   ├── CollabBadge.tsx          # People icon badge with peer count
 │   │   ├── peerColors.ts            # 8-color palette, getPeerColor(), getPeerLabel()
 │   │   ├── url-params.ts            # Re-exports from @panyam/massrelay/url
@@ -438,8 +439,10 @@ WebSocket endpoint: `/relay/ws/v1/{session_id}/sync`
 
 Messages use protobuf definitions with JSON-over-WebSocket transport (servicekit envelope: `{type: "data", data: <payload>}`).
 
-- **CollabAction** (client→server): oneof `JoinRoom`, `LeaveRoom`, `PresenceUpdate`, `SceneUpdate`, `CursorUpdate`, `TextUpdate`
-- **CollabEvent** (server→client): oneof `RoomJoined`, `PeerJoined`, `PeerLeft`, `PresenceUpdate`, `SceneUpdate`, `CursorUpdate`, `TextUpdate`, `SceneInit`, `ErrorEvent`
+- **CollabAction** (client→server): oneof `JoinRoom`, `LeaveRoom`, `PresenceUpdate`, `SceneUpdate`, `CursorUpdate`, `TextUpdate`, `CredentialsChanged`
+- **CollabEvent** (server→client): oneof `RoomJoined`, `PeerJoined`, `PeerLeft`, `PresenceUpdate`, `SceneUpdate`, `CursorUpdate`, `TextUpdate`, `SceneInit`, `ErrorEvent`, `CredentialsChanged`
+
+`JoinRoom` includes `protocol_version` (v2 for E2EE-capable clients) and `encrypted` flag. `RoomJoined` returns `max_peers`, `encrypted`, and `protocol_version`.
 
 Generated code: Go in `massrelay/gen/go/`, TypeScript in `@panyam/massrelay` npm package.
 
@@ -486,12 +489,31 @@ Cursor tracking uses Excalidraw's native collaborator rendering. No custom UI is
 4. Same `peerColors` palette and `ensurePeerIndex()` pattern as Excalidraw — stable color per clientId
 5. The `onCursorsChange` callback triggers React re-render via `cursorVersion` state counter
 
+### End-to-End Encryption (E2EE)
+
+Optional password-based encryption protects content from relay operator snooping and MITM attacks.
+
+**Key derivation:** Owner enters a session password → PBKDF2 derives AES-256-GCM key using sessionId as salt (100k iterations, SHA-256). Key cached in memory.
+
+**Encrypted fields:** `SceneUpdate.elements[].data`, `TextUpdate.text`, `SceneInitResponse.payload` — content payloads only. Cursors and metadata remain unencrypted.
+
+**Wire format:** `base64(IV_12bytes || ciphertext || authTag_16bytes)` — same field names, opaque base64 values.
+
+**Password distribution:** Shared out-of-band (not in the join code). JoinPage prompts for password when room is encrypted.
+
+**Implementation:** `src/collab/crypto.ts` (pure Web Crypto API), `useSync.ts` (encrypt outgoing, decrypt incoming), `SharePanel.tsx` (password field with auto-generate), `EditorChrome.tsx` (key derivation lifecycle).
+
+### Relay-Side Protections
+
+The relay enforces server-side limits: max 10 peers/room (ROOM_FULL ErrorEvent), global connection rate (100/s), per-IP rate (5/s), per-client message rate (30/s), 1MB max message size. Protocol version negotiation ensures old clients can't join encrypted rooms.
+
 ### Implementation Status
 
-- **Part 1** (connection infrastructure): Complete — relay embedded in site server, opt-in UI, 67 tests passing
+- **Part 1** (connection infrastructure): Complete — relay embedded in site server, opt-in UI
 - **Part 2** (element sync + text): Complete — ExcalidrawSyncAdapter, MermaidSyncAdapter, useSync hook, scene init, debounced outgoing
 - **Part 3** (share UX): Complete — SharePanel, owner lifecycle, join codes, auto-connect, browserId
-- **Part 4** (cursor tracking): Complete — Excalidraw native collaborator rendering, Mermaid pill+caret overlay, peer colors, throttled broadcasts, 139 TS tests passing
+- **Part 4** (cursor tracking): Complete — Excalidraw native collaborator rendering, Mermaid pill+caret overlay, peer colors, throttled broadcasts
+- **Part 5** (security hardening): Complete — participant limits, rate limiting, E2EE, protocol versioning, adapter robustness, 196 TS + ~40 Go tests passing
 
 ---
 

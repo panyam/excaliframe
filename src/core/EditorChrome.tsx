@@ -9,6 +9,7 @@ import type { SyncAdapter, SyncActions, SyncConnection } from '../collab/sync/Sy
 import SharePanel from '../collab/SharePanel';
 import CollabBadge from '../collab/CollabBadge';
 import { resolveRelayUrl } from '../collab/url-params';
+import { deriveKey } from '../collab/crypto';
 import type { EditorHandle, EditorStateCallbacks } from './EditorHandle';
 import FloatingToolbar from './FloatingToolbar';
 import type { ToolbarPosition } from './FloatingToolbar';
@@ -71,6 +72,31 @@ const EditorChrome: React.FC<EditorChromeProps> = ({
   }, []);
   const [collabState, collabActions] = useCollaboration(tool, onCollabEvent);
 
+  // E2EE encryption key (derived from password, cached for session duration)
+  const [encryptionKey, setEncryptionKey] = useState<CryptoKey | null>(null);
+
+  const handlePasswordChange = useCallback(async (password: string | null) => {
+    if (!password) {
+      setEncryptionKey(null);
+      return;
+    }
+    // sessionId may not be available yet (owner hasn't connected), derive once we have it
+    // For now store the password and derive after connect
+    passwordRef.current = password;
+  }, []);
+  const passwordRef = useRef<string | null>(null);
+
+  // Derive key once sessionId is available (after connect)
+  useEffect(() => {
+    if (collabState.sessionId && passwordRef.current) {
+      deriveKey(passwordRef.current, collabState.sessionId).then(setEncryptionKey);
+    }
+    if (!collabState.isConnected) {
+      setEncryptionKey(null);
+      passwordRef.current = null;
+    }
+  }, [collabState.sessionId, collabState.isConnected]);
+
   const syncConnection = useMemo<SyncConnection>(() => ({
     isConnected: collabState.isConnected,
     clientId: collabState.clientId,
@@ -79,7 +105,7 @@ const EditorChrome: React.FC<EditorChromeProps> = ({
     send: collabActions.send,
   }), [collabState.isConnected, collabState.clientId, collabState.isOwner, collabState.peers, collabActions.send]);
 
-  const [, syncActions] = useSync(syncAdapter, syncConnection);
+  const [, syncActions] = useSync(syncAdapter, syncConnection, { encryptionKey });
   syncActionsRef.current = syncActions;
 
   // Collab panel state
@@ -90,7 +116,19 @@ const EditorChrome: React.FC<EditorChromeProps> = ({
     if (collabConfig?.autoJoin && !collabState.isConnected && !collabState.isConnecting) {
       const relayUrl = collabConfig.autoJoinRelayUrl || '/relay';
       const sessionId = collabConfig.autoJoinSessionId || '';
-      collabActions.connect(resolveRelayUrl(relayUrl), sessionId, '', false, collabConfig.drawingId);
+      // Check for password in sessionStorage (set by JoinPage for encrypted rooms)
+      // or localStorage (set by owner's other tabs)
+      const storedPassword = sessionId
+        ? (sessionStorage.getItem(`excaliframe:joinPassword:${sessionId}`)
+           || localStorage.getItem(`excaliframe:sessionPassword:${sessionId}`))
+        : null;
+      if (storedPassword) {
+        passwordRef.current = storedPassword;
+        // Clean up sessionStorage (one-time use)
+        if (sessionId) sessionStorage.removeItem(`excaliframe:joinPassword:${sessionId}`);
+      }
+      const encrypted = !!storedPassword;
+      collabActions.connect(resolveRelayUrl(relayUrl), sessionId, '', false, collabConfig.drawingId, encrypted);
     }
   }, [collabConfig?.autoJoin]);
 
@@ -203,7 +241,8 @@ const EditorChrome: React.FC<EditorChromeProps> = ({
         </div>
         {showCollabPanel && (
           <SharePanel state={collabState} actions={collabActions} tool={tool}
-            drawingId={collabConfig?.drawingId ?? ''} onClose={() => setShowCollabPanel(false)} />
+            drawingId={collabConfig?.drawingId ?? ''} onClose={() => setShowCollabPanel(false)}
+            onPasswordChange={handlePasswordChange} />
         )}
         <div style={{ flex: 1, overflow: 'hidden', width: '100%', height: '100%' }}
           className={tool === 'excalidraw' ? 'excalidraw-wrapper' : undefined}>
@@ -231,6 +270,7 @@ const EditorChrome: React.FC<EditorChromeProps> = ({
         collabActions={collabActions}
         tool={tool}
         drawingId={collabConfig?.drawingId ?? ''}
+        onPasswordChange={handlePasswordChange}
       />
       <SaveToast
         status={autoSaveStatus}

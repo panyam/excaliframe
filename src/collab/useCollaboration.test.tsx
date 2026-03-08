@@ -43,6 +43,14 @@ vi.mock('./CollabClient', () => {
       this._isConnected = false;
       this.options.onDisconnect?.();
     }
+    simulateErrorEvent(code: string, message: string) {
+      this.options.onErrorEvent?.(code, message);
+    }
+    simulateCredentialsChanged(reason: string) {
+      this.options.onCredentialsChanged?.(reason);
+    }
+    simulateSessionEnded() { this.options.onSessionEnded?.(); }
+    simulateOwnerChanged(newOwnerClientId: string) { this.options.onOwnerChanged?.(newOwnerClientId); }
   }
 
   return {
@@ -83,7 +91,7 @@ describe('useCollaboration', () => {
     });
     expect(getMocks().mockConnect).toHaveBeenCalledWith(
       'ws://localhost:8787', 'sess1', 'Alice', 'excalidraw',
-      false, expect.any(String), '',
+      false, expect.any(String), '', false,
     );
   });
 
@@ -162,7 +170,7 @@ describe('useCollaboration', () => {
 
     expect(getMocks().mockConnect).toHaveBeenCalledWith(
       'ws://localhost:8787', 'sess1', 'Alice', 'mermaid',
-      false, expect.any(String), '',
+      false, expect.any(String), '', false,
     );
   });
 
@@ -178,5 +186,94 @@ describe('useCollaboration', () => {
     act(() => { result.current[1].connect('ws://localhost:8787', 'sess1', 'Alice'); });
 
     expect(localStorage.getItem('excaliframe:lastUsername')).toBe('Alice');
+  });
+
+  it('passes encrypted flag to CollabClient.connect', () => {
+    const { result } = renderHook(() => useCollaboration('excalidraw'));
+    act(() => { result.current[1].connect('ws://localhost:8787', 'sess1', 'Alice', true, 'd1', true); });
+
+    expect(getMocks().mockConnect).toHaveBeenCalledWith(
+      'ws://localhost:8787', 'sess1', 'Alice', 'excalidraw',
+      true, expect.any(String), expect.any(String), true,
+    );
+  });
+
+  it('initial state has roomEncrypted=false and maxPeers=0', () => {
+    const { result } = renderHook(() => useCollaboration('excalidraw'));
+    expect(result.current[0].roomEncrypted).toBe(false);
+    expect(result.current[0].maxPeers).toBe(0);
+  });
+
+  it('sets roomEncrypted and maxPeers from RoomJoined event', () => {
+    const onEvent = vi.fn();
+    const { result } = renderHook(() => useCollaboration('excalidraw', onEvent));
+    act(() => { result.current[1].connect('ws://localhost:8787', 'sess1', 'Alice'); });
+    act(() => { getMockClient().simulateConnect('c1'); });
+    act(() => {
+      getMockClient().simulateEvent({
+        roomJoined: { sessionId: 'sess1', ownerClientId: 'c1', encrypted: true, maxPeers: 10 },
+      });
+    });
+
+    expect(result.current[0].roomEncrypted).toBe(true);
+    expect(result.current[0].maxPeers).toBe(10);
+  });
+
+  it('sets error on ErrorEvent (ROOM_FULL)', () => {
+    const { result } = renderHook(() => useCollaboration('excalidraw'));
+    act(() => { result.current[1].connect('ws://localhost:8787', 'sess1', 'Alice'); });
+    act(() => { getMockClient().simulateErrorEvent('ROOM_FULL', 'Room is full (10/10)'); });
+
+    expect(result.current[0].error).toBe('ROOM_FULL: Room is full (10/10)');
+    expect(result.current[0].isConnecting).toBe(false);
+  });
+
+  it('resets state and sets error on CredentialsChanged (password_changed)', () => {
+    const { result } = renderHook(() => useCollaboration('excalidraw'));
+    act(() => { result.current[1].connect('ws://localhost:8787', 'sess1', 'Alice'); });
+    act(() => { getMockClient().simulateConnect('c1'); });
+    act(() => { getMockClient().simulateCredentialsChanged('password_changed'); });
+
+    expect(result.current[0].isConnected).toBe(false);
+    expect(result.current[0].error).toContain('Password changed');
+  });
+
+  it('resets state and sets error on CredentialsChanged (password_removed)', () => {
+    const { result } = renderHook(() => useCollaboration('excalidraw'));
+    act(() => { result.current[1].connect('ws://localhost:8787', 'sess1', 'Alice'); });
+    act(() => { getMockClient().simulateConnect('c1'); });
+    act(() => { getMockClient().simulateCredentialsChanged('password_removed'); });
+
+    expect(result.current[0].isConnected).toBe(false);
+    expect(result.current[0].error).toContain('Encryption was removed');
+  });
+
+  it('notifyCredentialsChanged sends credentialsChanged action', () => {
+    const { result } = renderHook(() => useCollaboration('excalidraw'));
+    act(() => { result.current[1].connect('ws://localhost:8787', 'sess1', 'Alice'); });
+    act(() => { getMockClient().simulateConnect('c1'); });
+    act(() => { result.current[1].notifyCredentialsChanged('password_changed'); });
+
+    expect(getMocks().mockSend).toHaveBeenCalledWith({ credentialsChanged: { reason: 'password_changed' } });
+  });
+
+  it('sets error and resets on SessionEnded', () => {
+    const { result } = renderHook(() => useCollaboration('excalidraw'));
+    act(() => { result.current[1].connect('ws://localhost:8787', 'sess1', 'Alice'); });
+    act(() => { getMockClient().simulateConnect('c1'); });
+    act(() => { getMockClient().simulateSessionEnded(); });
+
+    expect(result.current[0].isConnected).toBe(false);
+    expect(result.current[0].error).toContain('owner ended');
+  });
+
+  it('updates owner on OwnerChanged event', () => {
+    const { result } = renderHook(() => useCollaboration('excalidraw'));
+    act(() => { result.current[1].connect('ws://localhost:8787', 'sess1', 'Alice'); });
+    act(() => { getMockClient().simulateConnect('c1'); });
+    act(() => { getMockClient().simulateOwnerChanged('c1'); });
+
+    expect(result.current[0].ownerClientId).toBe('c1');
+    expect(result.current[0].isOwner).toBe(true);
   });
 });

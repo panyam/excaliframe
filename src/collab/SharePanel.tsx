@@ -3,6 +3,7 @@ import { CollabState, CollabActions } from './useCollaboration';
 import { DEFAULT_RELAY_SERVERS, RelayServerOption } from './types';
 import { resolveRelayUrl, encodeJoinCode } from './url-params';
 import { getPeerColor } from './peerColors';
+import { generatePassword } from './crypto';
 
 export interface SharePanelProps {
   state: CollabState;
@@ -11,15 +12,19 @@ export interface SharePanelProps {
   drawingId: string;
   relayServers?: RelayServerOption[];
   onClose?: () => void;
+  /** Called when owner sets/changes password. Parent derives encryption key. */
+  onPasswordChange?: (password: string | null) => void;
 }
 
 const SharePanel: React.FC<SharePanelProps> = ({
-  state, actions, tool, drawingId, relayServers, onClose,
+  state, actions, tool, drawingId, relayServers, onClose, onPasswordChange,
 }) => {
   const servers = relayServers ?? DEFAULT_RELAY_SERVERS;
   const [selectedServer, setSelectedServer] = useState(0);
   const [customUrl, setCustomUrl] = useState('');
   const [copied, setCopied] = useState(false);
+  const [password, setPassword] = useState(() => generatePassword());
+  const [passwordCopied, setPasswordCopied] = useState(false);
 
   useEffect(() => {
     const savedRelay = localStorage.getItem('excaliframe:lastRelayUrl');
@@ -42,8 +47,20 @@ const SharePanel: React.FC<SharePanelProps> = ({
   const handleStartSharing = () => {
     const relayUrl = getRelayUrl();
     const resolved = resolveRelayUrl(relayUrl);
+    const hasPassword = password.trim().length > 0;
+    // Notify parent of password for key derivation
+    if (hasPassword) {
+      onPasswordChange?.(password.trim());
+    }
     // Empty sessionId → relay generates one; pass drawingId for hint-based reuse
-    actions.connect(resolved, '', '', true, drawingId);
+    actions.connect(resolved, '', '', true, drawingId, hasPassword);
+  };
+
+  const handleCopyPassword = () => {
+    navigator.clipboard.writeText(password).then(() => {
+      setPasswordCopied(true);
+      setTimeout(() => setPasswordCopied(false), 2000);
+    }).catch(() => {});
   };
 
   const handleCopyJoinCode = () => {
@@ -115,6 +132,23 @@ const SharePanel: React.FC<SharePanelProps> = ({
             );
           })}
         </div>
+        {state.roomEncrypted && (
+          <div className="mb-3">
+            <div className="flex items-center gap-1 mb-1">
+              <span className="text-xs font-medium">Password:</span>
+              <span className="text-xs text-green-600 dark:text-green-400">encrypted</span>
+            </div>
+            <div className="flex gap-1">
+              <code className="flex-1 px-2 py-1 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-mono truncate">
+                {password}
+              </code>
+              <button onClick={handleCopyPassword}
+                className="px-2 py-1 text-xs rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600">
+                {passwordCopied ? '✓' : 'Copy'}
+              </button>
+            </div>
+          </div>
+        )}
         <div className="flex gap-2">
           <button onClick={handleCopyJoinCode}
             className="px-3 py-1.5 text-xs font-medium rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600">
@@ -160,6 +194,27 @@ const SharePanel: React.FC<SharePanelProps> = ({
             className="w-full mt-1 px-2.5 py-1.5 text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
           />
         )}
+      </div>
+
+      <div className="mb-3">
+        <label className="block text-xs font-medium mb-1">Password (optional):</label>
+        <div className="flex gap-1">
+          <input
+            type="text"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            placeholder="Leave empty for no encryption"
+            className="flex-1 px-2.5 py-1.5 text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono"
+          />
+          <button onClick={() => setPassword(generatePassword())}
+            title="Generate new password"
+            className="px-2 py-1.5 text-xs rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600">
+            &#x21bb;
+          </button>
+        </div>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+          Share the password separately from the join link
+        </p>
       </div>
 
       <div className="flex gap-2 justify-end">

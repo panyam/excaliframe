@@ -1,11 +1,14 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { SyncAdapter, SyncState, SyncActions, SyncConnection } from './SyncAdapter';
+import { encryptPayload, decryptPayload } from '../crypto';
 
 interface UseSyncConfig {
   /** Debounce interval for outgoing updates (ms). Default 100. */
   outgoingDebounceMs?: number;
   /** Throttle interval for cursor broadcasts (ms). Default 50. */
   cursorThrottleMs?: number;
+  /** AES-256-GCM key for E2EE. When set, content payloads are encrypted/decrypted. */
+  encryptionKey?: CryptoKey | null;
 }
 
 /**
@@ -28,6 +31,7 @@ export function useSync(
 ): [SyncState, SyncActions] {
   const debounceMs = config?.outgoingDebounceMs ?? 100;
   const cursorThrottleMs = config?.cursorThrottleMs ?? 50;
+  const encryptionKey = config?.encryptionKey ?? null;
 
   const [syncState, setSyncState] = useState<SyncState>({ isInitialized: false });
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -68,7 +72,7 @@ export function useSync(
     };
   }, []);
 
-  const flushOutgoing = useCallback(() => {
+  const flushOutgoing = useCallback(async () => {
     if (!adapter || !connection.isConnected) {
       console.log('[SYNC] flushOutgoing skipped: adapter=%s connected=%s', !!adapter, connection.isConnected);
       return;
@@ -81,9 +85,29 @@ export function useSync(
     }
 
     console.log('[SYNC] flushOutgoing: sending %s', update.type, update.payload);
+
+    // Encrypt content fields if E2EE is enabled
+    if (encryptionKey) {
+      try {
+        const payload = update.payload as any;
+        if (update.type === 'sceneUpdate' && payload.elements) {
+          for (const el of payload.elements) {
+            if (el.data) {
+              el.data = await encryptPayload(encryptionKey, el.data);
+            }
+          }
+        } else if (update.type === 'textUpdate' && typeof payload.text === 'string') {
+          payload.text = await encryptPayload(encryptionKey, payload.text);
+        }
+      } catch (err) {
+        console.warn('[SYNC] Encryption failed, skipping send:', err);
+        return;
+      }
+    }
+
     // Send using the proto JSON field name matching the update type
     connection.send({ [update.type]: update.payload });
-  }, [adapter, connection]);
+  }, [adapter, connection, encryptionKey]);
 
   const notifyLocalChange = useCallback(() => {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
@@ -104,7 +128,7 @@ export function useSync(
     }, cursorThrottleMs);
   }, [adapter, connection, cursorThrottleMs]);
 
-  const handleEvent = useCallback((event: any) => {
+  const handleEvent = useCallback(async (event: any) => {
     if (!adapter) {
       console.log('[SYNC] handleEvent: no adapter, ignoring', event);
       return;
@@ -112,11 +136,34 @@ export function useSync(
 
     if (event.sceneUpdate) {
       console.log('[SYNC] handleEvent: sceneUpdate from %s, elements=%d', event.fromClientId, event.sceneUpdate?.elements?.length ?? 0);
+      // Decrypt element data fields if E2EE is enabled
+      if (encryptionKey && event.sceneUpdate.elements) {
+        try {
+          for (const el of event.sceneUpdate.elements) {
+            if (el.data) {
+              el.data = await decryptPayload(encryptionKey, el.data);
+            }
+          }
+        } catch (err) {
+          console.warn('[SYNC] Decryption failed (wrong key?), skipping update:', err);
+          return;
+        }
+      }
       adapter.applyRemote(event.fromClientId ?? '', event.sceneUpdate);
     } else if (event.textUpdate) {
       console.log('[SYNC] handleEvent: textUpdate from %s', event.fromClientId);
+      // Decrypt text field if E2EE is enabled
+      if (encryptionKey && typeof event.textUpdate.text === 'string') {
+        try {
+          event.textUpdate.text = await decryptPayload(encryptionKey, event.textUpdate.text);
+        } catch (err) {
+          console.warn('[SYNC] Decryption failed (wrong key?), skipping update:', err);
+          return;
+        }
+      }
       adapter.applyRemote(event.fromClientId ?? '', event.textUpdate);
     } else if (event.cursorUpdate && event.fromClientId) {
+      // Cursors are NOT encrypted — low sensitivity, high frequency
       const peer = connection.peers.get(event.fromClientId) as { username?: string } | undefined;
       adapter.applyRemoteCursor({
         clientId: event.fromClientId,
@@ -128,31 +175,48 @@ export function useSync(
         selectedElementIds: event.cursorUpdate.selectedElementIds,
       });
     } else if (event.sceneInitResponse) {
-      adapter.applySceneInit(event.sceneInitResponse.payload ?? '{}');
+      let payload = event.sceneInitResponse.payload ?? '{}';
+      // Decrypt scene init payload if E2EE is enabled
+      if (encryptionKey && payload !== '{}') {
+        try {
+          payload = await decryptPayload(encryptionKey, payload);
+        } catch (err) {
+          console.warn('[SYNC] Scene init decryption failed (wrong key?):', err);
+          return;
+        }
+      }
+      adapter.applySceneInit(payload);
       setSyncState({ isInitialized: true });
     } else if (event.sceneInitRequest && event.fromClientId) {
       // Another peer is requesting the scene. Owner responds; if no owner,
       // fall back to lowest clientId among connected peers.
-      if (connection.isOwner) {
-        const snapshot = adapter.getSceneSnapshot();
-        connection.send({ sceneInitResponse: { payload: snapshot } });
-      } else if (!connection.isOwner) {
-        // Fallback: lowest clientId responds (for rooms without an explicit owner)
+      const shouldRespond = connection.isOwner || (() => {
         const myClientId = connection.clientId;
-        if (!myClientId) return;
+        if (!myClientId) return false;
         const peerIds = Array.from(connection.peers.keys());
         const candidates = peerIds.filter(id => id !== event.fromClientId);
-        if (candidates.length === 0) return;
+        if (candidates.length === 0) return false;
         candidates.sort();
-        if (candidates[0] === myClientId) {
-          const snapshot = adapter.getSceneSnapshot();
-          connection.send({ sceneInitResponse: { payload: snapshot } });
+        return candidates[0] === myClientId;
+      })();
+
+      if (shouldRespond) {
+        let snapshot = adapter.getSceneSnapshot();
+        // Encrypt scene init payload if E2EE is enabled
+        if (encryptionKey) {
+          try {
+            snapshot = await encryptPayload(encryptionKey, snapshot);
+          } catch (err) {
+            console.warn('[SYNC] Scene init encryption failed:', err);
+            return;
+          }
         }
+        connection.send({ sceneInitResponse: { payload: snapshot } });
       }
     } else if (event.peerLeft && event.peerLeft.clientId) {
       adapter.removePeerCursor(event.peerLeft.clientId);
     }
-  }, [adapter, connection]);
+  }, [adapter, connection, encryptionKey]);
 
   return [syncState, { notifyLocalChange, notifyCursorMove, handleEvent }];
 }

@@ -111,12 +111,17 @@ export class ExcalidrawSyncAdapter implements SyncAdapter {
     }>;
     if (incoming.length === 0) return;
 
-    // Deserialize remote elements
-    const remoteElements: ExcalidrawElement[] = incoming.map((update) => {
-      const el = JSON.parse(update.data);
-      if (update.deleted) el.isDeleted = true;
-      return el;
-    });
+    // Deserialize remote elements, skipping malformed entries
+    const remoteElements: ExcalidrawElement[] = [];
+    for (const update of incoming) {
+      try {
+        const el = JSON.parse(update.data);
+        if (update.deleted) el.isDeleted = true;
+        remoteElements.push(el);
+      } catch {
+        console.warn('[ExcalidrawSync] Skipping malformed element data:', update.id);
+      }
+    }
 
     // Use Excalidraw's built-in reconciliation (handles version/nonce conflicts)
     const localElements = this.api.getSceneElements();

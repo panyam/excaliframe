@@ -15,6 +15,8 @@ function makeState(overrides: Partial<CollabState> = {}): CollabState {
     error: null,
     isOwner: false,
     ownerClientId: '',
+    roomEncrypted: false,
+    maxPeers: 0,
     ...overrides,
   };
 }

@@ -49,8 +49,8 @@ export class MermaidSyncAdapter implements SyncAdapter {
 
   applyRemote(_fromClientId: string, payload: Record<string, unknown>): void {
     const incomingVersion = (payload.version as number) ?? 0;
-    const incomingText = payload.text as string;
-    if (incomingText === undefined) return;
+    const incomingText = payload.text;
+    if (typeof incomingText !== 'string') return;
 
     if (incomingVersion > this.localVersion) {
       this.isApplyingRemote = true;

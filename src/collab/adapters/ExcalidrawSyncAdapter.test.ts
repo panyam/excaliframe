@@ -277,6 +277,24 @@ describe('ExcalidrawSyncAdapter', () => {
       expect(api.updateScene).not.toHaveBeenCalled();
     });
 
+    it('skips malformed JSON data without throwing', () => {
+      const api = makeMockApi([]);
+      const adapter = new ExcalidrawSyncAdapter(api);
+
+      expect(() => {
+        adapter.applyRemote('peer-1', {
+          elements: [
+            { id: 'good', version: 1, versionNonce: 1, data: '{"id":"good","version":1,"versionNonce":1}', deleted: false },
+            { id: 'bad', version: 1, versionNonce: 1, data: 'not valid json{{{', deleted: false },
+            { id: 'also-good', version: 1, versionNonce: 1, data: '{"id":"also-good","version":1,"versionNonce":1}', deleted: false },
+          ],
+        });
+      }).not.toThrow();
+
+      // Should have called updateScene with 2 valid elements
+      expect(api.updateScene).toHaveBeenCalled();
+    });
+
     it('updates tracking after applying remote to prevent echo', () => {
       const api = makeMockApi([]);
       const adapter = new ExcalidrawSyncAdapter(api);

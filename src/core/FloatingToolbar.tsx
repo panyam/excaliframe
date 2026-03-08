@@ -17,6 +17,7 @@ export interface FloatingToolbarProps {
   collabActions: CollabActions;
   tool: 'excalidraw' | 'mermaid';
   drawingId: string;
+  onPasswordChange?: (password: string | null) => void;
 }
 
 const POSITION_CLASSES: Record<ToolbarPosition, string> = {
@@ -44,6 +45,7 @@ const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
   collabActions,
   tool,
   drawingId,
+  onPasswordChange,
 }) => {
   const [expanded, setExpanded] = useState(false);
   const [panelView, setPanelView] = useState<PanelView>('menu');
@@ -124,6 +126,7 @@ const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
         tool={tool}
         drawingId={drawingId}
         onClose={() => setPanelView('menu')}
+        onPasswordChange={onPasswordChange}
       />
     </div>
   );

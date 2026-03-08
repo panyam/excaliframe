@@ -12,13 +12,19 @@ export interface CollabState {
   error: string | null;
   isOwner: boolean;
   ownerClientId: string;
+  /** true if the room has E2EE enabled (from RoomJoined response). */
+  roomEncrypted: boolean;
+  /** Max peers allowed by relay (from RoomJoined response). */
+  maxPeers: number;
 }
 
 export interface CollabActions {
-  /** Connect to relay. sessionId empty = relay generates one (owner). drawingId used to build hint for session reuse. */
-  connect: (relayUrl: string, sessionId: string, username: string, isOwner?: boolean, drawingId?: string) => void;
+  /** Connect to relay. sessionId empty = relay generates one (owner). drawingId used to build hint for session reuse. encrypted declares E2EE (owner only). */
+  connect: (relayUrl: string, sessionId: string, username: string, isOwner?: boolean, drawingId?: string, encrypted?: boolean) => void;
   disconnect: () => void;
   send: (action: Record<string, unknown>) => void;
+  /** Broadcast CredentialsChanged event to all peers (owner only). */
+  notifyCredentialsChanged: (reason: string) => void;
 }
 
 export function useCollaboration(
@@ -34,11 +40,13 @@ export function useCollaboration(
     error: null,
     isOwner: false,
     ownerClientId: '',
+    roomEncrypted: false,
+    maxPeers: 0,
   });
 
   const clientRef = useRef<CollabClient | null>(null);
 
-  const connect = useCallback((relayUrl: string, sessionId: string, username: string, isOwner: boolean = false, drawingId?: string) => {
+  const connect = useCallback((relayUrl: string, sessionId: string, username: string, isOwner: boolean = false, drawingId?: string, encrypted: boolean = false) => {
     // Persist to localStorage
     localStorage.setItem('excaliframe:lastRelayUrl', relayUrl);
     if (username) localStorage.setItem('excaliframe:lastUsername', username);
@@ -47,31 +55,52 @@ export function useCollaboration(
     const clientHint = drawingId ? `${browserId}:${drawingId}` : '';
 
     const client = new CollabClient({
-      onConnect: (clientId) => {
+      onConnect: (clientId: string) => {
         setState(s => ({ ...s, isConnected: true, isConnecting: false, clientId, error: null }));
       },
-      onPeerJoined: (peer) => {
+      onPeerJoined: (peer: PeerInfo) => {
         setState(s => {
           const peers = new Map(s.peers);
           peers.set(peer.clientId, peer);
           return { ...s, peers };
         });
       },
-      onPeerLeft: (clientId) => {
+      onPeerLeft: (clientId: string) => {
         setState(s => {
           const peers = new Map(s.peers);
           peers.delete(clientId);
           return { ...s, peers };
         });
       },
-      onError: (err) => {
+      onError: (err: Error) => {
         setState(s => ({ ...s, error: err.message }));
+      },
+      onErrorEvent: (code: string, message: string) => {
+        // Graceful rejection from relay (ROOM_FULL, PROTOCOL_VERSION_TOO_OLD, etc.)
+        setState(s => ({ ...s, error: `${code}: ${message}`, isConnecting: false }));
+      },
+      onCredentialsChanged: (reason: string) => {
+        setState(s => ({
+          ...s,
+          isConnected: false,
+          isConnecting: false,
+          clientId: '',
+          sessionId: '',
+          peers: new Map(),
+          isOwner: false,
+          ownerClientId: '',
+          roomEncrypted: false,
+          maxPeers: 0,
+          error: reason === 'password_removed'
+            ? 'Encryption was removed — please reconnect'
+            : 'Password changed — please reconnect with the new password',
+        }));
       },
       onDisconnect: () => {
         if (isOwner && drawingId) {
           localStorage.removeItem(`excaliframe:activeSession:${drawingId}`);
         }
-        setState(s => ({ ...s, isConnected: false, isConnecting: false, clientId: '', sessionId: '', peers: new Map(), isOwner: false, ownerClientId: '' }));
+        setState(s => ({ ...s, isConnected: false, isConnecting: false, clientId: '', sessionId: '', peers: new Map(), isOwner: false, ownerClientId: '', roomEncrypted: false, maxPeers: 0 }));
       },
       onSessionEnded: () => {
         setState(s => ({
@@ -83,10 +112,12 @@ export function useCollaboration(
           peers: new Map(),
           isOwner: false,
           ownerClientId: '',
+          roomEncrypted: false,
+          maxPeers: 0,
           error: 'The owner ended the sharing session',
         }));
       },
-      onOwnerChanged: (newOwnerClientId) => {
+      onOwnerChanged: (newOwnerClientId: string) => {
         setState(s => ({
           ...s,
           ownerClientId: newOwnerClientId,
@@ -94,7 +125,7 @@ export function useCollaboration(
         }));
       },
       onEvent: (event) => {
-        // Extract ownerClientId and sessionId from RoomJoined
+        // Extract ownerClientId, sessionId, and room capabilities from RoomJoined
         if (event.roomJoined) {
           const ownerClientId = event.roomJoined.ownerClientId || '';
           const returnedSessionId = event.roomJoined.sessionId || sessionId;
@@ -103,6 +134,8 @@ export function useCollaboration(
             sessionId: returnedSessionId,
             ownerClientId,
             isOwner: s.clientId === ownerClientId || isOwner,
+            roomEncrypted: !!event.roomJoined.encrypted,
+            maxPeers: event.roomJoined.maxPeers || 0,
           }));
           // Store session mappings in localStorage for same-origin auto-connect and join code reuse
           if (drawingId && returnedSessionId) {
@@ -118,7 +151,7 @@ export function useCollaboration(
 
     clientRef.current = client;
     setState(s => ({ ...s, isConnecting: true, error: null }));
-    client.connect(relayUrl, sessionId, username, tool, isOwner, browserId, clientHint);
+    client.connect(relayUrl, sessionId, username, tool, isOwner, browserId, clientHint, encrypted);
   }, [tool, onEvent]);
 
   const disconnect = useCallback(() => {
@@ -129,6 +162,10 @@ export function useCollaboration(
     clientRef.current?.send(action);
   }, []);
 
+  const notifyCredentialsChanged = useCallback((reason: string) => {
+    clientRef.current?.send({ credentialsChanged: { reason } });
+  }, []);
+
   // Disconnect on unmount (page refresh, navigation, etc.)
   useEffect(() => {
     return () => {
@@ -136,5 +173,5 @@ export function useCollaboration(
     };
   }, []);
 
-  return [state, { connect, disconnect, send }];
+  return [state, { connect, disconnect, send, notifyCredentialsChanged }];
 }

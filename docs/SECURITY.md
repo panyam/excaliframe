@@ -167,7 +167,7 @@ Every collaborative update transits through the relay as JSON-over-WebSocket:
 | Both | `CursorUpdate` | Pointer coordinates, tool, peer identity |
 | Both | `JoinRoom` | Username, browserId, drawingId (in client_hint), tool |
 
-**The relay sees all content in plaintext.** There is no end-to-end encryption. This is the primary security trade-off of the collaboration system.
+**By default, the relay sees all content in plaintext.** However, sessions can optionally enable **password-based end-to-end encryption (E2EE)**, where content payloads are encrypted client-side with AES-256-GCM before transmission. When E2EE is enabled, the relay routes opaque ciphertext and cannot read content. See [End-to-End Encryption](#end-to-end-encryption) for details.
 
 ### Join Codes
 
@@ -178,10 +178,11 @@ Example: `d3NzOi8vZXhjYWxpZnJhbWUuY29tL3JlbGF5:3f9a2b71-...`
 Properties:
 - The relay URL is base64url encoded (reversible, not encrypted)
 - The sessionId is a UUID (128-bit, not guessable)
-- Anyone with the code can join the session — there is no password or token
+- Anyone with the code can join the session (password required separately for encrypted rooms)
 - The code is valid as long as the room exists (owner is connected)
 - There is no revocation mechanism short of the owner disconnecting
 - There is no expiry on join codes
+- The join code does NOT contain the encryption password — the password must be shared out-of-band
 
 ### Identity
 
@@ -216,11 +217,22 @@ All state evaporates on server restart. There is no database, no disk writes, no
 
 - **No authentication.** No JWT, API key, OAuth, or any credential check.
 - **No authorization beyond ownership.** Any client with a valid `sessionId` can join any room.
-- **No encryption.** Content is plaintext JSON. TLS is the transport-level protection (`wss://`).
-- **No rate limiting.** No throttle on connections or messages.
-- **No message size limits.** The 64-event channel provides back-pressure but not protection.
+- **No content encryption.** The relay does not encrypt/decrypt content. E2EE is performed client-side — the relay routes opaque ciphertext when enabled. TLS (`wss://`) protects the transport layer.
 - **No content inspection or filtering.** The relay forwards messages without examining payloads.
 - **No logging of content.** The relay does not log message payloads (only connection events).
+
+### Relay-Side Protections
+
+The relay enforces several server-side protections:
+
+| Protection | Default | Description |
+|-----------|---------|-------------|
+| **Max peers per room** | 10 | Room rejects new clients with `ROOM_FULL` ErrorEvent when full |
+| **Global connection rate** | 100/sec | Token bucket on the WebSocket endpoint (429 on excess) |
+| **Per-IP connection rate** | 5/sec (burst 3) | Per-IP rate limiter with 5-minute TTL cleanup |
+| **Per-client message rate** | 30/sec | Token bucket per WebSocket connection; excess messages dropped |
+| **Max message size** | 1 MB | WebSocket frames exceeding this are rejected |
+| **Protocol version check** | v2 | Encrypted rooms reject old clients lacking E2EE support |
 
 ### REST API (Unauthenticated)
 
@@ -351,13 +363,16 @@ In Forge mode, drawings are protected by Confluence access control. In web mode,
 
 **Threat:** The operator of the relay server reads drawing content from messages in transit.
 
-**Likelihood:** Depends on relay operator trust. For `excaliframe.com/relay`, this is the Excaliframe maintainer. For self-hosted relays, this is whoever runs the server.
+**Likelihood:** Depends on relay operator trust and whether E2EE is enabled. For `excaliframe.com/relay`, this is the Excaliframe maintainer. For self-hosted relays, this is whoever runs the server.
 
-**Impact:** High — full visibility into all drawing content.
+**Impact:** High without E2EE — full visibility into all drawing content. Low with E2EE — relay sees only opaque ciphertext and metadata (peer count, message sizes, timing).
 
-**Current mitigation:** Users can self-host the relay on their own infrastructure. The relay code is open-source and auditable.
+**Current mitigation:**
+- **Password-based E2EE** — owner sets a session password; all content payloads (element data, text, scene snapshots) are encrypted with AES-256-GCM before transmission. The relay routes opaque ciphertext.
+- **Self-hostable relay** — organizations can run the relay on their own infrastructure.
+- **Open-source code** — relay and client code are fully auditable.
 
-**Recommended mitigation:** End-to-end encryption. See [Future Work](#future-work).
+**Residual risk:** E2EE is optional. Without a password, content transits in plaintext. Cursor updates are not encrypted (low sensitivity, high frequency). Metadata (who is connected, message sizes, timing) is always visible to the relay.
 
 ### T4: Man-in-the-Middle on WebSocket
 
@@ -365,11 +380,13 @@ In Forge mode, drawings are protected by Confluence access control. In web mode,
 
 **Likelihood:** Low in production (`wss://` enforced). Higher if a user enters a `ws://` custom relay URL.
 
-**Impact:** High — full read/write of all messages.
+**Impact:** High without E2EE — full read/write of all messages. Low with E2EE — attacker sees only ciphertext (AES-256-GCM authenticated encryption prevents tampering).
 
-**Current mitigation:** Production relay uses `wss://` (TLS). The site enforces HTTPS redirects.
+**Current mitigation:**
+- **TLS transport** — Production relay uses `wss://` (TLS). The site enforces HTTPS redirects.
+- **Password-based E2EE** — When enabled, content is encrypted end-to-end. Even if TLS is compromised or `ws://` is used, content remains protected by AES-256-GCM.
 
-**Residual risk:** Custom relay URLs may use `ws://` (unencrypted). The UI does not warn about this.
+**Residual risk:** Custom relay URLs may use `ws://` (unencrypted). The UI does not warn about this. Without E2EE, unencrypted content is fully exposed to MITM.
 
 ### T5: Owner Impersonation
 
@@ -427,13 +444,19 @@ In Forge mode, drawings are protected by Confluence access control. In web mode,
 
 **Threat:** An attacker floods the relay with connections or messages, degrading service for all users.
 
-**Likelihood:** Medium — no rate limiting exists.
+**Likelihood:** Low — rate limiting is now enforced at multiple layers.
 
 **Impact:** Medium — collaboration becomes unavailable. Drawings themselves are unaffected (stored locally or in Confluence).
 
-**Current mitigation:** None currently. The 64-event channel buffer provides minimal back-pressure.
+**Current mitigation:**
+- **Global connection rate limit** — 100 connections/sec across all clients (429 response on excess)
+- **Per-IP connection rate limit** — 5 connections/sec per IP (burst 3), with 5-minute TTL cleanup
+- **Per-client message rate limit** — 30 messages/sec per WebSocket connection (excess dropped)
+- **Message size limit** — 1 MB max per WebSocket frame
+- **Room capacity limit** — 10 peers per room (configurable), graceful `ROOM_FULL` rejection
+- **64-event channel buffer** — per-client back-pressure
 
-**Recommended mitigation:** Rate limiting on connections and messages. See [Future Work](#future-work).
+**Residual risk:** A distributed attack from many IPs could still exhaust server resources. Consider reverse proxy with additional DDoS protection for high-value deployments.
 
 ---
 
@@ -453,6 +476,11 @@ In Forge mode, drawings are protected by Confluence access control. In web mode,
 | Open-source code | Auditability | All components |
 | Self-hostable relay | Relay trust (T3) | Relay design |
 | Opt-in collaboration | Accidental data exposure | Editor UX |
+| Password-based E2EE (AES-256-GCM) | Relay snooping (T3), MITM (T4) | Client-side encryption |
+| Room capacity limits (10 peers) | DoS (T10) | Relay server |
+| Multi-layer rate limiting | DoS (T10) | Relay server |
+| Message size limits (1 MB) | DoS (T10) | Relay server |
+| Protocol version negotiation | Forward compatibility | Relay + client |
 
 ### Defense in Depth Layers
 
@@ -531,6 +559,66 @@ Open browser DevTools Network tab while using the editor:
 
 ---
 
+## End-to-End Encryption
+
+### How It Works
+
+Password-based E2EE is an opt-in feature that encrypts content payloads client-side before transmission. The relay never sees plaintext content.
+
+**Key derivation:**
+- Owner enters or accepts an auto-generated password (16 chars, base62, `crypto.getRandomValues`) in the SharePanel
+- Key derived via PBKDF2: `crypto.subtle.deriveKey(PBKDF2, password, salt=sessionId, iterations=100000, hash=SHA-256)` → AES-256-GCM key
+- Key derived once on connect, cached in memory for session duration
+- The password is never sent to the relay — only the `encrypted: true` flag in `JoinRoom`
+
+**What's encrypted (content payloads):**
+- `SceneUpdate.elements[].data` — per-element JSON (Excalidraw)
+- `TextUpdate.text` — diagram source (Mermaid)
+- `SceneInitResponse.payload` — full scene snapshot
+
+**What's NOT encrypted:**
+- `JoinRoom`, `LeaveRoom`, `RoomJoined`, `PeerJoined`, `PeerLeft` — relay needs these for room management
+- `CursorUpdate` — low sensitivity (x/y coordinates), 50ms frequency, encryption overhead not justified
+- `SceneUpdate.elements[].id`, `.version`, `.versionNonce`, `.deleted` — structural metadata for reconciliation
+- `TextUpdate.version` — needed for version comparison before applying
+
+**Encryption format per field:**
+```
+base64(IV_12bytes || AES-GCM_ciphertext || authTag_16bytes)
+```
+
+The same field name (`data`, `text`, `payload`) is used — the value becomes an opaque base64 string. Old clients without E2EE support receiving encrypted values will fail on `JSON.parse` — try/catch in the sync adapters prevents crashes.
+
+### Password Sharing
+
+The password is shared **out-of-band** (separately from the join link). The join code does not contain the password. This is an intentional design choice:
+- Join code can be posted in a group chat → many people get the link
+- Password shared only with authorized collaborators via a secure channel
+- Compromised join code alone does not expose content
+
+### Join Flow for Encrypted Rooms
+
+1. Peer opens join link → JoinPage fetches room info via `GET /api/v1/rooms/{sessionId}`
+2. If `encrypted: true`, a password input is shown before allowing join
+3. Password is stored in `sessionStorage` (one-time transfer to editor page)
+4. Editor reads password from `sessionStorage`, derives key, connects
+5. On first received message, AES-GCM auth tag validates the key — failure indicates wrong password
+
+### Owner Tab Sharing
+
+- Owner's password stored in `localStorage` keyed by sessionId
+- Owner's other tabs auto-joining read the password from `localStorage` → derive key without prompting
+- Cleared on disconnect / session end
+
+### Password Change
+
+- Owner updates password → derives new key → sends `CredentialsChanged` action to relay
+- Relay broadcasts `CredentialsChanged` event to all peers
+- Peers see "Password changed — please reconnect with the new password" → disconnected
+- Peers must re-enter the new password to rejoin
+
+---
+
 ## Future Work
 
 Improvements that would strengthen the security posture, roughly in priority order:
@@ -540,9 +628,11 @@ Improvements that would strengthen the security posture, roughly in priority ord
 | Item | Addresses | Effort |
 |------|-----------|--------|
 | ~~**Remove/restrict list-rooms endpoint**~~ | ~~T2 (session enumeration)~~ | Done — routes not registered |
+| ~~**Rate limiting on relay**~~ | ~~T10 (DoS)~~ | Done — multi-layer rate limiting |
+| ~~**Message size limits**~~ | ~~T10 (DoS)~~ | Done — 1 MB max |
+| ~~**End-to-end encryption (E2EE)**~~ | ~~T3 (relay snooping), T4 (MITM)~~ | Done — password-based AES-256-GCM |
+| ~~**Room capacity limits**~~ | ~~T10 (DoS)~~ | Done — 10 peers/room default |
 | **Authenticated admin API for list-rooms/session-by-hint** | T2 (admin tooling) | Medium |
-| **Rate limiting on relay** | T10 (DoS) | Low |
-| **Message size limits** | T10 (DoS) | Low |
 | **Warn on `ws://` relay URLs** | T4 (MITM) | Low |
 | **Security headers on site server** (CSP, HSTS, X-Frame-Options) | General hardening | Low |
 | **Automated dependency scanning in CI** | T6 (supply chain) | Low |
@@ -553,32 +643,19 @@ Improvements that would strengthen the security posture, roughly in priority ord
 
 | Item | Addresses | Effort |
 |------|-----------|--------|
-| **Session passwords/tokens** | T1 (unauthorized join), T2 (enumeration) | Medium |
 | **Session expiry** | T1 (stale codes) | Medium |
 | **Read-only join mode** | Principle of least privilege | Medium |
 | **Join code revocation** | T1 (leaked codes) | Medium |
 | **Relay authentication** (API keys or tokens for room creation) | T2, T10 | Medium |
+| **Encrypt cursor updates** | T3, T4 (metadata protection) | Low |
 
 ### Long Term
 
 | Item | Addresses | Effort |
 |------|-----------|--------|
-| **End-to-end encryption** (E2EE) | T3 (relay snooping), T4 (MITM) | High |
 | **Signed messages** (peer-to-peer integrity) | T5 (impersonation) | High |
 | **Audit logging** (connection events, no content) | Compliance, incident response | Medium |
 | **Atlassian Cloud Fortified certification** | Enterprise trust | High |
-
-### E2EE Design Notes
-
-End-to-end encryption would eliminate the need to trust the relay operator. A possible approach:
-
-1. Owner generates a symmetric key (AES-GCM) when creating a session
-2. Key is embedded in the join code (e.g., appended after the sessionId, never sent to the relay)
-3. All `SceneUpdate`, `TextUpdate`, and `SceneInitResponse` payloads are encrypted client-side before sending
-4. The relay routes opaque ciphertext — it can see metadata (who is connected, message sizes, timing) but not content
-5. `CursorUpdate` could remain unencrypted (low sensitivity) or be encrypted (full protection)
-
-Trade-offs: key distribution for late joiners, key rotation, performance overhead on large scenes. Worth a dedicated design document before implementation.
 
 ---
 
@@ -586,9 +663,11 @@ Trade-offs: key distribution for late joiners, key rotation, performance overhea
 
 | Mode | Data at Rest | Data in Transit (no collab) | Data in Transit (collab) |
 |------|-------------|---------------------------|--------------------------|
-| **Forge** | Confluence macro config (Atlassian-managed, encrypted) | None (all via Forge bridge) | Plaintext JSON via relay WebSocket (TLS) |
-| **Web** | Browser IndexedDB (local only) | None | Plaintext JSON via relay WebSocket (TLS) |
+| **Forge** | Confluence macro config (Atlassian-managed, encrypted) | None (all via Forge bridge) | JSON via relay WebSocket (TLS); optionally E2EE with AES-256-GCM |
+| **Web** | Browser IndexedDB (local only) | None | JSON via relay WebSocket (TLS); optionally E2EE with AES-256-GCM |
 
 **Without collaboration:** Excaliframe is a zero-trust, zero-server-state application. Drawing data never leaves the browser (web) or the Confluence platform (Forge).
 
-**With collaboration:** Drawing data transits through the relay server in plaintext JSON over TLS. The relay is stateless and stores nothing to disk. Users can self-host the relay for full control. End-to-end encryption is a planned future improvement.
+**With collaboration (no password):** Drawing data transits through the relay server in plaintext JSON over TLS. The relay is stateless and stores nothing to disk. Users can self-host the relay for full control.
+
+**With collaboration (password-protected):** All content payloads are encrypted client-side with AES-256-GCM before transmission. The relay routes opaque ciphertext — it can see metadata (who is connected, message sizes, timing) but not content. The encryption key is derived from a user-chosen password via PBKDF2 and never sent to the relay.
