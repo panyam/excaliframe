@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useImperativeHandle, forwardRef } from 'react';
 import { EditorHost, DrawingEnvelope } from './types';
 import { MermaidSyncAdapter } from '../collab/adapters/MermaidSyncAdapter';
+import type { MermaidRemoteCursor } from '../collab/adapters/MermaidSyncAdapter';
 import type { SyncActions } from '../collab/sync/SyncAdapter';
 import type { EditorHandle, EditorStateCallbacks } from './EditorHandle';
 
@@ -45,6 +46,8 @@ const MermaidEditor = forwardRef<EditorHandle, MermaidEditorProps>(
     const saved = localStorage.getItem('excaliframe:mermaidSplitPct');
     return saved ? Number(saved) : 50;
   });
+
+  const [cursorVersion, setCursorVersion] = useState(0);
 
   const isDirty = code !== initialCode;
 
@@ -155,11 +158,31 @@ const MermaidEditor = forwardRef<EditorHandle, MermaidEditorProps>(
 
   useEffect(() => {
     if (!isLoading && !syncAdapterRef.current) {
-      const adapter = new MermaidSyncAdapter(() => codeRef.current, setCode);
+      const adapter = new MermaidSyncAdapter(
+        () => codeRef.current,
+        setCode,
+        () => setCursorVersion(v => v + 1),
+      );
       syncAdapterRef.current = adapter;
       stateCallbacks.onSyncAdapterReady(adapter);
     }
   }, [isLoading, stateCallbacks]);
+
+  // Broadcast local cursor position on selection change
+  const handleCursorChange = useCallback((e: React.SyntheticEvent<HTMLTextAreaElement>) => {
+    const ta = e.currentTarget;
+    const adapter = syncAdapterRef.current;
+    if (adapter) {
+      adapter.setLocalSelection(ta.selectionStart, ta.selectionEnd);
+      syncActionsRef.current?.notifyCursorMove();
+    }
+  }, []);
+
+  // Compute remote cursors for rendering (driven by cursorVersion)
+  const remoteCursors: MermaidRemoteCursor[] = [];
+  if (cursorVersion >= 0 && syncAdapterRef.current) {
+    syncAdapterRef.current.getRemoteCursors().forEach(c => remoteCursors.push(c));
+  }
 
   // Handle Tab key in textarea (insert spaces instead of changing focus)
   const handleTextareaKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -239,7 +262,7 @@ const MermaidEditor = forwardRef<EditorHandle, MermaidEditorProps>(
 
   return (
     <div className="mermaid-editor" ref={containerRef}>
-      <div className="mermaid-editor__code" style={{ width: `calc(${leftWidth}% - 3px)` }}>
+      <div className="mermaid-editor__code" style={{ width: `calc(${leftWidth}% - 3px)`, position: 'relative' }}>
         <textarea
           value={code}
           onChange={(e) => {
@@ -248,10 +271,55 @@ const MermaidEditor = forwardRef<EditorHandle, MermaidEditorProps>(
             if (adapter && !adapter.isApplyingRemote) {
               syncActionsRef.current?.notifyLocalChange();
             }
+            handleCursorChange(e);
           }}
           onKeyDown={handleTextareaKeyDown}
+          onSelect={handleCursorChange}
+          onKeyUp={handleCursorChange}
+          onClick={handleCursorChange}
           spellCheck={false}
         />
+        {remoteCursors.length > 0 && (
+          <div style={{
+            position: 'absolute',
+            bottom: 4,
+            left: 8,
+            right: 8,
+            display: 'flex',
+            gap: 4,
+            flexWrap: 'wrap',
+            pointerEvents: 'none',
+          }}>
+            {remoteCursors.slice(0, 3).map(c => (
+              <span
+                key={c.clientId}
+                style={{
+                  background: c.color.background,
+                  color: '#fff',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  padding: '2px 8px',
+                  borderRadius: 10,
+                  whiteSpace: 'nowrap',
+                  lineHeight: '18px',
+                  textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                }}
+              >
+                {c.username} · line {c.line}
+              </span>
+            ))}
+            {remoteCursors.length > 3 && (
+              <span style={{
+                fontSize: 11,
+                fontWeight: 600,
+                padding: '2px 8px',
+                color: '#666',
+              }}>
+                +{remoteCursors.length - 3} more
+              </span>
+            )}
+          </div>
+        )}
       </div>
       <div className="mermaid-editor__divider" ref={dividerRef} />
       <div className="mermaid-editor__preview" style={{ width: `calc(${100 - leftWidth}% - 3px)` }}>

@@ -31,10 +31,10 @@ Immediate and near-term action items for Excaliframe.
 ## In Progress
 
 ### Real-Time Collaboration — Remaining Work
-- Parts 1-4 complete: relay, transport, peer tracking, real-time sync, share UX, cursor tracking (125 TS tests passing)
+- Parts 1-4 complete: relay, transport, peer tracking, real-time sync, share UX, cursor tracking (139 TS tests passing)
 - Relay server and generic TS client extracted to [`massrelay`](https://github.com/panyam/massrelay) — npm: `@panyam/massrelay`
 - Excaliframe imports massrelay via npm package; local collab files are thin re-exports
-- Mermaid cursor tracking: deferred — see [#9](https://github.com/panyam/excaliframe/issues/9)
+- Mermaid cursor tracking: implemented — pills at bottom of code pane + inline cursor overlay ([#9](https://github.com/panyam/excaliframe/issues/9))
 - Remaining: smart reconnect (currently disabled), binary file sync
 
 ### Fix False Positive "Unsaved Changes" Indicator

@@ -87,7 +87,7 @@ Architecture uses `DrawingEnvelope.tool` field to identify diagram type. Host ad
 | Editor integration (optional `collab` prop, URL params) | Done |
 | Element sync (Excalidraw scene diffing/merging) | Done |
 | Cursor broadcasting (Excalidraw collaborators) | Done |
-| Cursor tracking — Mermaid (text selection cursors) | Planned — [#9](https://github.com/panyam/excaliframe/issues/9) |
+| Cursor tracking — Mermaid (text cursor pills + inline carets) | Done — [#9](https://github.com/panyam/excaliframe/issues/9) |
 | Text sync (Mermaid LWW) | Done |
 | Peer colors and labels (session-local, 8-color palette) | Done |
 | Programmatic control (CLI/agent → live drawing via relay) | Planned |

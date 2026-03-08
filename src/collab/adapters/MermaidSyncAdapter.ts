@@ -1,4 +1,12 @@
 import type { SyncAdapter, OutgoingUpdate, CursorData, PeerCursor } from '../sync/SyncAdapter';
+import { getPeerColor, getPeerLabel } from '../peerColors';
+
+export interface MermaidRemoteCursor {
+  clientId: string;
+  username: string;
+  line: number;
+  color: { background: string; stroke: string };
+}
 
 export class MermaidSyncAdapter implements SyncAdapter {
   readonly tool = 'mermaid' as const;
@@ -11,10 +19,18 @@ export class MermaidSyncAdapter implements SyncAdapter {
   private lastSyncedText: string = '';
   private localVersion: number = 0;
 
-  constructor(getCode: () => string, setCode: (code: string) => void) {
+  // Cursor tracking state
+  private localSelection: { start: number; end: number } | null = null;
+  private remoteCursors: Map<string, MermaidRemoteCursor> = new Map();
+  private peerIndex: Map<string, number> = new Map();
+  private nextPeerIndex: number = 0;
+  onCursorsChange?: () => void;
+
+  constructor(getCode: () => string, setCode: (code: string) => void, onCursorsChange?: () => void) {
     this.getCode = getCode;
     this.setCode = setCode;
     this.lastSyncedText = getCode();
+    this.onCursorsChange = onCursorsChange;
   }
 
   computeOutgoing(): OutgoingUpdate | null {
@@ -63,8 +79,55 @@ export class MermaidSyncAdapter implements SyncAdapter {
     this.isApplyingRemote = false;
   }
 
-  // Cursor sync — deferred to Part 3 (Mermaid text cursor OT is complex)
-  getCursorData(): CursorData | null { return null; }
-  applyRemoteCursor(_peer: PeerCursor): void {}
-  removePeerCursor(_clientId: string): void {}
+  // Cursor tracking
+
+  setLocalSelection(start: number, end: number): void {
+    this.localSelection = { start, end };
+  }
+
+  getCursorData(): CursorData | null {
+    if (!this.localSelection) return null;
+    return { x: this.localSelection.start, y: this.localSelection.end, tool: 'text' };
+  }
+
+  private ensurePeerIndex(clientId: string): number {
+    let idx = this.peerIndex.get(clientId);
+    if (idx === undefined) {
+      idx = this.nextPeerIndex++;
+      this.peerIndex.set(clientId, idx);
+    }
+    return idx;
+  }
+
+  private charOffsetToLine(offset: number): number {
+    const text = this.getCode();
+    const slice = text.slice(0, Math.max(0, offset));
+    let line = 1;
+    for (let i = 0; i < slice.length; i++) {
+      if (slice[i] === '\n') line++;
+    }
+    return line;
+  }
+
+  applyRemoteCursor(peer: PeerCursor): void {
+    const idx = this.ensurePeerIndex(peer.clientId);
+    const color = getPeerColor(idx);
+    const line = this.charOffsetToLine(peer.x);
+    this.remoteCursors.set(peer.clientId, {
+      clientId: peer.clientId,
+      username: peer.username || getPeerLabel(idx),
+      line,
+      color,
+    });
+    this.onCursorsChange?.();
+  }
+
+  removePeerCursor(clientId: string): void {
+    this.remoteCursors.delete(clientId);
+    this.onCursorsChange?.();
+  }
+
+  getRemoteCursors(): Map<string, MermaidRemoteCursor> {
+    return this.remoteCursors;
+  }
 }

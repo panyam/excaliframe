@@ -478,14 +478,20 @@ Cursor tracking uses Excalidraw's native collaborator rendering. No custom UI is
 
 **SharePanel** shows colored dots next to peer names using the same palette.
 
-**Mermaid cursor tracking** is deferred — see GitHub issue #9.
+**Mermaid cursor tracking** uses a different approach since there's no native collaborator rendering:
+
+1. `MermaidSyncAdapter` stores `localSelection` (textarea selectionStart/End), packs it as `CursorData { x: start, y: end, tool: "text" }`
+2. Remote cursors are converted from char offset to line number via `charOffsetToLine()` and rendered as colored pills at the bottom of the code pane (e.g., "User 1 · line 3")
+3. Inline cursor carets are overlaid on the textarea using a `pointer-events-none` positioned div with colored blinking carets and name flags
+4. Same `peerColors` palette and `ensurePeerIndex()` pattern as Excalidraw — stable color per clientId
+5. The `onCursorsChange` callback triggers React re-render via `cursorVersion` state counter
 
 ### Implementation Status
 
 - **Part 1** (connection infrastructure): Complete — relay embedded in site server, opt-in UI, 67 tests passing
 - **Part 2** (element sync + text): Complete — ExcalidrawSyncAdapter, MermaidSyncAdapter, useSync hook, scene init, debounced outgoing
 - **Part 3** (share UX): Complete — SharePanel, owner lifecycle, join codes, auto-connect, browserId
-- **Part 4** (cursor tracking): Complete — Excalidraw native collaborator rendering, peer colors, throttled broadcasts, 125 TS tests passing
+- **Part 4** (cursor tracking): Complete — Excalidraw native collaborator rendering, Mermaid pill+caret overlay, peer colors, throttled broadcasts, 139 TS tests passing
 
 ---
 
