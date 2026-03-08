@@ -40,7 +40,8 @@ Immediate and near-term action items for Excaliframe.
 - Zombie client fix: server-side `watchClose()` goroutine cleans up on ungraceful WS disconnect
 - CollabClient disconnect lifecycle fix: `onDisconnect` fires synchronously, state reset before `grpc.close()`
 - Cross-tab session reuse: owner's second tab finds existing session via localStorage before creating a new one
-- Remaining: smart reconnect (currently disabled), binary file sync, `ws://` URL warning, Playwright E2E tests
+- Playwright E2E tests: implemented — 23 tests across 7 files (CRUD, editor, sharing, joining, collab sync, cursors, encryption) using Python + pytest-playwright + uv. Page Object Model with sample fixture catalog. See `e2e/README.md`.
+- Remaining: smart reconnect (currently disabled), binary file sync, `ws://` URL warning
 
 ### Fix False Positive "Unsaved Changes" Indicator
 - When loading an existing drawing, "Unsaved changes" appears immediately without user interaction
