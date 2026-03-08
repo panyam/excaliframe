@@ -45,28 +45,51 @@ class EditorPage:
         canvas.click()
         self.page.wait_for_timeout(200)
 
+    def _dispatch_draw(self, start: tuple[int, int], end: tuple[int, int], steps: int = 5) -> None:
+        """Draw on canvas by dispatching PointerEvents via JS.
+
+        Playwright mouse events don't reliably reach Excalidraw's canvas
+        handlers in headless mode, so we dispatch native PointerEvents.
+        """
+        self.page.evaluate(
+            """([startX, startY, endX, endY, steps]) => {
+                const canvas = document.querySelector('.excalidraw__canvas.interactive');
+                const rect = canvas.getBoundingClientRect();
+                const sx = rect.left + startX, sy = rect.top + startY;
+                const ex = rect.left + endX, ey = rect.top + endY;
+                const opts = { bubbles: true, cancelable: true,
+                               pointerType: 'mouse', pointerId: 1 };
+
+                canvas.dispatchEvent(new PointerEvent('pointerdown', {
+                    ...opts, clientX: sx, clientY: sy,
+                    button: 0, buttons: 1, pressure: 0.5,
+                }));
+                for (let i = 1; i <= steps; i++) {
+                    canvas.dispatchEvent(new PointerEvent('pointermove', {
+                        ...opts, button: 0, buttons: 1, pressure: 0.5,
+                        clientX: sx + (ex - sx) * i / steps,
+                        clientY: sy + (ey - sy) * i / steps,
+                    }));
+                }
+                canvas.dispatchEvent(new PointerEvent('pointerup', {
+                    ...opts, clientX: ex, clientY: ey,
+                    button: 0, buttons: 0,
+                }));
+            }""",
+            [start[0], start[1], end[0], end[1], steps],
+        )
+
     def draw_line(self) -> None:
         """Draw a simple line on the Excalidraw canvas."""
         self._focus_canvas()
-        canvas = self.excalidraw_canvas()
-        box = canvas.bounding_box()
-        assert box is not None
-        self.page.mouse.move(box["x"] + 100, box["y"] + 100)
-        self.page.mouse.down()
-        self.page.mouse.move(box["x"] + 300, box["y"] + 300, steps=10)
-        self.page.mouse.up()
+        self._dispatch_draw((100, 100), (300, 300), steps=10)
 
     def draw_rectangle(self) -> None:
         """Select rectangle tool and draw on canvas."""
         self._focus_canvas()
         self.page.keyboard.press("r")
-        canvas = self.excalidraw_canvas()
-        box = canvas.bounding_box()
-        assert box is not None
-        self.page.mouse.move(box["x"] + 120, box["y"] + 120)
-        self.page.mouse.down()
-        self.page.mouse.move(box["x"] + 280, box["y"] + 250, steps=5)
-        self.page.mouse.up()
+        self.page.wait_for_timeout(100)
+        self._dispatch_draw((120, 120), (280, 250))
 
     def type_mermaid(self, code: str) -> None:
         self.page.locator("textarea").first.fill(code)
