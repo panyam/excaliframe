@@ -83,6 +83,7 @@ Architecture uses `DrawingEnvelope.tool` field to identify diagram type. Host ad
 | Browser client (CollabClient, framework-agnostic) | Done |
 | React hooks + UI (useCollaboration, SharePanel, CollabBadge) | Done |
 | Test suite (TDD — 200 TS + ~40 Go tests) | Done |
+| Playwright E2E tests (23 browser tests, multi-profile collab) | Done |
 | `make test` unified test runner | Done |
 | Editor integration (optional `collab` prop, URL params) | Done |
 | Element sync (Excalidraw scene diffing/merging) | Done |

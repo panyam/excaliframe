@@ -141,6 +141,18 @@ excaliframe/
 │   ├── app.yaml                    # App Engine config
 │   └── Makefile                    # Site build/deploy
 │
+├── e2e/                           # Playwright E2E tests (Python + uv)
+│   ├── conftest.py                # Fixtures: server lifecycle, multi-profile contexts
+│   ├── list_tests.py              # Standalone test lister (AST-based)
+│   ├── pages/                     # Page Object Models (listing, editor, join, share)
+│   ├── helpers/                   # Seeding (IndexedDB), server manager, join codes
+│   ├── tests/                     # 23 tests across 7 files
+│   ├── pyproject.toml             # uv project (playwright, pytest-playwright)
+│   └── Makefile                   # E2E-specific targets (test, list, debug, report)
+│
+├── scripts/
+│   └── pre-push.sh                # Git hook: unit + E2E tests on push
+│
 ├── tools/
 │   └── sync.py                     # Enterprise distribution sync tool
 │
