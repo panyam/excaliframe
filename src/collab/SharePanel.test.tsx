@@ -77,21 +77,36 @@ describe('SharePanel', () => {
       expect(screen.getByRole('combobox')).toBeInTheDocument();
     });
 
-    it('renders password field with auto-generated password', () => {
+    it('shows encrypt checkbox unchecked by default, password field hidden', () => {
       render(<SharePanel state={makeState()} actions={makeActions()} tool="excalidraw" drawingId="d1" />);
-      const pwInput = screen.getByPlaceholderText(/leave empty/i) as HTMLInputElement;
+      const checkbox = screen.getByRole('checkbox', { name: /encrypt with password/i });
+      expect(checkbox).toBeInTheDocument();
+      expect(checkbox).not.toBeChecked();
+      // Password input should not be visible
+      expect(screen.queryByPlaceholderText(/enter a password/i)).not.toBeInTheDocument();
+    });
+
+    it('shows password field with auto-generated password when checkbox is checked', () => {
+      render(<SharePanel state={makeState()} actions={makeActions()} tool="excalidraw" drawingId="d1" />);
+      fireEvent.click(screen.getByRole('checkbox', { name: /encrypt with password/i }));
+
+      const pwInput = screen.getByPlaceholderText(/enter a password/i) as HTMLInputElement;
       expect(pwInput).toBeInTheDocument();
       expect(pwInput.value).toBe('mock-password-1234');
     });
 
-    it('shows password sharing reminder', () => {
+    it('shows password sharing reminder when encrypt is enabled', () => {
       render(<SharePanel state={makeState()} actions={makeActions()} tool="excalidraw" drawingId="d1" />);
+      // Not visible before checking
+      expect(screen.queryByText(/share the password separately/i)).not.toBeInTheDocument();
+      // Visible after checking
+      fireEvent.click(screen.getByRole('checkbox', { name: /encrypt with password/i }));
       expect(screen.getByText(/share the password separately/i)).toBeInTheDocument();
     });
 
-    it('shows regenerate password button', () => {
+    it('shows regenerate password button when encrypt is enabled', () => {
       render(<SharePanel state={makeState()} actions={makeActions()} tool="excalidraw" drawingId="d1" />);
-      // The ↻ button
+      fireEvent.click(screen.getByRole('checkbox', { name: /encrypt with password/i }));
       const buttons = screen.getAllByRole('button');
       const regenButton = buttons.find(b => b.getAttribute('title') === 'Generate new password');
       expect(regenButton).toBeInTheDocument();
@@ -102,11 +117,20 @@ describe('SharePanel', () => {
       expect(screen.getByText('Room is full (3/3)')).toBeInTheDocument();
     });
 
-    it('calls connect with encrypted=true when password is set', () => {
+    it('calls connect with encrypted=false when checkbox is unchecked', () => {
       const connect = vi.fn();
       render(<SharePanel state={makeState()} actions={makeActions({ connect })} tool="excalidraw" drawingId="d1" />);
+      // Don't check the encrypt checkbox — just share
       fireEvent.click(screen.getByRole('button', { name: /start sharing/i }));
-      // Last arg is encrypted: true (password is auto-generated, not empty)
+      expect(connect).toHaveBeenCalledTimes(1);
+      expect(connect.mock.calls[0][5]).toBe(false); // encrypted flag
+    });
+
+    it('calls connect with encrypted=true when checkbox is checked', () => {
+      const connect = vi.fn();
+      render(<SharePanel state={makeState()} actions={makeActions({ connect })} tool="excalidraw" drawingId="d1" />);
+      fireEvent.click(screen.getByRole('checkbox', { name: /encrypt with password/i }));
+      fireEvent.click(screen.getByRole('button', { name: /start sharing/i }));
       expect(connect).toHaveBeenCalledTimes(1);
       expect(connect.mock.calls[0][5]).toBe(true); // encrypted flag
     });
@@ -114,29 +138,14 @@ describe('SharePanel', () => {
     it('calls onPasswordChange with password when starting encrypted share', () => {
       const onPasswordChange = vi.fn();
       render(<SharePanel state={makeState()} actions={makeActions()} tool="excalidraw" drawingId="d1" onPasswordChange={onPasswordChange} />);
+      fireEvent.click(screen.getByRole('checkbox', { name: /encrypt with password/i }));
       fireEvent.click(screen.getByRole('button', { name: /start sharing/i }));
       expect(onPasswordChange).toHaveBeenCalledWith('mock-password-1234');
     });
 
-    it('calls connect with encrypted=false when password is cleared', () => {
-      const connect = vi.fn();
-      render(<SharePanel state={makeState()} actions={makeActions({ connect })} tool="excalidraw" drawingId="d1" />);
-
-      // Clear the password
-      const pwInput = screen.getByPlaceholderText(/leave empty/i);
-      fireEvent.change(pwInput, { target: { value: '' } });
-
-      fireEvent.click(screen.getByRole('button', { name: /start sharing/i }));
-      expect(connect.mock.calls[0][5]).toBe(false); // encrypted flag
-    });
-
-    it('does not call onPasswordChange when password is empty', () => {
+    it('does not call onPasswordChange when checkbox is unchecked', () => {
       const onPasswordChange = vi.fn();
       render(<SharePanel state={makeState()} actions={makeActions()} tool="excalidraw" drawingId="d1" onPasswordChange={onPasswordChange} />);
-
-      const pwInput = screen.getByPlaceholderText(/leave empty/i);
-      fireEvent.change(pwInput, { target: { value: '' } });
-
       fireEvent.click(screen.getByRole('button', { name: /start sharing/i }));
       expect(onPasswordChange).not.toHaveBeenCalled();
     });
@@ -153,6 +162,24 @@ describe('SharePanel', () => {
     it('does not show Cancel button when onClose is not provided', () => {
       render(<SharePanel state={makeState()} actions={makeActions()} tool="excalidraw" drawingId="d1" />);
       expect(screen.queryByRole('button', { name: /cancel/i })).not.toBeInTheDocument();
+    });
+
+    it('reuses active session from localStorage when starting sharing', () => {
+      localStorage.setItem('excaliframe:activeSession:d1', 'existing-sess-abc');
+      const connect = vi.fn();
+      render(<SharePanel state={makeState()} actions={makeActions({ connect })} tool="excalidraw" drawingId="d1" />);
+      fireEvent.click(screen.getByRole('button', { name: /start sharing/i }));
+      expect(connect).toHaveBeenCalledTimes(1);
+      // Should pass the existing sessionId instead of empty string
+      expect(connect.mock.calls[0][1]).toBe('existing-sess-abc');
+    });
+
+    it('uses empty sessionId when no active session exists', () => {
+      const connect = vi.fn();
+      render(<SharePanel state={makeState()} actions={makeActions({ connect })} tool="excalidraw" drawingId="d1" />);
+      fireEvent.click(screen.getByRole('button', { name: /start sharing/i }));
+      expect(connect).toHaveBeenCalledTimes(1);
+      expect(connect.mock.calls[0][1]).toBe('');
     });
 
     it('loads saved relay URL from localStorage', () => {
@@ -208,10 +235,9 @@ describe('SharePanel', () => {
       expect(disconnect).toHaveBeenCalled();
     });
 
-    it('shows encrypted badge and password when room is encrypted', () => {
+    it('shows encrypted badge when room is encrypted', () => {
       render(<SharePanel state={ownerState({ roomEncrypted: true })} actions={makeActions()} tool="excalidraw" drawingId="d1" />);
       expect(screen.getByText('encrypted')).toBeInTheDocument();
-      expect(screen.getByText('mock-password-1234')).toBeInTheDocument();
     });
 
     it('does not show encrypted badge when room is not encrypted', () => {

@@ -326,9 +326,11 @@ The playground is a multi-page experience for creating, browsing, and editing dr
 **Self-contained site/**: The `site/` directory has its own `package.json`, `tsconfig.json`, and `webpack.config.js`. Playground page source lives in `site/pages/` and imports shared core code via the `@excaliframe/*` path alias (mapped to `../src/*`). This means `site/` can eventually move to its own repo — only the alias config changes, no source code changes.
 
 **Bundler**: `site/rspack.config.js` (default) or `site/webpack.config.js` (fallback) produces three bundles:
-- `playground-listing` → `site/static/playground/listing/bundle.js` (small, jsx-dom)
-- `playground-detail` → `site/static/playground/detail/bundle.js` (small, jsx-dom)
-- `playground-editor` → `site/static/playground/editor/bundle.js` (dispatcher + async chunks)
+- `playground-listing` → `site/static/playground/listing/bundle.[hash].js` (small, jsx-dom)
+- `playground-detail` → `site/static/playground/detail/bundle.[hash].js` (small, jsx-dom)
+- `playground-editor` → `site/static/playground/editor/bundle.[hash].js` (dispatcher + async chunks)
+
+**Cache busting**: Production builds use content-hash filenames (`bundle.[contenthash:8].js`). Each bundle directory gets a `manifest.json` mapping logical names to hashed filenames. The Go server reads manifests at startup via `LoadManifests()` and registers a `bundleJS` template function. Templates use `{{bundleJS "editor"}}` to emit the correct hashed URL. Dev mode uses plain `bundle.js` (no hashing).
 
 The editor bundle uses an **editor dispatcher** pattern: the entry point reads `envelope.tool` from IndexedDB, then dynamically imports the matching editor (Excalidraw or Mermaid) as a webpack async chunk. This means Mermaid users never download Excalidraw (~400KB), and vice versa. `splitChunks: { chunks: 'async' }` enables automatic code splitting. The same pattern is used by the Forge editor entry point (reads `moduleKey` from `view.getContext()` instead of IndexedDB).
 
@@ -513,7 +515,8 @@ The relay enforces server-side limits: max 10 peers/room (ROOM_FULL ErrorEvent),
 - **Part 2** (element sync + text): Complete — ExcalidrawSyncAdapter, MermaidSyncAdapter, useSync hook, scene init, debounced outgoing
 - **Part 3** (share UX): Complete — SharePanel, owner lifecycle, join codes, auto-connect, browserId
 - **Part 4** (cursor tracking): Complete — Excalidraw native collaborator rendering, Mermaid pill+caret overlay, peer colors, throttled broadcasts
-- **Part 5** (security hardening): Complete — participant limits, rate limiting, E2EE, protocol versioning, adapter robustness, 196 TS + ~40 Go tests passing
+- **Part 5** (security hardening): Complete — participant limits, rate limiting, E2EE, protocol versioning, adapter robustness, 200 TS + ~40 Go tests passing
+- **Stability fixes**: Zombie client cleanup (server-side `watchClose` goroutine), CollabClient disconnect lifecycle fix, cross-tab session reuse via localStorage, cache-busted bundle URLs (content-hash filenames + manifest.json)
 
 ---
 

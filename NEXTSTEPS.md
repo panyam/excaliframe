@@ -31,12 +31,16 @@ Immediate and near-term action items for Excaliframe.
 ## In Progress
 
 ### Real-Time Collaboration — Remaining Work
-- Parts 1-5 complete: relay, transport, peer tracking, real-time sync, share UX, cursor tracking, security hardening (196 TS tests passing)
-- Relay server and generic TS client extracted to [`massrelay`](https://github.com/panyam/massrelay) — npm: `@panyam/massrelay`
+- Parts 1-5 complete: relay, transport, peer tracking, real-time sync, share UX, cursor tracking, security hardening (200 TS tests passing)
+- Relay server and generic TS client extracted to [`massrelay`](https://github.com/panyam/massrelay) — npm: `@panyam/massrelay@0.0.6`
 - Excaliframe imports massrelay via npm package; local collab files are thin re-exports
 - Mermaid cursor tracking: implemented — pills at bottom of code pane + inline cursor overlay ([#9](https://github.com/panyam/excaliframe/issues/9))
 - Security hardening: participant limits (10/room), multi-layer rate limiting, password-based E2EE (AES-256-GCM), protocol versioning
-- Remaining: smart reconnect (currently disabled), binary file sync, `ws://` URL warning
+- Cache busting: content-hash filenames + manifest.json per bundle dir + Go `bundleJS` template function
+- Zombie client fix: server-side `watchClose()` goroutine cleans up on ungraceful WS disconnect
+- CollabClient disconnect lifecycle fix: `onDisconnect` fires synchronously, state reset before `grpc.close()`
+- Cross-tab session reuse: owner's second tab finds existing session via localStorage before creating a new one
+- Remaining: smart reconnect (currently disabled), binary file sync, `ws://` URL warning, Playwright E2E tests
 
 ### Fix False Positive "Unsaved Changes" Indicator
 - When loading an existing drawing, "Unsaved changes" appears immediately without user interaction

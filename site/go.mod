@@ -6,7 +6,7 @@ toolchain go1.24.6
 
 require (
 	github.com/panyam/goapplib v0.0.34
-	github.com/panyam/massrelay v0.0.2
+	github.com/panyam/massrelay v0.0.7
 	github.com/panyam/templar v0.0.29
 )
 
@@ -20,6 +20,7 @@ require (
 	golang.org/x/net v0.48.0 // indirect
 	golang.org/x/sys v0.39.0 // indirect
 	golang.org/x/text v0.32.0 // indirect
+	golang.org/x/time v0.14.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251222181119-0a764e51fe1b // indirect
 	google.golang.org/grpc v1.79.1 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
@@ -41,3 +42,4 @@ require (
 // replace github.com/panyam/oneauth v0.0.23 => ./locallinks/newstack/oneauth
 
 // replace github.com/panyam/goapplib v0.0.34 => ./locallinks/newstack/goapplib/main
+replace github.com/panyam/massrelay v0.0.7 => ./locallinks/newstack/massrelay

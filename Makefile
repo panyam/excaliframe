@@ -30,10 +30,6 @@ test-ts: ## Run TypeScript tests (vitest)
 	@echo "$(GREEN)Running TypeScript tests...$(NC)"
 	npm run test
 
-test-go: ## Run Go relay server tests
-	@echo "$(GREEN)Running Go relay tests...$(NC)"
-	cd relay && go test ./...
-
 ##@ Setup
 
 install: ## Install npm dependencies
@@ -149,10 +145,3 @@ sync-status: ## Show what changed since last sync
 
 migrate: ## One-time migration: restructure enterprise target into excaliframe/ subdirectory
 	@python3 tools/sync.py migrate "$(TARGET)"
-
-##@ Proto Generation
-
-proto: ## Generate protobuf code (Go + TypeScript)
-	@echo "$(GREEN)Generating protobuf code...$(NC)"
-	cd relay/protos && make buf
-	@echo "$(GREEN)Proto generation complete$(NC)"
