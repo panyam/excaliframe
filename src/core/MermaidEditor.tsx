@@ -4,6 +4,7 @@ import { MermaidSyncAdapter } from '../collab/adapters/MermaidSyncAdapter';
 import type { MermaidRemoteCursor } from '../collab/adapters/MermaidSyncAdapter';
 import type { SyncActions } from '../collab/sync/SyncAdapter';
 import type { EditorHandle, EditorStateCallbacks } from './EditorHandle';
+import MermaidCursorOverlay from './MermaidCursorOverlay';
 
 export interface MermaidEditorProps {
   host: EditorHost;
@@ -40,6 +41,7 @@ const MermaidEditor = forwardRef<EditorHandle, MermaidEditorProps>(
   const renderTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [mermaid, setMermaid] = useState<any>(null);
   const lastValidSvg = useRef<string>('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const dividerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [leftWidth, setLeftWidth] = useState(() => {
@@ -264,6 +266,7 @@ const MermaidEditor = forwardRef<EditorHandle, MermaidEditorProps>(
     <div className="mermaid-editor" ref={containerRef}>
       <div className="mermaid-editor__code" style={{ width: `calc(${leftWidth}% - 3px)`, position: 'relative' }}>
         <textarea
+          ref={textareaRef}
           value={code}
           onChange={(e) => {
             setCode(e.target.value);
@@ -278,6 +281,11 @@ const MermaidEditor = forwardRef<EditorHandle, MermaidEditorProps>(
           onKeyUp={handleCursorChange}
           onClick={handleCursorChange}
           spellCheck={false}
+        />
+        <MermaidCursorOverlay
+          textareaRef={textareaRef}
+          code={code}
+          cursors={remoteCursors}
         />
         {remoteCursors.length > 0 && (
           <div style={{

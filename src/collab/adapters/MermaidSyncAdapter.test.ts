@@ -162,7 +162,7 @@ describe('MermaidSyncAdapter', () => {
     });
 
     describe('applyRemoteCursor', () => {
-      it('stores peer with correct line number', () => {
+      it('stores peer with correct line number and charOffset', () => {
         // "line1\nline2\nline3" — offset 6 is start of line 2
         const { adapter } = makeAdapter('line1\nline2\nline3');
         adapter.applyRemoteCursor({ clientId: 'peer-1', username: 'Alice', x: 6, y: 6 });
@@ -171,6 +171,7 @@ describe('MermaidSyncAdapter', () => {
         expect(cursors.size).toBe(1);
         const c = cursors.get('peer-1')!;
         expect(c.line).toBe(2);
+        expect(c.charOffset).toBe(6);
         expect(c.username).toBe('Alice');
       });
 

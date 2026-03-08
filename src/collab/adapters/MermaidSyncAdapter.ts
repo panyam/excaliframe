@@ -5,6 +5,7 @@ export interface MermaidRemoteCursor {
   clientId: string;
   username: string;
   line: number;
+  charOffset: number;
   color: { background: string; stroke: string };
 }
 
@@ -117,6 +118,7 @@ export class MermaidSyncAdapter implements SyncAdapter {
       clientId: peer.clientId,
       username: peer.username || getPeerLabel(idx),
       line,
+      charOffset: peer.x,
       color,
     });
     this.onCursorsChange?.();
