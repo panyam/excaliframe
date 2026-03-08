@@ -39,8 +39,15 @@ class EditorPage:
         """Return the interactive canvas (not the static rendering canvas)."""
         return self.page.locator(".excalidraw__canvas.interactive").first
 
+    def _focus_canvas(self) -> None:
+        """Click canvas to ensure Excalidraw has focus (not toolbar/share panel)."""
+        canvas = self.excalidraw_canvas()
+        canvas.click()
+        self.page.wait_for_timeout(200)
+
     def draw_line(self) -> None:
         """Draw a simple line on the Excalidraw canvas."""
+        self._focus_canvas()
         canvas = self.excalidraw_canvas()
         box = canvas.bounding_box()
         assert box is not None
@@ -51,7 +58,7 @@ class EditorPage:
 
     def draw_rectangle(self) -> None:
         """Select rectangle tool and draw on canvas."""
-        # Press 'r' to select rectangle tool (Excalidraw shortcut)
+        self._focus_canvas()
         self.page.keyboard.press("r")
         canvas = self.excalidraw_canvas()
         box = canvas.bounding_box()
