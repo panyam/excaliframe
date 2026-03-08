@@ -9,18 +9,19 @@ class TestCreateDrawing:
     """Creating new drawings via the tool modal."""
 
     def test_create_excalidraw_drawing(self, seeded_page, server):
+        """New Drawing > Excalidraw > editor loads with canvas."""
         page = seeded_page
         listing = ListingPage(page)
         listing.goto()
         listing.click_new_drawing()
         listing.select_tool("Excalidraw")
 
-        # Should navigate to the editor with Excalidraw canvas
         editor = EditorPage(page)
         editor.wait_for_loaded()
         assert editor.is_excalidraw()
 
     def test_create_mermaid_drawing(self, seeded_page, server):
+        """New Drawing > Mermaid > editor loads with textarea."""
         page = seeded_page
         listing = ListingPage(page)
         listing.goto()
@@ -36,6 +37,7 @@ class TestListDrawings:
     """Listing page shows seeded drawings."""
 
     def test_listing_shows_seeded_drawings(self, seeded_page, server):
+        """Seed 2 drawings, listing shows both cards."""
         page = seeded_page
         seed_samples(page, "blank_excalidraw", "flowchart_mermaid")
 
@@ -47,6 +49,7 @@ class TestListDrawings:
         assert listing.card_by_id(SAMPLES["flowchart_mermaid"]["id"]).is_visible()
 
     def test_empty_state_when_no_drawings(self, seeded_page, server):
+        """Empty IndexedDB shows empty state placeholder."""
         page = seeded_page
         listing = ListingPage(page)
         listing.goto()
@@ -58,6 +61,7 @@ class TestDeleteDrawing:
     """Deleting a drawing from the listing."""
 
     def test_delete_removes_card(self, seeded_page, server):
+        """Seed drawing, delete from listing, confirm dialog, card disappears."""
         page = seeded_page
         sample = seed_samples(page, "rectangle_excalidraw")["rectangle_excalidraw"]
 

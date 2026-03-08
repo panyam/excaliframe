@@ -9,6 +9,7 @@ class TestExcalidrawEditor:
     """Excalidraw canvas interactions."""
 
     def test_canvas_loads_with_seeded_data(self, seeded_page, server):
+        """Open seeded Excalidraw drawing, canvas renders."""
         page = seeded_page
         sample = seed_samples(page, "rectangle_excalidraw")["rectangle_excalidraw"]
 
@@ -17,6 +18,7 @@ class TestExcalidrawEditor:
         assert editor.is_excalidraw()
 
     def test_draw_on_canvas(self, seeded_page, server):
+        """Draw a rectangle on blank canvas, element count increases."""
         page = seeded_page
         sample = seed_samples(page, "blank_excalidraw")["blank_excalidraw"]
 
@@ -24,7 +26,6 @@ class TestExcalidrawEditor:
         editor.goto(sample["id"])
         editor.draw_rectangle()
 
-        # Give Excalidraw a moment to register the element
         page.wait_for_timeout(500)
         count = editor.excalidraw_element_count()
         assert count > 0, f"Expected elements after drawing, got {count}"
@@ -34,6 +35,7 @@ class TestMermaidEditor:
     """Mermaid textarea interactions."""
 
     def test_textarea_loads_with_seeded_data(self, seeded_page, server):
+        """Open seeded Mermaid drawing, textarea contains the code."""
         page = seeded_page
         sample = seed_samples(page, "flowchart_mermaid")["flowchart_mermaid"]
 
@@ -45,6 +47,7 @@ class TestMermaidEditor:
         assert "Start" in text
 
     def test_type_mermaid_code(self, seeded_page, server):
+        """Type Mermaid code into blank drawing, textarea reflects it."""
         page = seeded_page
         sample = seed_samples(page, "blank_mermaid")["blank_mermaid"]
 
@@ -60,14 +63,13 @@ class TestSave:
     """Save functionality via keyboard shortcut."""
 
     def test_ctrl_s_saves(self, seeded_page, server):
+        """Draw on canvas, Cmd+S triggers save, SaveToast shows 'Saved'."""
         page = seeded_page
         sample = seed_samples(page, "blank_excalidraw")["blank_excalidraw"]
 
         editor = EditorPage(page)
         editor.goto(sample["id"])
 
-        # Draw something then save
         editor.draw_rectangle()
         page.keyboard.press("Meta+s")
-        # SaveToast should briefly show "Saved"
         page.get_by_text("Saved").wait_for(timeout=5_000)

@@ -26,20 +26,19 @@ class TestFollowerJoin:
         return editor.share_panel.get_join_link()
 
     def test_join_via_link(self, owner, follower, server):
+        """Owner shares, follower navigates to join URL, editor loads."""
         join_link = self._owner_start_sharing(owner["page"], server)
 
-        # Follower navigates to the join link
         follower_page = follower["page"]
         follower_page.goto(join_link)
 
-        # Should redirect to editor page
         editor = EditorPage(follower_page)
         editor.wait_for_loaded()
         assert editor.is_excalidraw()
 
     def test_join_via_paste(self, owner, follower, server):
+        """Owner shares, follower pastes code on /join/ page, editor loads."""
         join_link = self._owner_start_sharing(owner["page"], server)
-        # Extract just the code from the full URL
         code = join_link.split("/join/")[1]
 
         follower_page = follower["page"]
@@ -47,12 +46,12 @@ class TestFollowerJoin:
         join_page.goto()
         join_page.paste_code(code)
 
-        # Should redirect to editor
         editor = EditorPage(follower_page)
         editor.wait_for_loaded()
         assert editor.is_excalidraw()
 
     def test_invalid_code_shows_error(self, follower, server):
+        """Paste invalid code on /join/ page, error message appears."""
         follower_page = follower["page"]
         join_page = JoinPage(follower_page)
         join_page.goto()

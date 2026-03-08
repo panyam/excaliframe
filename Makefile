@@ -1,4 +1,4 @@
-.PHONY: help install build build-old playground-build playground-build-old dev dev-old type-check clean deploy install-app tunnel lint sync diff sync-status migrate test test-all test-ts test-go proto e2e-setup e2e e2e-headed e2e-debug e2e-report hooks
+.PHONY: help install build build-old playground-build playground-build-old dev dev-old type-check clean deploy install-app tunnel lint sync diff sync-status migrate test test-all test-ts test-go proto e2e-setup e2e e2e-list hooks
 
 # Default target
 .DEFAULT_GOAL := help
@@ -32,22 +32,16 @@ test-ts: ## Run TypeScript tests (vitest)
 	@echo "$(GREEN)Running TypeScript tests...$(NC)"
 	npm run test
 
-##@ E2E Testing
+##@ E2E Testing (delegates to e2e/Makefile — run `make -C e2e help` for all targets)
 
 e2e-setup: ## Install E2E test dependencies (first time)
-	cd e2e && uv sync && uv run playwright install chromium
+	$(MAKE) -C e2e setup
 
 e2e: ## Run E2E tests (headless)
-	cd e2e && uv run pytest --browser chromium
+	$(MAKE) -C e2e test
 
-e2e-headed: ## Run E2E tests (headed, for debugging)
-	cd e2e && uv run pytest --browser chromium --headed --slowmo=500
-
-e2e-debug: ## Run E2E tests with Playwright step-through debugger
-	cd e2e && PWDEBUG=1 uv run pytest --browser chromium --headed
-
-e2e-report: ## Open last E2E test report
-	cd e2e && uv run playwright show-report playwright-report
+e2e-list: ## List all E2E tests with descriptions
+	@$(MAKE) -s -C e2e list
 
 ##@ Git Hooks
 

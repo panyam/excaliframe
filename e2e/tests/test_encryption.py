@@ -22,7 +22,6 @@ class TestEncryption:
         editor.toolbar.click_share()
         editor.share_panel.wait_for_visible()
 
-        # Enable encryption
         editor.share_panel.enable_encryption()
         password = editor.share_panel.get_password()
         assert len(password) > 0, "Password should be auto-generated"
@@ -34,29 +33,25 @@ class TestEncryption:
         return editor, join_link, password
 
     def test_encrypted_share_and_join(self, owner, follower, server):
+        """Owner enables encryption, follower enters correct password, editor loads."""
         _, join_link, password = self._owner_start_encrypted(owner["page"], server)
-
-        # Extract code from join link
         code = join_link.split("/join/")[1]
 
-        # Follower goes to join page
         follower_page = follower["page"]
         join_page = JoinPage(follower_page)
         join_page.goto()
         join_page.paste_code(code)
 
-        # Should show password prompt
         assert join_page.is_password_visible()
 
-        # Enter correct password
         join_page.enter_password(password)
 
-        # Should redirect to editor
         editor = EditorPage(follower_page)
         editor.wait_for_loaded()
         assert editor.is_excalidraw()
 
     def test_wrong_password_rejected(self, owner, follower, server):
+        """Owner enables encryption, follower enters wrong password, page still loads but data is unreadable."""
         _, join_link, _ = self._owner_start_encrypted(owner["page"], server)
         code = join_link.split("/join/")[1]
 
@@ -67,11 +62,9 @@ class TestEncryption:
 
         assert join_page.is_password_visible()
 
-        # Enter wrong password — should still redirect to editor, but
-        # decryption will fail silently (elements arrive as garbage/empty)
         join_page.enter_password("wrong-password-12345")
 
-        # The join page redirects regardless (password validation is client-side
-        # after receiving encrypted data), so we just verify it loads
+        # Redirects regardless — password validation is client-side after
+        # receiving encrypted data, so we just verify the editor loads
         editor = EditorPage(follower_page)
         editor.wait_for_loaded()
