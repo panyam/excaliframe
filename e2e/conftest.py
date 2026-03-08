@@ -81,6 +81,7 @@ def owner(request, browser: Browser, server) -> dict:
         x, y = WINDOW_POSITIONS["owner"]
         _position_window(page, x, y, WINDOW_WIDTH, WINDOW_HEIGHT)
     yield {"context": ctx, "page": page}
+    _end_of_test_pause(request, page)
     ctx.close()
 
 
@@ -93,36 +94,44 @@ def follower(request, browser: Browser, server) -> dict:
         x, y = WINDOW_POSITIONS["follower"]
         _position_window(page, x, y, WINDOW_WIDTH, WINDOW_HEIGHT)
     yield {"context": ctx, "page": page}
-    ctx.close()
+    ctx.close()  # follower closes silently — owner fixture handles the pause
 
 
 # ── Seeded page helper ────────────────────────────────────────────────
 
 
 @pytest.fixture
-def seeded_page(page: Page, server) -> Page:
+def seeded_page(request, page: Page, server) -> Page:
     """A page that has visited the origin (so IndexedDB is accessible).
 
     Clears any leftover drawings before yielding.
     """
     page.goto(server["url"] + "/about/")
     clear_drawings(page)
-    return page
+    yield page
+    _end_of_test_pause(request, page)
 
 
 # ── End-of-test pause (headed mode) ─────────────────────────────────
 
 
-@pytest.fixture(autouse=True)
-def pause_after_test(request):
-    """Pause after each test so the final page state is visible in headed mode.
+def _end_of_test_pause(request, page) -> None:
+    """Pause before closing so the final page state is visible.
 
-    Auto-detects --headed flag (3s default). Override with E2E_PAUSE_END=<seconds>.
-    Set E2E_PAUSE_END=0 to disable even in headed mode.
+    - debug mode (-s): prompts "Press Enter to close..."
+    - headed mode: waits E2E_PAUSE_END seconds (default 3s)
+    - headless: no pause
     """
-    yield
-    pause = PAUSE_END
-    if pause == 0 and request.config.getoption("--headed", default=False):
-        pause = 3.0
-    if pause > 0:
-        time.sleep(pause)
+    headed = request.config.getoption("--headed", default=False)
+    if not headed:
+        return
+    if page.is_closed():
+        return
+
+    # -s flag disables capture → capture == "no"
+    capture = request.config.getoption("capture", default="fd")
+    if capture == "no":
+        input("\n  Test done. Press Enter to close...")
+    else:
+        pause = PAUSE_END or 3.0
+        page.wait_for_timeout(int(pause * 1000))

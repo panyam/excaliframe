@@ -37,10 +37,15 @@ class ListingPage:
         self.search_input.fill(query)
 
     def delete_drawing(self, drawing_id: str) -> None:
-        """Open action menu for a card and click delete."""
+        """Hover card to reveal actions, open dropdown menu, click Delete."""
         card = self.card_by_id(drawing_id)
-        card.locator(".entity-actions-btn").click()
-        self.page.locator(f'[data-playground-delete="{drawing_id}"]').click()
+        card.hover()
+        # Actions button is opacity-hidden until hover; force click in headless
+        card.locator(".entity-actions-btn").click(force=True)
+        # Shared singleton dropdown positioned dynamically (not inside card)
+        menu = self.page.locator("#entity-action-menu")
+        menu.wait_for(state="visible", timeout=5_000)
+        menu.get_by_text("Delete").click()
 
     def is_empty(self) -> bool:
         return self.empty_state.is_visible()

@@ -11,7 +11,7 @@ setup: ## Install dependencies and browser (first time)
 	@echo "$(GREEN)E2E setup complete$(NC)"
 
 test: ## Run tests headless (add X=1 to stop on first failure)
-	uv run pytest --browser chromium $(if $(X),-x) $(if $(K),-k $(K))
+	PWDEBUG= uv run pytest --browser chromium $(if $(X),-x) $(if $(K),-k $(K))
 
 test-headed: ## Run tests with visible browser + slow-motion (add X=1 to stop on first failure)
 	uv run pytest --browser chromium --headed --slowmo=100 $(if $(X),-x) $(if $(K),-k $(K))
