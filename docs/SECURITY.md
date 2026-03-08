@@ -89,6 +89,8 @@ Drawings are stored in the browser's IndexedDB (`excaliframe-playground` databas
 
 There is no authentication. The playground is anonymous and public. Drawing data is purely local until collaboration is explicitly activated.
 
+**Relay server choice:** When starting a collab session, the user selects a relay server from a list or enters a custom URL. Default options are "This server" (`/relay` — the embedded relay on the same origin) and `excaliframe.com/relay`. Users can also type in any arbitrary WebSocket URL (e.g. a self-hosted relay on their own infrastructure). The last-used relay URL is persisted in `localStorage` for convenience. This means the user controls where their drawing data is routed — choosing a custom relay directs all content through that third-party endpoint. See [T3: Relay Operator Snooping](#t3-relay-operator-snooping) and [T4: Man-in-the-Middle on WebSocket](#t4-man-in-the-middle-on-websocket) for trust implications.
+
 ---
 
 ## Data Storage
@@ -279,7 +281,7 @@ When using a self-hosted relay, drawing data never touches excaliframe.com. The 
 | **Excalidraw library** | Open-source library doesn't exfiltrate data | Partially — large codebase, widely used | Low |
 | **Mermaid library** | Rendering library doesn't exfiltrate data | Partially — large codebase, widely used | Low |
 | **npm dependencies** | Transitive dependencies are not malicious | Partially — `npm audit`, lockfiles | Medium |
-| **Relay server** (collab) | Routes messages without storing/leaking content | If self-hosted: fully verifiable | Medium |
+| **Relay server** (collab) | Routes messages without storing/leaking content | If self-hosted: fully verifiable. Default relay (`excaliframe.com`): trust the operator. Custom relay: trust whoever runs it | Medium |
 | **TLS transport** (collab) | WebSocket connection is encrypted in transit | Standard browser TLS | Low |
 
 ### Trust Boundaries
