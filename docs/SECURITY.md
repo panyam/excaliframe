@@ -224,15 +224,15 @@ All state evaporates on server restart. There is no database, no disk writes, no
 
 ### REST API (Unauthenticated)
 
-The relay exposes REST endpoints for room discovery:
+The relay exposes one REST endpoint:
 
 | Endpoint | Returns |
 |----------|---------|
-| `GET /api/v1/rooms` | All active session IDs and peer counts |
 | `GET /api/v1/rooms/{sessionId}` | Room details: peers (username, client type, is_owner), owner ID, tool, created_at |
-| `GET /api/v1/session-by-hint?hint=...` | Session lookup by `browserId:drawingId` |
 
-These endpoints have no authentication. Anyone who can reach the relay can enumerate active sessions and their peer details.
+This endpoint is unauthenticated but requires knowing the sessionId (128-bit UUID), so it does not enable discovery of sessions.
+
+The `GET /api/v1/rooms` (list all sessions) and `GET /api/v1/session-by-hint` endpoints exist in the massrelay codebase but are **not registered as routes** — they are intentionally unexposed to prevent session enumeration. The handler methods are retained for future authenticated admin use.
 
 ### CORS Policy
 
@@ -288,32 +288,32 @@ When using a self-hosted relay, drawing data never touches excaliframe.com. The 
 
 ```
                      ┌─────────────────────────────────────┐
-                     │          Trust Boundary 1            │
-                     │     Atlassian Forge Sandbox          │
+                     │          Trust Boundary 1           │
+                     │     Atlassian Forge Sandbox         │
                      │                                     │
-                     │  Excaliframe code runs here          │
-                     │  Can only call view.getContext(),     │
-                     │  view.submit(), view.close()         │
-                     │  Cannot access any Confluence API    │
+                     │  Excaliframe code runs here         │
+                     │  Can only call view.getContext(),   │
+                     │  view.submit(), view.close()        │
+                     │  Cannot access any Confluence API   │
                      └─────────────────┬───────────────────┘
                                        │ @forge/bridge (IPC)
                      ┌─────────────────┴───────────────────┐
-                     │          Trust Boundary 2            │
-                     │     Confluence Cloud                 │
+                     │          Trust Boundary 2           │
+                     │     Confluence Cloud                │
                      │                                     │
-                     │  Stores drawing in macro config      │
-                     │  Enforces page permissions            │
-                     │  Atlassian-managed infrastructure    │
+                     │  Stores drawing in macro config     │
+                     │  Enforces page permissions          │
+                     │  Atlassian-managed infrastructure   │
                      └─────────────────────────────────────┘
 
                      ┌─────────────────────────────────────┐
-                     │          Trust Boundary 3            │
-                     │     Relay Server (opt-in)            │
+                     │          Trust Boundary 3           │
+                     │     Relay Server (opt-in)           │
                      │                                     │
   Browser A ────wss────→  Routes messages between peers  ←────wss──── Browser B
                      │     Sees all content in plaintext   │
-                     │     Stores nothing to disk           │
-                     │     No authentication                │
+                     │     Stores nothing to disk          │
+                     │     No authentication               │
                      └─────────────────────────────────────┘
 ```
 
@@ -341,13 +341,11 @@ In Forge mode, drawings are protected by Confluence access control. In web mode,
 
 **Threat:** An attacker polls `GET /api/v1/rooms` to discover active sessions, then joins them.
 
-**Likelihood:** Medium — the endpoint is unauthenticated and returns all active session IDs.
+**Likelihood:** Low — the list-rooms and session-by-hint endpoints are not exposed as routes. The only REST endpoint (`GET /api/v1/rooms/{sessionId}`) requires knowing the 128-bit UUID.
 
-**Impact:** High — attacker can join any discovered session.
+**Impact:** High — if an attacker could enumerate sessions, they could join any of them.
 
-**Current mitigation:** None. The REST API is open.
-
-**Recommended mitigation:** Restrict or remove the list-rooms endpoint in production. See [Future Work](#future-work).
+**Current mitigation:** List-rooms and session-by-hint routes are not registered. Handler methods exist in the codebase for future authenticated admin use but are not reachable via HTTP.
 
 ### T3: Relay Operator Snooping
 
@@ -541,7 +539,8 @@ Improvements that would strengthen the security posture, roughly in priority ord
 
 | Item | Addresses | Effort |
 |------|-----------|--------|
-| **Remove/restrict list-rooms endpoint** | T2 (session enumeration) | Low |
+| ~~**Remove/restrict list-rooms endpoint**~~ | ~~T2 (session enumeration)~~ | Done — routes not registered |
+| **Authenticated admin API for list-rooms/session-by-hint** | T2 (admin tooling) | Medium |
 | **Rate limiting on relay** | T10 (DoS) | Low |
 | **Message size limits** | T10 (DoS) | Low |
 | **Warn on `ws://` relay URLs** | T4 (MITM) | Low |
