@@ -1,4 +1,4 @@
-.PHONY: setup test test-headed test-debug test-ipdb list describe report
+.PHONY: setup test test-headed test-debug test-ipdb test-insp list describe report screens
 
 .DEFAULT_GOAL := test
 
@@ -33,6 +33,11 @@ describe: ## Show test details (usage: make describe T=encryption)
 
 report: ## Open last HTML test report
 	uv run playwright show-report playwright-report
+
+screens: ## Show display origins (use with E2E_WINDOW_X/Y)
+	@osascript -e 'tell application "Finder" to get bounds of window of desktop' 2>/dev/null | \
+		awk -F', ' '{printf "  Desktop bounds: origin=(%s, %s) size=(%s x %s)\n  Use: E2E_WINDOW_X=%s E2E_WINDOW_Y=%s make test-debug\n", $$1, $$2, $$3-$$1, $$4-$$2, $$1, $$2}' || \
+		echo "Could not detect display layout"
 
 help: ## Show this help
 	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z_-]+:.*?##/ { printf "  $(GREEN)%-15s$(NC) %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
