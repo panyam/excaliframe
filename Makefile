@@ -1,4 +1,4 @@
-.PHONY: help install build build-old playground-build playground-build-old dev dev-old type-check clean deploy install-app tunnel lint sync diff sync-status migrate test test-ts test-go proto
+.PHONY: help install build build-old playground-build playground-build-old dev dev-old type-check clean deploy install-app tunnel lint sync diff sync-status migrate test test-all test-ts test-go proto e2e-setup e2e e2e-headed e2e-debug e2e-report hooks
 
 # Default target
 .DEFAULT_GOAL := help
@@ -26,9 +26,35 @@ help: ## Display this help message
 
 test: test-ts test-go ## Run all tests across all projects
 
+test-all: test e2e ## Run everything (unit + E2E)
+
 test-ts: ## Run TypeScript tests (vitest)
 	@echo "$(GREEN)Running TypeScript tests...$(NC)"
 	npm run test
+
+##@ E2E Testing
+
+e2e-setup: ## Install E2E test dependencies (first time)
+	cd e2e && uv sync && uv run playwright install chromium
+
+e2e: ## Run E2E tests (headless)
+	cd e2e && uv run pytest --browser chromium
+
+e2e-headed: ## Run E2E tests (headed, for debugging)
+	cd e2e && uv run pytest --browser chromium --headed --slowmo=500
+
+e2e-debug: ## Run E2E tests with Playwright step-through debugger
+	cd e2e && PWDEBUG=1 uv run pytest --browser chromium --headed
+
+e2e-report: ## Open last E2E test report
+	cd e2e && uv run playwright show-report playwright-report
+
+##@ Git Hooks
+
+hooks: ## Install git hooks (pre-push)
+	ln -sf ../../scripts/pre-push.sh .git/hooks/pre-push
+	chmod +x scripts/pre-push.sh
+	@echo "$(GREEN)Git hooks installed$(NC)"
 
 ##@ Setup
 
