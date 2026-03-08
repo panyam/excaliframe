@@ -193,14 +193,16 @@ describe('MermaidSyncAdapter', () => {
         expect(color1).toEqual(color2);
       });
 
-      it('assigns different colors to different peers', () => {
-        const { adapter } = makeAdapter('abc');
-        adapter.applyRemoteCursor({ clientId: 'peer-1', username: '', x: 0, y: 0 });
-        adapter.applyRemoteCursor({ clientId: 'peer-2', username: '', x: 0, y: 0 });
+      it('assigns deterministic color based on clientId hash', () => {
+        // Same clientId should get same color in different adapter instances
+        const { adapter: a1 } = makeAdapter('abc');
+        const { adapter: a2 } = makeAdapter('abc');
+        a1.applyRemoteCursor({ clientId: 'peer-1', username: '', x: 0, y: 0 });
+        a2.applyRemoteCursor({ clientId: 'peer-1', username: '', x: 0, y: 0 });
 
-        const c1 = adapter.getRemoteCursors().get('peer-1')!.color;
-        const c2 = adapter.getRemoteCursors().get('peer-2')!.color;
-        expect(c1).not.toEqual(c2);
+        const c1 = a1.getRemoteCursors().get('peer-1')!.color;
+        const c2 = a2.getRemoteCursors().get('peer-1')!.color;
+        expect(c1).toEqual(c2);
       });
 
       it('uses getPeerLabel when username is empty', () => {

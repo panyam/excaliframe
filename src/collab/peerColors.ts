@@ -16,3 +16,13 @@ export function getPeerColor(index: number) {
 export function getPeerLabel(index: number) {
   return `User ${index + 1}`;
 }
+
+/** Deterministic hash of a clientId to a color index.
+ *  Ensures the same peer gets the same color from every viewer's perspective. */
+export function hashClientIdToColorIndex(clientId: string): number {
+  let hash = 0;
+  for (let i = 0; i < clientId.length; i++) {
+    hash = ((hash << 5) - hash + clientId.charCodeAt(i)) | 0;
+  }
+  return ((hash % PEER_COLORS.length) + PEER_COLORS.length) % PEER_COLORS.length;
+}

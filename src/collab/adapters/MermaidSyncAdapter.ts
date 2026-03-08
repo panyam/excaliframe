@@ -1,5 +1,5 @@
 import type { SyncAdapter, OutgoingUpdate, CursorData, PeerCursor } from '../sync/SyncAdapter';
-import { getPeerColor, getPeerLabel } from '../peerColors';
+import { getPeerColor, getPeerLabel, hashClientIdToColorIndex } from '../peerColors';
 
 export interface MermaidRemoteCursor {
   clientId: string;
@@ -112,7 +112,8 @@ export class MermaidSyncAdapter implements SyncAdapter {
 
   applyRemoteCursor(peer: PeerCursor): void {
     const idx = this.ensurePeerIndex(peer.clientId);
-    const color = getPeerColor(idx);
+    const colorIdx = hashClientIdToColorIndex(peer.clientId);
+    const color = getPeerColor(colorIdx);
     const line = this.charOffsetToLine(peer.x);
     this.remoteCursors.set(peer.clientId, {
       clientId: peer.clientId,

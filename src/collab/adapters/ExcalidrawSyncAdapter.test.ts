@@ -20,16 +20,12 @@ vi.mock('@excalidraw/excalidraw', () => ({
   }),
 }));
 
-vi.mock('../peerColors', () => ({
-  getPeerColor: (index: number) => {
-    const colors = [
-      { background: '#ff6b6b', stroke: '#c92a2a' },
-      { background: '#51cf66', stroke: '#2b8a3e' },
-    ];
-    return colors[index % colors.length];
-  },
-  getPeerLabel: (index: number) => `User ${index + 1}`,
-}));
+vi.mock('../peerColors', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../peerColors')>();
+  return {
+    ...actual,
+  };
+});
 
 import { ExcalidrawSyncAdapter } from './ExcalidrawSyncAdapter';
 
@@ -405,10 +401,11 @@ describe('ExcalidrawSyncAdapter', () => {
       expect(collab.pointer).toEqual({ x: 100, y: 200, tool: 'pointer' });
       expect(collab.button).toBe('up');
       expect(collab.username).toBe('Alice');
-      expect(collab.color).toEqual({ background: '#ff6b6b', stroke: '#c92a2a' });
+      // Color is deterministic based on clientId hash
+      expect(collab.color).toEqual({ background: '#22b8cf', stroke: '#0b7285' });
     });
 
-    it('assigns stable colors per clientId', () => {
+    it('assigns stable colors per clientId based on hash', () => {
       const api = makeMockApi([]);
       const adapter = new ExcalidrawSyncAdapter(api);
 
@@ -419,8 +416,9 @@ describe('ExcalidrawSyncAdapter', () => {
 
       const lastCall = api.updateScene.mock.calls[api.updateScene.mock.calls.length - 1][0];
       const collaborators = lastCall.collaborators as Map<string, any>;
-      expect(collaborators.get('peer-1').color).toEqual({ background: '#ff6b6b', stroke: '#c92a2a' });
-      expect(collaborators.get('peer-2').color).toEqual({ background: '#51cf66', stroke: '#2b8a3e' });
+      // Colors determined by hash of clientId — same across all viewers
+      expect(collaborators.get('peer-1').color).toEqual({ background: '#22b8cf', stroke: '#0b7285' });
+      expect(collaborators.get('peer-2').color).toEqual({ background: '#f06595', stroke: '#a61e4d' });
     });
 
     it('uses getPeerLabel as fallback when username empty', () => {

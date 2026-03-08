@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { PEER_COLORS, getPeerColor, getPeerLabel } from './peerColors';
+import { PEER_COLORS, getPeerColor, getPeerLabel, hashClientIdToColorIndex } from './peerColors';
 
 describe('peerColors', () => {
   describe('getPeerColor', () => {
@@ -35,5 +35,27 @@ describe('peerColors', () => {
 
   it('PEER_COLORS has 8 entries', () => {
     expect(PEER_COLORS).toHaveLength(8);
+  });
+
+  describe('hashClientIdToColorIndex', () => {
+    it('returns index in range [0, 7]', () => {
+      const ids = ['abc', 'xyz', 'peer-1', 'client-foo-bar', '12345', ''];
+      for (const id of ids) {
+        const idx = hashClientIdToColorIndex(id);
+        expect(idx).toBeGreaterThanOrEqual(0);
+        expect(idx).toBeLessThan(PEER_COLORS.length);
+      }
+    });
+
+    it('is deterministic for same input', () => {
+      expect(hashClientIdToColorIndex('peer-1')).toBe(hashClientIdToColorIndex('peer-1'));
+    });
+
+    it('produces different indices for different clientIds', () => {
+      // With 8 colors and distinct strings, most pairs will differ
+      const a = hashClientIdToColorIndex('alice-abc123');
+      const b = hashClientIdToColorIndex('bob-xyz789');
+      expect(a).not.toBe(b);
+    });
   });
 });

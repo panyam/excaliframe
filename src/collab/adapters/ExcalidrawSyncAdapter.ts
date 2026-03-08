@@ -1,6 +1,6 @@
 import { hashElementsVersion, reconcileElements } from '@excalidraw/excalidraw';
 import type { SyncAdapter, OutgoingUpdate, CursorData, PeerCursor } from '../sync/SyncAdapter';
-import { getPeerColor, getPeerLabel } from '../peerColors';
+import { getPeerColor, getPeerLabel, hashClientIdToColorIndex } from '../peerColors';
 
 // Excalidraw types — mirrors ExcalidrawEditor.tsx local definitions.
 // Using `any` to avoid deep coupling to Excalidraw's internal branded types
@@ -200,7 +200,8 @@ export class ExcalidrawSyncAdapter implements SyncAdapter {
 
   applyRemoteCursor(peer: PeerCursor): void {
     const idx = this.ensurePeerIndex(peer.clientId);
-    const color = getPeerColor(idx);
+    const colorIdx = hashClientIdToColorIndex(peer.clientId);
+    const color = getPeerColor(colorIdx);
     const collaborator: Collaborator = {
       pointer: { x: peer.x, y: peer.y, tool: peer.tool },
       button: peer.button,
