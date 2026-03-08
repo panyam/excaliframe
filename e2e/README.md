@@ -15,7 +15,8 @@ Requires [uv](https://docs.astral.sh/uv/) and Go (for the site server).
 ```bash
 make test           # Headless (CI default)
 make test-headed    # Visible browser, 500ms slow-motion
-make test-debug     # Playwright Inspector — step through every action
+make test-debug     # ipdb debugger, stops on first failure
+make test-insp      # Playwright Inspector (UI), stops on first failure
 ```
 
 Run a single test or filter by keyword:
@@ -23,6 +24,13 @@ Run a single test or filter by keyword:
 ```bash
 make test K=test_create_excalidraw
 make test K=encryption
+```
+
+Stop on first failure (for `test` and `test-headed`):
+
+```bash
+make test X=1
+make test-headed X=1 K=collab
 ```
 
 ### Skip the build step
@@ -43,28 +51,28 @@ make describe T=encryption  # Verbose: fixtures, file locations
 
 ## Debugging
 
-### Step-through mode (`PWDEBUG=1`)
+### ipdb breakpoints (`make test-debug`)
 
-Opens the **Playwright Inspector** alongside the browser. It pauses before every action (click, fill, navigate) and shows Resume / Step Over buttons.
-
-```bash
-make test-debug                    # All tests
-make test-debug K=test_start_sharing  # Single test
-```
-
-### Breakpoints in code
-
-Drop `page.pause()` anywhere in a test to open the Inspector at that exact point:
+Runs headed with `-s` (so stdin works) and stops on first failure. Drop `import ipdb; ipdb.set_trace()` anywhere in a test to get a Python REPL with access to `page`, `owner`, `follower`, etc.
 
 ```python
-def test_something(self, seeded_page, server):
-    editor = EditorPage(seeded_page)
-    editor.goto(sample["id"])
-    seeded_page.pause()  # Inspector opens here
+def test_something(self, owner, follower, server):
+    owner_editor, follower_editor = self._setup_collab(...)
+    import ipdb; ipdb.set_trace()  # REPL here — inspect page state, run commands
+
     editor.draw_rectangle()
 ```
 
-Only works in headed mode. Remove before committing.
+Remove `ipdb.set_trace()` before committing.
+
+### Playwright Inspector (`make test-insp`)
+
+Opens the **Playwright Inspector** UI alongside the browser. Pauses before every action (click, fill, navigate) with Resume / Step Over buttons.
+
+```bash
+make test-insp                        # All tests
+make test-insp K=test_start_sharing   # Single test
+```
 
 ### Trace viewer (post-mortem)
 

@@ -26,8 +26,8 @@ class FloatingToolbar:
         self.page.get_by_text("Save", exact=True).click()
 
     def click_share(self) -> None:
-        """Click the Share/Collab button to show the SharePanel inline."""
-        self.page.get_by_text(re.compile(r"Share|Sharing|Connected")).first.click()
+        """Click the Share/Collab badge to show the SharePanel inline."""
+        self.page.locator('[data-testid="collab-badge"]').click()
 
     def is_collab_indicator_visible(self) -> bool:
         """Check if the indigo collab-connected dot is visible on the gear."""
