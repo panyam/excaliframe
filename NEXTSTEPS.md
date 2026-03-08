@@ -31,11 +31,16 @@ Immediate and near-term action items for Excaliframe.
 ## In Progress
 
 ### Real-Time Collaboration — Remaining Work
-- Parts 1-5 complete: relay, transport, peer tracking, real-time sync, share UX, cursor tracking, security hardening (196 TS tests passing)
-- Relay server and generic TS client extracted to [`massrelay`](https://github.com/panyam/massrelay) — npm: `@panyam/massrelay`
+- Parts 1-5 complete: relay, transport, peer tracking, real-time sync, share UX, cursor tracking, security hardening (200 TS tests passing)
+- Relay server and generic TS client extracted to [`massrelay`](https://github.com/panyam/massrelay) — npm: `@panyam/massrelay@0.0.6`
 - Excaliframe imports massrelay via npm package; local collab files are thin re-exports
 - Mermaid cursor tracking: implemented — pills at bottom of code pane + inline cursor overlay ([#9](https://github.com/panyam/excaliframe/issues/9))
 - Security hardening: participant limits (10/room), multi-layer rate limiting, password-based E2EE (AES-256-GCM), protocol versioning
+- Cache busting: content-hash filenames + manifest.json per bundle dir + Go `bundleJS` template function
+- Zombie client fix: server-side `watchClose()` goroutine cleans up on ungraceful WS disconnect
+- CollabClient disconnect lifecycle fix: `onDisconnect` fires synchronously, state reset before `grpc.close()`
+- Cross-tab session reuse: owner's second tab finds existing session via localStorage before creating a new one
+- Playwright E2E tests: implemented — 23 tests across 7 files (CRUD, editor, sharing, joining, collab sync, cursors, encryption) using Python + pytest-playwright + uv. Page Object Model with sample fixture catalog. All 23 tests passing headless. Debugged and fixed: shared singleton dropdown locator, stale server detection, canvas focus management, end-of-test pause lifecycle, PWDEBUG isolation. See `e2e/README.md`.
 - Remaining: smart reconnect (currently disabled), binary file sync, `ws://` URL warning
 
 ### Fix False Positive "Unsaved Changes" Indicator
@@ -114,3 +119,4 @@ Immediate and near-term action items for Excaliframe.
 - [x] Collab Part 5 — relay hardening: participant limits (10/room default, graceful ROOM_FULL ErrorEvent), multi-layer rate limiting (global 100/s, per-IP 5/s, per-client 30msg/s, 1MB max message), protocol versioning (v2), adapter robustness (try/catch on JSON.parse), password-based E2EE (AES-256-GCM, PBKDF2 key derivation, optional per-session password)
 - [x] E2EE UX: SharePanel password field with auto-generate, JoinPage password prompt for encrypted rooms, EditorChrome key derivation, useSync encrypt/decrypt layer, CredentialsChanged broadcast
 - [x] Security doc (docs/SECURITY.md) updated with E2EE section, rate limiting mitigations, updated threat analysis
+- [x] Playwright E2E tests (`e2e/`): Python + pytest-playwright + uv, Page Object Model, 23 tests (CRUD, editor, share, join, collab sync, cursors, E2EE), multi-profile fixtures, sample fixture catalog for IndexedDB seeding, standalone test lister, pre-push hook

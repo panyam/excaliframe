@@ -23,7 +23,8 @@ const SharePanel: React.FC<SharePanelProps> = ({
   const [selectedServer, setSelectedServer] = useState(0);
   const [customUrl, setCustomUrl] = useState('');
   const [copied, setCopied] = useState(false);
-  const [password, setPassword] = useState(() => generatePassword());
+  const [encryptEnabled, setEncryptEnabled] = useState(false);
+  const [password, setPassword] = useState('');
   const [passwordCopied, setPasswordCopied] = useState(false);
 
   useEffect(() => {
@@ -47,13 +48,19 @@ const SharePanel: React.FC<SharePanelProps> = ({
   const handleStartSharing = () => {
     const relayUrl = getRelayUrl();
     const resolved = resolveRelayUrl(relayUrl);
-    const hasPassword = password.trim().length > 0;
+    const hasPassword = encryptEnabled && password.trim().length > 0;
     // Notify parent of password for key derivation
     if (hasPassword) {
       onPasswordChange?.(password.trim());
     }
-    // Empty sessionId → relay generates one; pass drawingId for hint-based reuse
-    actions.connect(resolved, '', '', true, drawingId, hasPassword);
+    // If another tab is already sharing this drawing, join that session instead of creating a new one.
+    // Falls back to empty sessionId (relay generates one, with hint-based reuse as second fallback).
+    let sessionId = '';
+    if (drawingId) {
+      const activeSession = localStorage.getItem(`excaliframe:activeSession:${drawingId}`);
+      if (activeSession) sessionId = activeSession;
+    }
+    actions.connect(resolved, sessionId, '', true, drawingId, hasPassword);
   };
 
   const handleCopyPassword = () => {
@@ -197,24 +204,41 @@ const SharePanel: React.FC<SharePanelProps> = ({
       </div>
 
       <div className="mb-3">
-        <label className="block text-xs font-medium mb-1">Password (optional):</label>
-        <div className="flex gap-1">
+        <label className="flex items-center gap-1.5 text-xs font-medium cursor-pointer">
           <input
-            type="text"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            placeholder="Leave empty for no encryption"
-            className="flex-1 px-2.5 py-1.5 text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono"
+            type="checkbox"
+            checked={encryptEnabled}
+            onChange={e => {
+              const on = e.target.checked;
+              setEncryptEnabled(on);
+              // Auto-generate password the first time the checkbox is turned on
+              if (on && !password) setPassword(generatePassword());
+            }}
+            className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
           />
-          <button onClick={() => setPassword(generatePassword())}
-            title="Generate new password"
-            className="px-2 py-1.5 text-xs rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600">
-            &#x21bb;
-          </button>
-        </div>
-        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-          Share the password separately from the join link
-        </p>
+          Encrypt with password
+        </label>
+        {encryptEnabled && (
+          <div className="mt-1.5">
+            <div className="flex gap-1">
+              <input
+                type="text"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="Enter a password"
+                className="flex-1 px-2.5 py-1.5 text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono"
+              />
+              <button onClick={() => setPassword(generatePassword())}
+                title="Generate new password"
+                className="px-2 py-1.5 text-xs rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600">
+                &#x21bb;
+              </button>
+            </div>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+              Share the password separately from the join link
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="flex gap-2 justify-end">

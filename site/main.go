@@ -77,6 +77,17 @@ func main() {
 		templates.Loader = sourceLoader
 	}
 	templates.AddFuncs(goal.DefaultFuncMap())
+	// Template function for cache-busted bundle URLs.
+	// Usage: {{bundleJS "editor"}} → "/static/playground/editor/bundle.7a3caf9f.js"
+	templates.AddFuncs(map[string]any{
+		"bundleJS": func(dir string) string {
+			filename := appCtx.BundleManifest[dir]
+			if filename == "" {
+				filename = "bundle.js"
+			}
+			return "/static/playground/" + dir + "/" + filename
+		},
+	})
 
 	// Create the goal app
 	app := goal.NewApp(appCtx, templates)

@@ -1,4 +1,4 @@
-.PHONY: help install build build-old playground-build playground-build-old dev dev-old type-check clean deploy install-app tunnel lint sync diff sync-status migrate test test-ts test-go proto
+.PHONY: help install build build-old playground-build playground-build-old dev dev-old type-check clean deploy install-app tunnel lint sync diff sync-status migrate test test-all test-ts test-go proto e2e-setup e2e e2e-list hooks
 
 # Default target
 .DEFAULT_GOAL := help
@@ -26,13 +26,29 @@ help: ## Display this help message
 
 test: test-ts test-go ## Run all tests across all projects
 
+test-all: test e2e ## Run everything (unit + E2E)
+
 test-ts: ## Run TypeScript tests (vitest)
 	@echo "$(GREEN)Running TypeScript tests...$(NC)"
 	npm run test
 
-test-go: ## Run Go relay server tests
-	@echo "$(GREEN)Running Go relay tests...$(NC)"
-	cd relay && go test ./...
+##@ E2E Testing (delegates to e2e/Makefile — run `make -C e2e help` for all targets)
+
+e2e-setup: ## Install E2E test dependencies (first time)
+	$(MAKE) -C e2e setup
+
+e2e: ## Run E2E tests (headless)
+	$(MAKE) -C e2e test
+
+e2e-list: ## List all E2E tests with descriptions
+	@$(MAKE) -s -C e2e list
+
+##@ Git Hooks
+
+hooks: ## Install git hooks (pre-push)
+	ln -sf ../../scripts/pre-push.sh .git/hooks/pre-push
+	chmod +x scripts/pre-push.sh
+	@echo "$(GREEN)Git hooks installed$(NC)"
 
 ##@ Setup
 
@@ -149,10 +165,3 @@ sync-status: ## Show what changed since last sync
 
 migrate: ## One-time migration: restructure enterprise target into excaliframe/ subdirectory
 	@python3 tools/sync.py migrate "$(TARGET)"
-
-##@ Proto Generation
-
-proto: ## Generate protobuf code (Go + TypeScript)
-	@echo "$(GREEN)Generating protobuf code...$(NC)"
-	cd relay/protos && make buf
-	@echo "$(GREEN)Proto generation complete$(NC)"

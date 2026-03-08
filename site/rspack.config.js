@@ -1,5 +1,24 @@
 const path = require('path');
+const fs = require('fs');
 const rspack = require('@rspack/core');
+
+// Minimal plugin that writes manifest.json mapping entry names to hashed filenames.
+class ManifestPlugin {
+  apply(compiler) {
+    compiler.hooks.afterEmit.tap('ManifestPlugin', (compilation) => {
+      const manifest = {};
+      for (const asset of compilation.getAssets()) {
+        if (asset.name.endsWith('.js') && !asset.name.endsWith('.map')) {
+          // Map logical name (e.g. "bundle") to hashed filename
+          const logical = asset.name.replace(/\.[a-f0-9]{8}\.js$/, '.js');
+          manifest[logical] = asset.name;
+        }
+      }
+      const outDir = compilation.outputOptions.path;
+      fs.writeFileSync(path.join(outDir, 'manifest.json'), JSON.stringify(manifest));
+    });
+  }
+}
 
 module.exports = (env, argv) => {
   const isDev = argv.mode === 'development';
@@ -46,18 +65,26 @@ module.exports = (env, argv) => {
     runtimeChunk: false,
   };
 
+  // Content-hash filenames for cache busting.
+  // Each bundle writes a manifest.json mapping logical names → hashed filenames.
+  const hashFilename = isDev ? 'bundle.js' : 'bundle.[contenthash:8].js';
+  const hashChunkFilename = isDev ? '[name].js' : '[name].[contenthash:8].js';
+
+  const sharedPlugins = isDev ? [] : [new ManifestPlugin()];
+
   // --- Listing bundle (vanilla TS + jsx-dom, small) ---
   const listing = {
     name: 'playground-listing',
     entry: './pages/listing/index.tsx',
     output: {
       path: path.resolve(__dirname, 'static/playground/listing'),
-      filename: 'bundle.js',
+      filename: hashFilename,
       clean: true,
       publicPath: '/static/playground/listing/',
     },
     module: { rules: sharedRules },
     resolve: sharedResolve,
+    plugins: [...sharedPlugins],
     devtool: isDev ? 'eval-source-map' : 'source-map',
     optimization: sharedOptimization,
     performance: { hints: false },
@@ -69,12 +96,13 @@ module.exports = (env, argv) => {
     entry: './pages/detail/index.tsx',
     output: {
       path: path.resolve(__dirname, 'static/playground/detail'),
-      filename: 'bundle.js',
+      filename: hashFilename,
       clean: true,
       publicPath: '/static/playground/detail/',
     },
     module: { rules: sharedRules },
     resolve: sharedResolve,
+    plugins: [...sharedPlugins],
     devtool: isDev ? 'eval-source-map' : 'source-map',
     optimization: sharedOptimization,
     performance: { hints: false },
@@ -86,8 +114,8 @@ module.exports = (env, argv) => {
     entry: './pages/editor/index.tsx',
     output: {
       path: path.resolve(__dirname, 'static/playground/editor'),
-      filename: 'bundle.js',
-      chunkFilename: '[name].js',
+      filename: hashFilename,
+      chunkFilename: hashChunkFilename,
       assetModuleFilename: '[hash][ext]',
       clean: true,
       publicPath: '/static/playground/editor/',
@@ -103,6 +131,7 @@ module.exports = (env, argv) => {
       },
     },
     plugins: [
+      ...sharedPlugins,
       new rspack.CopyRspackPlugin({
         patterns: [
           {

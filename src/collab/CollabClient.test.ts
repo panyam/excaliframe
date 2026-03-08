@@ -229,6 +229,18 @@ describe('CollabClient', () => {
       expect(client.isConnecting).toBe(false);
     });
 
+    it('fires onDisconnect synchronously', async () => {
+      const onDisconnect = vi.fn();
+      const { client, controllers } = createTestClient({ onDisconnect });
+      client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
+      await connectAndJoin(client, controllers[0]);
+
+      client.disconnect();
+      // onDisconnect should have been called synchronously (not waiting for async onClose)
+      expect(onDisconnect).toHaveBeenCalledTimes(1);
+      expect(client.isConnected).toBe(false);
+    });
+
     it('is a no-op if not connected', () => {
       const { client } = createTestClient();
       expect(() => client.disconnect()).not.toThrow();

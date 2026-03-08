@@ -155,7 +155,16 @@ export function useCollaboration(
   }, [tool, onEvent]);
 
   const disconnect = useCallback(() => {
-    clientRef.current?.disconnect();
+    const client = clientRef.current;
+    if (!client) return;
+    // Capture sessionId before disconnect() resets it
+    const sid = client.sessionId;
+    client.disconnect();
+    // Clean up all session mappings (onDisconnect handles activeSession:{drawingId})
+    if (sid) {
+      localStorage.removeItem(`excaliframe:sessionDrawing:${sid}`);
+      localStorage.removeItem(`excaliframe:sessionPassword:${sid}`);
+    }
   }, []);
 
   const send = useCallback((action: Record<string, unknown>) => {
