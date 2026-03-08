@@ -10,11 +10,7 @@ class FloatingToolbar:
 
     def _gear_button(self):
         """The gear/settings toggle button."""
-        # FloatingToolbar renders a button with an SVG gear icon
-        # It's the only fixed-position button with the gear SVG
-        return self.page.locator('button:has(svg)').filter(
-            has=self.page.locator('path[d*="M9.594"]')
-        ).first
+        return self.page.locator('button[title="Menu"]')
 
     def open(self) -> None:
         self._gear_button().click()

@@ -158,4 +158,9 @@ def test_sync(self, owner, follower, server):
 |----------|---------|-------------|
 | `E2E_PORT` | `9222` | Port for the Go dev server |
 | `E2E_SKIP_BUILD` | `false` | Skip `make build` before starting the server |
+| `E2E_PAUSE_END` | `0` | Seconds to pause after each test so you can see the final page state. Auto-set to `3` when `--headed` is used. Set to `0` to disable. |
+| `E2E_WINDOW_W` | `700` | Browser window width in headed mode (collab tests) |
+| `E2E_WINDOW_H` | `800` | Browser window height in headed mode (collab tests) |
+| `E2E_WINDOW_X` | `0` | X offset for the owner window (follower is placed to the right) |
+| `E2E_WINDOW_Y` | `0` | Y offset for both windows |
 | `PWDEBUG` | unset | Set to `1` to open Playwright Inspector |

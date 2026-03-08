@@ -1,4 +1,4 @@
-.PHONY: setup test test-headed test-debug list describe report
+.PHONY: setup test test-headed test-debug test-ipdb list describe report
 
 .DEFAULT_GOAL := test
 
@@ -16,7 +16,13 @@ test: ## Run tests headless
 test-headed: ## Run tests with visible browser + slow-motion
 	uv run pytest --browser chromium --headed --slowmo=500 $(if $(K),-k $(K))
 
-test-debug: ## Step-through with Playwright Inspector
+test-debug: ## Step-through with ipdb (drop `import ipdb; ipdb.set_trace()` in tests)
+	uv run pytest --browser chromium --headed -s --slowmo=500 $(if $(K),-k $(K))
+
+test-ipdb: ## Alias for test-debug
+	$(MAKE) test-debug $(if $(K),K=$(K))
+
+test-insp: ## Step-through with Playwright Inspector (UI)
 	PWDEBUG=1 uv run pytest --browser chromium --headed $(if $(K),-k $(K))
 
 list: ## List all tests (filter: make list T=collab)

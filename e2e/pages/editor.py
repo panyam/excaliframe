@@ -36,7 +36,8 @@ class EditorPage:
         return self.page.locator("textarea").count() > 0
 
     def excalidraw_canvas(self):
-        return self.page.locator(".excalidraw canvas").first
+        """Return the interactive canvas (not the static rendering canvas)."""
+        return self.page.locator(".excalidraw__canvas.interactive").first
 
     def draw_line(self) -> None:
         """Draw a simple line on the Excalidraw canvas."""

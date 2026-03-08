@@ -276,6 +276,7 @@ const ExcalidrawEditor = forwardRef<EditorHandle, ExcalidrawEditorProps>(
     <ExcalidrawComponent
       excalidrawAPI={(api: ExcalidrawImperativeAPI) => {
         excalidrawApiRef.current = api;
+        (window as any).__EXCALIDRAW_API__ = api;
         if (!syncAdapterRef.current) {
           const adapter = new ExcalidrawSyncAdapter(api);
           syncAdapterRef.current = adapter;

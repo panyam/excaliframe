@@ -7,7 +7,7 @@ class ListingPage:
     def __init__(self, page: Page):
         self.page = page
         self.loading = page.locator("#drawings-loading")
-        self.new_drawing_btn = page.locator('a[href="#new-drawing"]')
+        self.new_drawing_btn = page.locator('a[href="#new-drawing"]').first
         self.tool_modal = page.locator("#tool-modal")
         self.tool_grid = page.locator("#tool-grid")
         self.grid_wrapper = page.locator("#drawings-grid-wrapper")
@@ -23,7 +23,7 @@ class ListingPage:
         return self.page.locator(".entity-card").count()
 
     def card_by_id(self, drawing_id: str) -> Locator:
-        return self.page.locator(f'[data-entity-id="{drawing_id}"]')
+        return self.page.locator(f'#item-{drawing_id}')
 
     def click_new_drawing(self) -> None:
         self.new_drawing_btn.click()
