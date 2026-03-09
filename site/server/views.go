@@ -133,7 +133,7 @@ func (p *PlaygroundListPage) Load(r *http.Request, w http.ResponseWriter, app *g
 	// Configure EntityListingData - Items will be empty since data lives in IndexedDB.
 	// Client JS populates the grid after loading from IndexedDB.
 	p.ListingData = goal.NewEntityListingData[*PlaygroundDrawing]("My Drawings", "/playground/%s/").
-		WithCreate("#new-drawing", "New Drawing").
+		WithCreate("#new-drawing", "New").
 		WithView("/playground/%s/").
 		WithEdit("/playground/%s/edit").
 		WithDelete("/playground/%s/delete")
@@ -200,10 +200,6 @@ type JoinPage struct {
 
 func (p *JoinPage) Load(r *http.Request, w http.ResponseWriter, app *goal.App[*ExcaliframeApp]) (error, bool) {
 	p.JoinCode = r.PathValue("code")
-	if p.JoinCode == "" {
-		http.Redirect(w, r, "/", http.StatusFound)
-		return nil, true
-	}
 	p.Title = "Join Session - Excaliframe"
 	p.DisableSplashScreen = true
 	p.CustomHeader = false

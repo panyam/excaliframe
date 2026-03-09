@@ -13,9 +13,12 @@ class JoinPage:
         self.password_join_btn = page.locator("#password-join-btn")
         self.error = page.locator("#join-error")
 
-    def goto(self, code: str = "_") -> None:
-        """Navigate to the join page. A code is required (/join/ redirects to /)."""
-        self.page.goto(f"/join/{code}")
+    def goto(self, code: str = "") -> None:
+        """Navigate to the join page. With no code, shows the paste form."""
+        if code:
+            self.page.goto(f"/join/{code}")
+        else:
+            self.page.goto("/join/")
         self.input.wait_for(state="visible", timeout=10_000)
 
     def paste_code(self, code: str) -> None:

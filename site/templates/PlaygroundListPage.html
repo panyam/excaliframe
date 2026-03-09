@@ -34,6 +34,39 @@
 
 {{# extend "EL:Scripts" "DrawingScripts" #}}
 
+{{ define "DrawingPageHeader" }}
+<div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ .Title }}</h1>
+                {{ if .Subtitle }}
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">{{ .Subtitle }}</p>
+                {{ end }}
+            </div>
+            <div class="flex items-center gap-3">
+                <a href="/join/"
+                   class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 shadow-sm">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
+                    </svg>
+                    Join
+                </a>
+                {{ if .CreateUrl }}
+                <a href="{{ .CreateUrl }}"
+                   class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800 shadow-sm">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    {{ or .CreateLabel "Create New" }}
+                </a>
+                {{ end }}
+            </div>
+        </div>
+    </div>
+</div>
+{{ end }}
+
 {{ define "BodySection" }}
 <div class="min-h-screen flex flex-col">
     <main class="flex-grow w-full">
@@ -44,7 +77,7 @@
           empty at render time. Client JS populates the grid and toggles visibility.
         */}}
         <div>
-            {{ template "EL:PageHeader" .ListingData }}
+            {{ template "DrawingPageHeader" .ListingData }}
             {{ template "EL:Controls" .ListingData }}
 
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
@@ -76,7 +109,7 @@
     <div class="fixed inset-0 bg-black/50 dark:bg-black/70" id="tool-modal-backdrop"></div>
     <div class="fixed inset-0 flex items-center justify-center p-4">
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-md p-6 relative">
-            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">New Drawing</h2>
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">New</h2>
             <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">Choose a tool to get started</p>
             <div id="tool-grid" class="grid grid-cols-2 gap-4">
                 <!-- Tools injected by JS -->
