@@ -113,7 +113,7 @@ if (!drawingId) {
 
     const root = ReactDOM.createRoot(document.getElementById('playground-root')!);
     root.render(
-      <EditorChrome host={host} tool={tool} showCancel={false} collabConfig={collabConfig}>
+      <EditorChrome host={host} tool={tool} showCancel={false} collabConfig={collabConfig} toolbarPosition="bottom-left">
         {(props) => <Editor ref={props.ref} host={host} syncActions={props.syncActions}
           stateCallbacks={props.stateCallbacks} autoSave={props.autoSave} />}
       </EditorChrome>
