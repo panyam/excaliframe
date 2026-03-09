@@ -9,7 +9,7 @@ function makeMockAdapter(tool: 'excalidraw' | 'mermaid' = 'excalidraw'): SyncAda
   _outgoing: OutgoingUpdate | null;
 } {
   return {
-    tool,
+    metadata: { tool },
     _outgoing: null,
     computeOutgoing() { return this._outgoing; },
     applyRemote: vi.fn(),

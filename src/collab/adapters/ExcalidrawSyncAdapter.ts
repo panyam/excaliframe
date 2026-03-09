@@ -33,7 +33,7 @@ interface ElementVersionSnapshot {
 }
 
 export class ExcalidrawSyncAdapter implements SyncAdapter {
-  readonly tool = 'excalidraw' as const;
+  readonly metadata = { tool: 'excalidraw' };
 
   /** Set to true while applying remote updates to suppress echo in onChange. */
   isApplyingRemote = false;

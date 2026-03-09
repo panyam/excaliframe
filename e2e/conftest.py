@@ -97,6 +97,32 @@ def follower(request, browser: Browser, server) -> dict:
     ctx.close()  # follower closes silently — owner fixture handles the pause
 
 
+# ── Cross-browser follower (Firefox) ──────────────────────────────────
+
+
+@pytest.fixture(scope="session")
+def firefox_browser(playwright):
+    """Launch a Firefox browser instance for cross-browser collab tests."""
+    browser = playwright.firefox.launch(headless=True)
+    yield browser
+    browser.close()
+
+
+@pytest.fixture
+def remote_follower(request, firefox_browser, server) -> dict:
+    """Follower profile using Firefox — for cross-browser collab tests."""
+    ctx = firefox_browser.new_context(
+        base_url=server["url"],
+        viewport={"width": WINDOW_WIDTH - 20, "height": WINDOW_HEIGHT - 100},
+    )
+    page = ctx.new_page()
+    if request.config.getoption("--headed", default=False):
+        x, y = WINDOW_POSITIONS["follower"]
+        # Firefox doesn't support CDP window positioning; skip silently
+    yield {"context": ctx, "page": page}
+    ctx.close()
+
+
 # ── Seeded page helper ────────────────────────────────────────────────
 
 

@@ -57,14 +57,14 @@ describe('CollabClient', () => {
   describe('connect', () => {
     it('sets isConnecting to true while connecting', () => {
       const { client } = createTestClient();
-      client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
+      client.connect('ws://localhost:8787', 'sess1', 'Alice', { tool: 'excalidraw' });
       expect(client.isConnecting).toBe(true);
       expect(client.isConnected).toBe(false);
     });
 
     it('sends JoinRoom action on WebSocket open', async () => {
       const { client, controllers } = createTestClient();
-      client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
+      client.connect('ws://localhost:8787', 'sess1', 'Alice', { tool: 'excalidraw' });
       const ctrl = controllers[0];
       ctrl.simulateOpen();
       await flushPromises();
@@ -74,14 +74,14 @@ describe('CollabClient', () => {
       expect(msg.join).toBeDefined();
       expect(msg.join.sessionId).toBe('sess1');
       expect(msg.join.username).toBe('Alice');
-      expect(msg.join.tool).toBe('excalidraw');
+      expect(msg.join.metadata).toEqual({ tool: 'excalidraw' });
       expect(msg.join.clientType).toBe('browser');
     });
 
     it('sets isConnected after receiving RoomJoined event', async () => {
       const onConnect = vi.fn();
       const { client, controllers } = createTestClient({ onConnect });
-      client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
+      client.connect('ws://localhost:8787', 'sess1', 'Alice', { tool: 'excalidraw' });
       await connectAndJoin(client, controllers[0], { clientId: 'client-123' });
 
       expect(client.isConnected).toBe(true);
@@ -93,7 +93,7 @@ describe('CollabClient', () => {
     it('dispatches self as peer on roomJoined', async () => {
       const onPeerJoined = vi.fn();
       const { client, controllers } = createTestClient({ onPeerJoined });
-      client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
+      client.connect('ws://localhost:8787', 'sess1', 'Alice', { tool: 'excalidraw' });
       await connectAndJoin(client, controllers[0]);
 
       // Self-peer dispatched during roomJoined processing
@@ -128,7 +128,7 @@ describe('CollabClient', () => {
     it('calls onPeerJoined callback when peer joins later', async () => {
       const onPeerJoined = vi.fn();
       const { client, controllers } = createTestClient({ onPeerJoined });
-      client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
+      client.connect('ws://localhost:8787', 'sess1', 'Alice', { tool: 'excalidraw' });
       const ctrl = controllers[0];
       await connectAndJoin(client, ctrl);
       onPeerJoined.mockClear(); // clear the self-peer call
@@ -147,7 +147,7 @@ describe('CollabClient', () => {
     it('calls onPeerLeft callback when peer leaves', async () => {
       const onPeerLeft = vi.fn();
       const { client, controllers } = createTestClient({ onPeerLeft });
-      client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
+      client.connect('ws://localhost:8787', 'sess1', 'Alice', { tool: 'excalidraw' });
       const ctrl = controllers[0];
       await connectAndJoin(client, ctrl);
 
@@ -161,7 +161,7 @@ describe('CollabClient', () => {
     it('calls onEvent callback for all received events', async () => {
       const onEvent = vi.fn();
       const { client, controllers } = createTestClient({ onEvent });
-      client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
+      client.connect('ws://localhost:8787', 'sess1', 'Alice', { tool: 'excalidraw' });
       const ctrl = controllers[0];
       ctrl.simulateOpen();
       await flushPromises();
@@ -175,7 +175,7 @@ describe('CollabClient', () => {
     it('calls onError callback on error', () => {
       const onError = vi.fn();
       const { client, controllers } = createTestClient({ onError });
-      client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
+      client.connect('ws://localhost:8787', 'sess1', 'Alice', { tool: 'excalidraw' });
       controllers[0].simulateError('connection failed');
 
       expect(onError).toHaveBeenCalled();
@@ -184,7 +184,7 @@ describe('CollabClient', () => {
     it('calls onDisconnect callback on close', async () => {
       const onDisconnect = vi.fn();
       const { client, controllers } = createTestClient({ onDisconnect });
-      client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
+      client.connect('ws://localhost:8787', 'sess1', 'Alice', { tool: 'excalidraw' });
       const ctrl = controllers[0];
       await connectAndJoin(client, ctrl);
 
@@ -195,7 +195,7 @@ describe('CollabClient', () => {
 
     it('throws if already connected', async () => {
       const { client, controllers } = createTestClient();
-      client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
+      client.connect('ws://localhost:8787', 'sess1', 'Alice', { tool: 'excalidraw' });
       await connectAndJoin(client, controllers[0]);
 
       expect(() => {
@@ -207,7 +207,7 @@ describe('CollabClient', () => {
   describe('disconnect', () => {
     it('sends LeaveRoom action before closing', async () => {
       const { client, controllers } = createTestClient();
-      client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
+      client.connect('ws://localhost:8787', 'sess1', 'Alice', { tool: 'excalidraw' });
       const ctrl = controllers[0];
       await connectAndJoin(client, ctrl);
 
@@ -221,7 +221,7 @@ describe('CollabClient', () => {
 
     it('resets state to disconnected', async () => {
       const { client, controllers } = createTestClient();
-      client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
+      client.connect('ws://localhost:8787', 'sess1', 'Alice', { tool: 'excalidraw' });
       await connectAndJoin(client, controllers[0]);
 
       client.disconnect();
@@ -232,7 +232,7 @@ describe('CollabClient', () => {
     it('fires onDisconnect synchronously', async () => {
       const onDisconnect = vi.fn();
       const { client, controllers } = createTestClient({ onDisconnect });
-      client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
+      client.connect('ws://localhost:8787', 'sess1', 'Alice', { tool: 'excalidraw' });
       await connectAndJoin(client, controllers[0]);
 
       client.disconnect();
@@ -250,7 +250,7 @@ describe('CollabClient', () => {
   describe('send', () => {
     it('sends action with clientId and timestamp', async () => {
       const { client, controllers } = createTestClient();
-      client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
+      client.connect('ws://localhost:8787', 'sess1', 'Alice', { tool: 'excalidraw' });
       const ctrl = controllers[0];
       await connectAndJoin(client, ctrl);
 
@@ -276,7 +276,7 @@ describe('CollabClient', () => {
 
     it('does not reconnect after unexpected disconnect', async () => {
       const { client, controllers } = createTestClient();
-      client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
+      client.connect('ws://localhost:8787', 'sess1', 'Alice', { tool: 'excalidraw' });
       const ctrl = controllers[0];
       ctrl.simulateOpen();
       await vi.advanceTimersByTimeAsync(0);
@@ -294,7 +294,7 @@ describe('CollabClient', () => {
 
     it('does not reconnect after explicit disconnect', async () => {
       const { client, controllers } = createTestClient();
-      client.connect('ws://localhost:8787', 'sess1', 'Alice', 'excalidraw');
+      client.connect('ws://localhost:8787', 'sess1', 'Alice', { tool: 'excalidraw' });
       controllers[0].simulateOpen();
       await vi.advanceTimersByTimeAsync(0);
       controllers[0].simulateMessage({

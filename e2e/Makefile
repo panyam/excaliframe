@@ -26,6 +26,9 @@ test-ipdb: ## Alias for test-debug
 test-insp: ## Step-through with Playwright Inspector (UI), stops on first failure
 	PWDEBUG=1 uv run pytest --browser chromium --headed -x $(if $(K),-k $(K))
 
+test-cross: ## Run cross-browser collab tests (Chrome owner + Firefox follower)
+	PWDEBUG= uv run pytest --browser chromium -k "cross_browser" $(if $(X),-x)
+
 list: ## List all tests (filter: make list T=collab)
 	@uv run python list_tests.py $(T)
 

@@ -96,7 +96,7 @@ if (!drawingId) {
     const Editor = await loadEditor(tool);
 
     let collabConfig: CollabConfig | undefined;
-    if (window.ENABLE_SHARING) {
+    if (window.ENABLE_SHARING && localStorage.getItem('ENABLE_SHARING')) {
       collabConfig = {
         drawingId,
         initialRelayUrl: connectRelay || undefined,

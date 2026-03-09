@@ -162,7 +162,7 @@ export function useCollaboration(
 
     clientRef.current = client;
     setState(s => ({ ...s, isConnecting: true, error: null }));
-    client.connect(relayUrl, sessionId, username, tool, isOwner, browserId, clientHint, encrypted, title);
+    client.connect(relayUrl, sessionId, username, { tool }, isOwner, browserId, clientHint, encrypted, title);
   }, [tool, onEvent]);
 
   const disconnect = useCallback(() => {

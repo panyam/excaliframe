@@ -90,7 +90,7 @@ describe('useCollaboration', () => {
       result.current[1].connect('ws://localhost:8787', 'sess1', 'Alice');
     });
     expect(getMocks().mockConnect).toHaveBeenCalledWith(
-      'ws://localhost:8787', 'sess1', 'Alice', 'excalidraw',
+      'ws://localhost:8787', 'sess1', 'Alice', { tool: 'excalidraw' },
       false, expect.any(String), '', false, '',
     );
   });
@@ -169,7 +169,7 @@ describe('useCollaboration', () => {
     act(() => { result.current[1].connect('ws://localhost:8787', 'sess1', 'Alice'); });
 
     expect(getMocks().mockConnect).toHaveBeenCalledWith(
-      'ws://localhost:8787', 'sess1', 'Alice', 'mermaid',
+      'ws://localhost:8787', 'sess1', 'Alice', { tool: 'mermaid' },
       false, expect.any(String), '', false, '',
     );
   });
@@ -193,7 +193,7 @@ describe('useCollaboration', () => {
     act(() => { result.current[1].connect('ws://localhost:8787', 'sess1', 'Alice', true, 'd1', true); });
 
     expect(getMocks().mockConnect).toHaveBeenCalledWith(
-      'ws://localhost:8787', 'sess1', 'Alice', 'excalidraw',
+      'ws://localhost:8787', 'sess1', 'Alice', { tool: 'excalidraw' },
       true, expect.any(String), expect.any(String), true, '',
     );
   });
