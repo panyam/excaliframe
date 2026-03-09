@@ -95,12 +95,14 @@ func main() {
 	// Setup routes
 	mux := server.SetupRoutes(app)
 
-	// Mount relay server at /relay/
-	relayApp := relayserver.NewRelayApp()
-	if err := relayApp.Init(); err != nil {
-		log.Fatal("Failed to initialize relay:", err)
+	// Mount relay server at /relay/ (disabled on App Engine Standard which lacks WebSocket support)
+	if os.Getenv("ENABLE_RELAY") != "" {
+		relayApp := relayserver.NewRelayApp()
+		if err := relayApp.Init(); err != nil {
+			log.Fatal("Failed to initialize relay:", err)
+		}
+		mux.Handle("/relay/", http.StripPrefix("/relay", relayApp))
 	}
-	mux.Handle("/relay/", http.StripPrefix("/relay", relayApp))
 
 	// Serve static files
 	mux.Handle("/static/", http.StripPrefix("/static", http.FileServer(http.Dir(STATIC_FOLDER))))

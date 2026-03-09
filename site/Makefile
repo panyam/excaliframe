@@ -4,7 +4,7 @@ NUM_LINKED_GOMODS=`cat go.mod | grep -v "^\/\/" | grep replace | wc -l | sed -e 
 all: parent build run
 
 run: resymlink
-	EXCALIFRAME_ENV=dev go run .
+	ENABLE_SHARING=1 ENABLE_RELAY=1 EXCALIFRAME_ENV=dev go run .
 
 parent:
 	cd ../ && make build
