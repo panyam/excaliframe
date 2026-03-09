@@ -25,7 +25,7 @@ build:
 build-old:
 	npm run build
 
-deploy: checklinks build
+deploy: checklinks parent build
 	rm -Rf locallinks ; mkdir locallinks
 	gcloud app deploy --project excaliframe --verbosity=info
 

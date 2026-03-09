@@ -42,4 +42,5 @@ require (
 // replace github.com/panyam/oneauth v0.0.23 => ./locallinks/newstack/oneauth
 
 // replace github.com/panyam/goapplib v0.0.34 => ./locallinks/newstack/goapplib/main
-replace github.com/panyam/massrelay v0.0.7 => ./locallinks/newstack/massrelay
+
+// replace github.com/panyam/massrelay v0.0.7 => ./locallinks/newstack/massrelay
