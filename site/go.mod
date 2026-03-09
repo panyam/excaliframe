@@ -6,7 +6,7 @@ toolchain go1.24.6
 
 require (
 	github.com/panyam/goapplib v0.0.34
-	github.com/panyam/massrelay v0.0.10
+	github.com/panyam/massrelay v0.0.11
 	github.com/panyam/templar v0.0.29
 )
 
