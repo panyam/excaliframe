@@ -173,8 +173,9 @@ func (p *PlaygroundDetailPage) Load(r *http.Request, w http.ResponseWriter, app 
 // PlaygroundEditPage - drawing edit page (full-screen editor)
 type PlaygroundEditPage struct {
 	goal.BasePage
-	Header    Header
-	DrawingId string
+	Header         Header
+	DrawingId      string
+	SharingEnabled bool
 }
 
 func (p *PlaygroundEditPage) Load(r *http.Request, w http.ResponseWriter, app *goal.App[*ExcaliframeApp]) (error, bool) {
@@ -187,6 +188,7 @@ func (p *PlaygroundEditPage) Load(r *http.Request, w http.ResponseWriter, app *g
 	p.DisableSplashScreen = true
 	p.CustomHeader = false
 	p.Header.AppName = app.Context.AppName
+	p.SharingEnabled = app.Context.SharingEnabled
 	return nil, false
 }
 
@@ -194,8 +196,9 @@ func (p *PlaygroundEditPage) Load(r *http.Request, w http.ResponseWriter, app *g
 // to the correct editor page.
 type JoinPage struct {
 	goal.BasePage
-	Header   Header
-	JoinCode string
+	Header         Header
+	JoinCode       string
+	SharingEnabled bool
 }
 
 func (p *JoinPage) Load(r *http.Request, w http.ResponseWriter, app *goal.App[*ExcaliframeApp]) (error, bool) {
@@ -204,6 +207,7 @@ func (p *JoinPage) Load(r *http.Request, w http.ResponseWriter, app *goal.App[*E
 	p.DisableSplashScreen = true
 	p.CustomHeader = false
 	p.Header.AppName = app.Context.AppName
+	p.SharingEnabled = app.Context.SharingEnabled
 	return nil, false
 }
 

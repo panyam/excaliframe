@@ -3,6 +3,7 @@
 {{ define "BodySection" }}
 <main class="flex-1 flex items-center justify-center p-4">
     <div class="w-full max-w-md">
+{{ if .SharingEnabled }}
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
             <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">Join Session</h2>
             <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Paste a join link or code to collaborate on a drawing.</p>
@@ -44,8 +45,6 @@
             </div>
             <div id="join-error" class="hidden mt-3 px-2.5 py-1.5 text-xs rounded-md bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800"></div>
         </div>
-    </div>
-</main>
 
 <script>
 (function() {
@@ -187,6 +186,14 @@
     }
 })();
 </script>
+{{ else }}
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 text-center">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Sharing Unavailable</h2>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Sharing is not available on this server.</p>
+        </div>
+{{ end }}
+    </div>
+</main>
 {{ end }}
 
 {{ define "PostBodySection" }}{{ end }}

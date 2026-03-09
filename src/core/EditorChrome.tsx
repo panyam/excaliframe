@@ -215,7 +215,7 @@ const EditorChrome: React.FC<EditorChromeProps> = ({
                 • Unsaved changes
               </span>
             )}
-            <CollabBadge state={collabState} onClick={() => setShowCollabPanel(!showCollabPanel)} />
+            {!!collabConfig && <CollabBadge state={collabState} onClick={() => setShowCollabPanel(!showCollabPanel)} />}
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
@@ -249,9 +249,9 @@ const EditorChrome: React.FC<EditorChromeProps> = ({
             </button>
           </div>
         </div>
-        {showCollabPanel && (
+        {!!collabConfig && showCollabPanel && (
           <SharePanel state={collabState} actions={collabActions} tool={tool}
-            drawingId={collabConfig?.drawingId ?? ''} onClose={() => setShowCollabPanel(false)}
+            drawingId={collabConfig.drawingId} onClose={() => setShowCollabPanel(false)}
             onPasswordChange={handlePasswordChange} title={host.getTitle?.() ?? ''} />
         )}
         <div style={{ flex: 1, overflow: 'hidden', width: '100%', height: '100%' }}
@@ -282,6 +282,7 @@ const EditorChrome: React.FC<EditorChromeProps> = ({
         drawingId={collabConfig?.drawingId ?? ''}
         onPasswordChange={handlePasswordChange}
         title={host.getTitle?.() ?? ''}
+        collabEnabled={!!collabConfig}
       />
       <SaveToast
         status={autoSaveStatus}

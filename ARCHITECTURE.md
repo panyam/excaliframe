@@ -472,7 +472,9 @@ The `client_type` field in `JoinRoom` distinguishes client kinds (`"browser"`, `
 
 ### Editor Integration
 
-Connection is **opt-in**. Editors accept an optional `collabConfig` prop (`CollabConfig: {drawingId, initialRelayUrl?, relayServers?}`):
+Connection is **opt-in** and gated by the `ENABLE_SHARING` env var. When the env var is unset (production default), all sharing UI is hidden — no Share button, no CollabBadge, and `/join/` shows a "Sharing unavailable" message. When set (`ENABLE_SHARING=1`), the Go server passes `SharingEnabled: true` to templates, which inject `window.ENABLE_SHARING = true` for the editor JS. The editor page only creates the `collabConfig` object when enabled; components guard collab UI on its presence.
+
+Editors accept an optional `collabConfig` prop (`CollabConfig: {drawingId, initialRelayUrl?, relayServers?}`):
 
 - **CollabBadge**: Always visible — people icon when disconnected, `N` + icon when connected
 - **CollabPanel**: Dialog with predefined relay server list (radio buttons), username field, session ID (= drawing ID)

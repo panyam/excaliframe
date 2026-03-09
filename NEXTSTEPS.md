@@ -42,6 +42,7 @@ Immediate and near-term action items for Excaliframe.
 - Cross-tab session reuse: owner's second tab finds existing session via localStorage before creating a new one
 - Playwright E2E tests: implemented — 23 tests across 7 files (CRUD, editor, sharing, joining, collab sync, cursors, encryption) using Python + pytest-playwright + uv. Page Object Model with sample fixture catalog. All 23 tests passing headless. Debugged and fixed: shared singleton dropdown locator, stale server detection, canvas focus management, end-of-test pause lifecycle, PWDEBUG isolation. See `e2e/README.md`.
 - Room title sync: owner's drawing title transmitted via `JoinRoom.title`, echoed in `RoomJoined.title` and `GetRoom.title`; `TitleChanged` action/event for live rename broadcast; followers auto-update local title
+- `ENABLE_SHARING` env var: Go server reads env, passes to templates as `window.ENABLE_SHARING`; editor page only creates `collabConfig` when enabled; FloatingToolbar, EditorChrome, and JoinPage guard collab UI on presence
 - Remaining: smart reconnect (currently disabled), binary file sync, `ws://` URL warning
 
 ### Fix False Positive "Unsaved Changes" Indicator
@@ -121,3 +122,4 @@ Immediate and near-term action items for Excaliframe.
 - [x] E2EE UX: SharePanel password field with auto-generate, JoinPage password prompt for encrypted rooms, EditorChrome key derivation, useSync encrypt/decrypt layer, CredentialsChanged broadcast
 - [x] Security doc (docs/SECURITY.md) updated with E2EE section, rate limiting mitigations, updated threat analysis
 - [x] Playwright E2E tests (`e2e/`): Python + pytest-playwright + uv, Page Object Model, 23 tests (CRUD, editor, share, join, collab sync, cursors, E2EE), multi-profile fixtures, sample fixture catalog for IndexedDB seeding, standalone test lister, pre-push hook
+- [x] `ENABLE_SHARING` env var: conditionally enables sharing/collab UI — Go server reads env, passes to templates, editor page guards `collabConfig` creation, components guard UI elements

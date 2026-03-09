@@ -6,6 +6,7 @@
         window.PLAYGROUND_DRAWING_ID = '{{ .DrawingId }}';
         // Must be set before Excalidraw loads to find bundled fonts
         window.EXCALIDRAW_ASSET_PATH = '/static/playground/editor/';
+        window.ENABLE_SHARING = {{ if .SharingEnabled }}true{{ else }}false{{ end }};
         // Inject drawing title slot into header (next to "Excaliframe" logo)
         (function() {
             var logo = document.querySelector('header > div:first-child');

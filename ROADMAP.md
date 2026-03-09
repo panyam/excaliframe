@@ -97,6 +97,7 @@ Architecture uses `DrawingEnvelope.tool` field to identify diagram type. Host ad
 | Password-based E2EE (AES-256-GCM, PBKDF2 key derivation) | Done |
 | Adapter robustness (try/catch on malformed data) | Done |
 | Room title sync (owner title → followers, live rename broadcast) | Done |
+| `ENABLE_SHARING` env var (hide collab UI in production) | Done |
 | Programmatic control (CLI/agent → live drawing via relay) | Planned |
 
 The relay is stateless — no database, no persistent storage. It routes messages between peers in real-time and enforces server-side protections (room capacity, rate limiting, protocol version checks). Any client (browser, CLI, agent) that speaks the protocol can join sessions.

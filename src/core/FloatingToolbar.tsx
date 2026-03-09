@@ -20,6 +20,8 @@ export interface FloatingToolbarProps {
   onPasswordChange?: (password: string | null) => void;
   /** Drawing title to send when starting a sharing session. */
   title?: string;
+  /** Whether collab/share UI is enabled. Default true. */
+  collabEnabled?: boolean;
 }
 
 const POSITION_CLASSES: Record<ToolbarPosition, string> = {
@@ -49,6 +51,7 @@ const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
   drawingId,
   onPasswordChange,
   title,
+  collabEnabled = true,
 }) => {
   const [expanded, setExpanded] = useState(false);
   const [panelView, setPanelView] = useState<PanelView>('menu');
@@ -94,16 +97,18 @@ const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
       {/* Divider */}
       <div className="border-t border-gray-200 dark:border-gray-700 my-0.5" />
 
-      {/* Share / Collab */}
-      <button
-        onClick={() => setPanelView('share')}
-        className="flex items-center w-full rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
-      >
-        <CollabBadge state={collabState} />
-      </button>
+      {collabEnabled && <>
+        {/* Share / Collab */}
+        <button
+          onClick={() => setPanelView('share')}
+          className="flex items-center w-full rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+        >
+          <CollabBadge state={collabState} />
+        </button>
 
-      {/* Divider */}
-      <div className="border-t border-gray-200 dark:border-gray-700 my-0.5" />
+        {/* Divider */}
+        <div className="border-t border-gray-200 dark:border-gray-700 my-0.5" />
+      </>}
 
       {/* Auto-save toggle */}
       <div className="px-3 py-1.5">

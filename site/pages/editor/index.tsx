@@ -16,6 +16,7 @@ declare global {
   interface Window {
     PLAYGROUND_DRAWING_ID?: string;
     EXCALIDRAW_ASSET_PATH?: string;
+    ENABLE_SHARING?: boolean;
   }
 }
 
@@ -94,24 +95,27 @@ if (!drawingId) {
     }
     const Editor = await loadEditor(tool);
 
-    const collabConfig: CollabConfig = {
-      drawingId,
-      initialRelayUrl: connectRelay || undefined,
-    };
+    let collabConfig: CollabConfig | undefined;
+    if (window.ENABLE_SHARING) {
+      collabConfig = {
+        drawingId,
+        initialRelayUrl: connectRelay || undefined,
+      };
 
-    // Auto-join from /join/<code> redirect
-    if (autoJoinParam) {
-      collabConfig.autoJoin = true;
-      collabConfig.autoJoinRelayUrl = relayParam || '/relay';
-      collabConfig.autoJoinSessionId = params.get('session') || undefined;
-    }
-    // Same-origin auto-connect: validate room is still alive before joining
-    else if (!connectRelay) {
-      const activeSessionId = findActiveSession(drawingId);
-      if (activeSessionId && await validateRoom(drawingId, activeSessionId)) {
+      // Auto-join from /join/<code> redirect
+      if (autoJoinParam) {
         collabConfig.autoJoin = true;
-        collabConfig.autoJoinRelayUrl = '/relay';
-        collabConfig.autoJoinSessionId = activeSessionId;
+        collabConfig.autoJoinRelayUrl = relayParam || '/relay';
+        collabConfig.autoJoinSessionId = params.get('session') || undefined;
+      }
+      // Same-origin auto-connect: validate room is still alive before joining
+      else if (!connectRelay) {
+        const activeSessionId = findActiveSession(drawingId);
+        if (activeSessionId && await validateRoom(drawingId, activeSessionId)) {
+          collabConfig.autoJoin = true;
+          collabConfig.autoJoinRelayUrl = '/relay';
+          collabConfig.autoJoinSessionId = activeSessionId;
+        }
       }
     }
 
