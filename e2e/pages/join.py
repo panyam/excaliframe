@@ -13,12 +13,10 @@ class JoinPage:
         self.password_join_btn = page.locator("#password-join-btn")
         self.error = page.locator("#join-error")
 
-    def goto(self, code: str = "") -> None:
-        if code:
-            self.page.goto(f"/join/{code}")
-        else:
-            self.page.goto("/join/")
-            self.page.wait_for_load_state("domcontentloaded")
+    def goto(self, code: str = "_") -> None:
+        """Navigate to the join page. A code is required (/join/ redirects to /)."""
+        self.page.goto(f"/join/{code}")
+        self.input.wait_for(state="visible", timeout=10_000)
 
     def paste_code(self, code: str) -> None:
         self.input.fill(code)
@@ -34,6 +32,10 @@ class JoinPage:
 
     def error_text(self) -> str:
         return self.error.text_content() or ""
+
+    def wait_for_password(self, timeout: int = 10_000) -> None:
+        """Wait for the password section to appear (async room check)."""
+        self.password_section.wait_for(state="visible", timeout=timeout)
 
     def is_password_visible(self) -> bool:
         return self.password_section.is_visible()

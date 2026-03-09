@@ -23,11 +23,12 @@ class TestEncryption:
         editor.share_panel.wait_for_visible()
 
         editor.share_panel.enable_encryption()
-        password = editor.share_panel.get_password()
-        assert len(password) > 0, "Password should be auto-generated"
-
         editor.share_panel.start_sharing()
         editor.share_panel.wait_for_connected()
+
+        # Password is displayed in a <code> element only after sharing starts
+        password = editor.share_panel.get_password()
+        assert len(password) > 0, "Password should be auto-generated"
 
         join_link = editor.share_panel.get_join_link()
         return editor, join_link, password
@@ -42,7 +43,7 @@ class TestEncryption:
         join_page.goto()
         join_page.paste_code(code)
 
-        assert join_page.is_password_visible()
+        join_page.wait_for_password()
 
         join_page.enter_password(password)
 
@@ -60,7 +61,7 @@ class TestEncryption:
         join_page.goto()
         join_page.paste_code(code)
 
-        assert join_page.is_password_visible()
+        join_page.wait_for_password()
 
         join_page.enter_password("wrong-password-12345")
 
