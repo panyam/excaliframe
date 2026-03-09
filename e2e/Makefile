@@ -8,6 +8,7 @@ NC := \033[0m
 
 setup: ## Install dependencies and browser (first time)
 	uv sync && uv run playwright install chromium
+	uv sync && uv run playwright install firefox
 	@echo "$(GREEN)E2E setup complete$(NC)"
 
 test: ## Run tests headless (add X=1 to stop on first failure)
