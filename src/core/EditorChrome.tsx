@@ -3,13 +3,15 @@ import { VERSION } from '../version';
 import { EditorHost } from './types';
 import { useAutoSave } from './useAutoSave';
 import { CollabConfig } from '../collab/types';
-import { useCollaboration } from '../collab/useCollaboration';
-import { useSync } from '../collab/sync/useSync';
-import type { SyncAdapter, SyncActions, SyncConnection } from '../collab/sync/SyncAdapter';
+import { useCollabEngine } from '../collab/useCollabEngine';
+import type { CollabEngine, CollabEngineState } from '../collab/useCollabEngine';
+import type { SyncAdapter } from '../collab/sync/SyncAdapter';
+import type { SyncActions } from '../collab/sync/SyncAdapter';
 import SharePanel from '../collab/SharePanel';
 import CollabBadge from '../collab/CollabBadge';
 import { resolveRelayUrl } from '../collab/url-params';
 import { deriveKey } from '../collab/crypto';
+import { getBrowserId } from '../collab/browserId';
 import type { EditorHandle, EditorStateCallbacks } from './EditorHandle';
 import FloatingToolbar from './FloatingToolbar';
 import type { ToolbarPosition } from './FloatingToolbar';
@@ -40,6 +42,56 @@ export interface EditorChromeProps {
   }) => React.ReactNode;
 }
 
+/** Adapt CollabEngineState to the shape SharePanel/CollabBadge/FloatingToolbar expect. */
+function engineStateToCollabState(s: CollabEngineState) {
+  return {
+    isConnected: s.phase === 'connected',
+    isConnecting: s.phase === 'connecting',
+    clientId: s.clientId,
+    sessionId: s.sessionId,
+    peers: s.peers as Map<string, any>,
+    error: s.error,
+    isOwner: s.isOwner,
+    ownerClientId: s.ownerClientId,
+    roomEncrypted: s.roomEncrypted,
+    maxPeers: s.maxPeers,
+    roomTitle: s.roomTitle,
+  };
+}
+
+/** Adapt engine methods to CollabActions shape that SharePanel/FloatingToolbar expect. */
+function engineToCollabActions(engine: CollabEngine, tool: string, drawingId?: string) {
+  return {
+    connect: (relayUrl: string, sessionId: string, username: string, isOwner: boolean = false, _drawingId?: string, encrypted: boolean = false, title: string = '') => {
+      // Persist to localStorage
+      localStorage.setItem('excaliframe:lastRelayUrl', relayUrl);
+      if (username) localStorage.setItem('excaliframe:lastUsername', username);
+
+      const browserId = getBrowserId();
+      const effectiveDrawingId = _drawingId ?? drawingId ?? '';
+      const clientHint = effectiveDrawingId ? `${browserId}:${effectiveDrawingId}` : '';
+
+      engine.connect({
+        relayUrl,
+        sessionId,
+        username,
+        metadata: { tool },
+        isOwner,
+        browserId,
+        clientHint,
+        encrypted,
+        title,
+      });
+    },
+    disconnect: () => engine.disconnect(),
+    send: (_action: Record<string, unknown>) => {
+      // No-op — engine handles send internally
+    },
+    notifyCredentialsChanged: (reason: string) => engine.notifyCredentialsChanged(reason),
+    notifyTitleChanged: (title: string) => engine.notifyTitleChanged(title),
+  };
+}
+
 const EditorChrome: React.FC<EditorChromeProps> = ({
   host,
   tool,
@@ -67,12 +119,15 @@ const EditorChrome: React.FC<EditorChromeProps> = ({
     onSave: handleSave,
   });
 
-  // Collaboration
-  const syncActionsRef = useRef<SyncActions | null>(null);
-  const onCollabEvent = useCallback((event: any) => {
-    syncActionsRef.current?.handleEvent(event);
-  }, []);
-  const [collabState, collabActions] = useCollaboration(tool, onCollabEvent);
+  // Collaboration via CollabEngine
+  const [engineState, engine] = useCollabEngine();
+  const collabState = useMemo(() => engineStateToCollabState(engineState), [engineState]);
+  const collabActions = useMemo(() => engineToCollabActions(engine, tool, collabConfig?.drawingId), [engine, tool, collabConfig?.drawingId]);
+
+  // Wire adapter to engine when it becomes available
+  useEffect(() => {
+    engine.setAdapter(syncAdapter);
+  }, [engine, syncAdapter]);
 
   // E2EE encryption key (derived from password, cached for session duration)
   const [encryptionKey, setEncryptionKey] = useState<CryptoKey | null>(null);
@@ -90,39 +145,61 @@ const EditorChrome: React.FC<EditorChromeProps> = ({
 
   // Derive key once sessionId is available (after connect)
   useEffect(() => {
-    if (collabState.sessionId && passwordRef.current) {
-      deriveKey(passwordRef.current, collabState.sessionId).then(setEncryptionKey);
+    if (engineState.sessionId && passwordRef.current) {
+      deriveKey(passwordRef.current, engineState.sessionId).then(setEncryptionKey);
     }
-    if (!collabState.isConnected) {
+    if (engineState.phase === 'disconnected') {
       setEncryptionKey(null);
       passwordRef.current = null;
     }
-  }, [collabState.sessionId, collabState.isConnected]);
+  }, [engineState.sessionId, engineState.phase]);
+
+  // Push encryption key to engine
+  useEffect(() => {
+    engine.setEncryptionKey(encryptionKey);
+  }, [engine, encryptionKey]);
 
   // When a follower receives roomTitle from the relay, update the local title
   useEffect(() => {
-    if (collabState.roomTitle && collabState.isConnected && !collabState.isOwner) {
-      host.setTitle?.(collabState.roomTitle);
+    if (engineState.roomTitle && engineState.phase === 'connected' && !engineState.isOwner) {
+      host.setTitle?.(engineState.roomTitle);
     }
-  }, [collabState.roomTitle, collabState.isConnected, collabState.isOwner, host]);
+  }, [engineState.roomTitle, engineState.phase, engineState.isOwner, host]);
 
-  const syncConnection = useMemo<SyncConnection>(() => ({
-    isConnected: collabState.isConnected,
-    clientId: collabState.clientId,
-    isOwner: collabState.isOwner,
-    peers: collabState.peers,
-    send: collabActions.send,
-  }), [collabState.isConnected, collabState.clientId, collabState.isOwner, collabState.peers, collabActions.send]);
+  // localStorage side effects for session tracking
+  useEffect(() => {
+    const drawingId = collabConfig?.drawingId;
+    if (engineState.sessionId && drawingId) {
+      localStorage.setItem(`excaliframe:sessionDrawing:${engineState.sessionId}`, drawingId);
+      if (engineState.isOwner) {
+        localStorage.setItem(`excaliframe:activeSession:${drawingId}`, engineState.sessionId);
+      }
+    }
+  }, [engineState.sessionId, engineState.isOwner, collabConfig?.drawingId]);
 
-  const [, syncActions] = useSync(syncAdapter, syncConnection, { encryptionKey });
-  syncActionsRef.current = syncActions;
+  // Clean up localStorage on disconnect
+  const prevSessionRef = useRef<string>('');
+  useEffect(() => {
+    if (engineState.phase === 'disconnected' && prevSessionRef.current) {
+      const sid = prevSessionRef.current;
+      localStorage.removeItem(`excaliframe:sessionDrawing:${sid}`);
+      localStorage.removeItem(`excaliframe:sessionPassword:${sid}`);
+      if (collabConfig?.drawingId && engineState.isOwner) {
+        localStorage.removeItem(`excaliframe:activeSession:${collabConfig.drawingId}`);
+      }
+      prevSessionRef.current = '';
+    }
+    if (engineState.sessionId) {
+      prevSessionRef.current = engineState.sessionId;
+    }
+  }, [engineState.phase, engineState.sessionId, engineState.isOwner, collabConfig?.drawingId]);
 
   // Collab panel state
   const [showCollabPanel, setShowCollabPanel] = useState(!!collabConfig?.initialRelayUrl);
 
   // Auto-connect as follower when collabConfig.autoJoin is set
   useEffect(() => {
-    if (collabConfig?.autoJoin && !collabState.isConnected && !collabState.isConnecting) {
+    if (collabConfig?.autoJoin && engineState.phase === 'disconnected') {
       const relayUrl = collabConfig.autoJoinRelayUrl || '/relay';
       const sessionId = collabConfig.autoJoinSessionId || '';
       // Check for password in sessionStorage (set by JoinPage for encrypted rooms)
@@ -183,6 +260,13 @@ const EditorChrome: React.FC<EditorChromeProps> = ({
     onSavingChange: setIsSaving,
     onSyncAdapterReady: setSyncAdapter,
   }), []);
+
+  // SyncActions for editors — thin wrapper around engine
+  const syncActions = useMemo<SyncActions>(() => ({
+    notifyLocalChange: () => engine.notifyLocalChange(),
+    notifyCursorMove: () => engine.notifyCursorMove(),
+    handleEvent: () => {}, // no-op — engine handles events internally
+  }), [engine]);
 
   const toolLabel = tool === 'mermaid' ? 'Mermaid' : 'Excalidraw';
   const childContent = children({

@@ -10,7 +10,7 @@ export interface MermaidRemoteCursor {
 }
 
 export class MermaidSyncAdapter implements SyncAdapter {
-  readonly tool = 'mermaid' as const;
+  readonly metadata = { tool: 'mermaid' };
 
   /** Set to true while applying remote updates to suppress echo in onChange. */
   isApplyingRemote = false;
