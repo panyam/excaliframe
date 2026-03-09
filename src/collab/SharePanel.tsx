@@ -14,10 +14,12 @@ export interface SharePanelProps {
   onClose?: () => void;
   /** Called when owner sets/changes password. Parent derives encryption key. */
   onPasswordChange?: (password: string | null) => void;
+  /** Drawing title to send when starting a sharing session. */
+  title?: string;
 }
 
 const SharePanel: React.FC<SharePanelProps> = ({
-  state, actions, tool, drawingId, relayServers, onClose, onPasswordChange,
+  state, actions, tool, drawingId, relayServers, onClose, onPasswordChange, title,
 }) => {
   const servers = relayServers ?? DEFAULT_RELAY_SERVERS;
   const [selectedServer, setSelectedServer] = useState(0);
@@ -60,7 +62,7 @@ const SharePanel: React.FC<SharePanelProps> = ({
       const activeSession = localStorage.getItem(`excaliframe:activeSession:${drawingId}`);
       if (activeSession) sessionId = activeSession;
     }
-    actions.connect(resolved, sessionId, '', true, drawingId, hasPassword);
+    actions.connect(resolved, sessionId, '', true, drawingId, hasPassword, title);
   };
 
   const handleCopyPassword = () => {

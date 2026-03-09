@@ -16,15 +16,19 @@ export interface CollabState {
   roomEncrypted: boolean;
   /** Max peers allowed by relay (from RoomJoined response). */
   maxPeers: number;
+  /** Drawing title from the room (set by owner, echoed to followers). */
+  roomTitle: string;
 }
 
 export interface CollabActions {
-  /** Connect to relay. sessionId empty = relay generates one (owner). drawingId used to build hint for session reuse. encrypted declares E2EE (owner only). */
-  connect: (relayUrl: string, sessionId: string, username: string, isOwner?: boolean, drawingId?: string, encrypted?: boolean) => void;
+  /** Connect to relay. sessionId empty = relay generates one (owner). drawingId used to build hint for session reuse. encrypted declares E2EE (owner only). title = drawing title (owner only). */
+  connect: (relayUrl: string, sessionId: string, username: string, isOwner?: boolean, drawingId?: string, encrypted?: boolean, title?: string) => void;
   disconnect: () => void;
   send: (action: Record<string, unknown>) => void;
   /** Broadcast CredentialsChanged event to all peers (owner only). */
   notifyCredentialsChanged: (reason: string) => void;
+  /** Broadcast TitleChanged event to all peers (owner only). */
+  notifyTitleChanged: (title: string) => void;
 }
 
 export function useCollaboration(
@@ -42,11 +46,12 @@ export function useCollaboration(
     ownerClientId: '',
     roomEncrypted: false,
     maxPeers: 0,
+    roomTitle: '',
   });
 
   const clientRef = useRef<CollabClient | null>(null);
 
-  const connect = useCallback((relayUrl: string, sessionId: string, username: string, isOwner: boolean = false, drawingId?: string, encrypted: boolean = false) => {
+  const connect = useCallback((relayUrl: string, sessionId: string, username: string, isOwner: boolean = false, drawingId?: string, encrypted: boolean = false, title: string = '') => {
     // Persist to localStorage
     localStorage.setItem('excaliframe:lastRelayUrl', relayUrl);
     if (username) localStorage.setItem('excaliframe:lastUsername', username);
@@ -91,16 +96,20 @@ export function useCollaboration(
           ownerClientId: '',
           roomEncrypted: false,
           maxPeers: 0,
+          roomTitle: '',
           error: reason === 'password_removed'
             ? 'Encryption was removed — please reconnect'
             : 'Password changed — please reconnect with the new password',
         }));
       },
+      onTitleChanged: (newTitle: string) => {
+        setState(s => ({ ...s, roomTitle: newTitle }));
+      },
       onDisconnect: () => {
         if (isOwner && drawingId) {
           localStorage.removeItem(`excaliframe:activeSession:${drawingId}`);
         }
-        setState(s => ({ ...s, isConnected: false, isConnecting: false, clientId: '', sessionId: '', peers: new Map(), isOwner: false, ownerClientId: '', roomEncrypted: false, maxPeers: 0 }));
+        setState(s => ({ ...s, isConnected: false, isConnecting: false, clientId: '', sessionId: '', peers: new Map(), isOwner: false, ownerClientId: '', roomEncrypted: false, maxPeers: 0, roomTitle: '' }));
       },
       onSessionEnded: () => {
         setState(s => ({
@@ -114,6 +123,7 @@ export function useCollaboration(
           ownerClientId: '',
           roomEncrypted: false,
           maxPeers: 0,
+          roomTitle: '',
           error: 'The owner ended the sharing session',
         }));
       },
@@ -136,6 +146,7 @@ export function useCollaboration(
             isOwner: s.clientId === ownerClientId || isOwner,
             roomEncrypted: !!event.roomJoined.encrypted,
             maxPeers: event.roomJoined.maxPeers || 0,
+            roomTitle: event.roomJoined.title || '',
           }));
           // Store session mappings in localStorage for same-origin auto-connect and join code reuse
           if (drawingId && returnedSessionId) {
@@ -151,7 +162,7 @@ export function useCollaboration(
 
     clientRef.current = client;
     setState(s => ({ ...s, isConnecting: true, error: null }));
-    client.connect(relayUrl, sessionId, username, tool, isOwner, browserId, clientHint, encrypted);
+    client.connect(relayUrl, sessionId, username, tool, isOwner, browserId, clientHint, encrypted, title);
   }, [tool, onEvent]);
 
   const disconnect = useCallback(() => {
@@ -175,6 +186,10 @@ export function useCollaboration(
     clientRef.current?.send({ credentialsChanged: { reason } });
   }, []);
 
+  const notifyTitleChanged = useCallback((title: string) => {
+    clientRef.current?.send({ titleChanged: { title } });
+  }, []);
+
   // Disconnect on unmount (page refresh, navigation, etc.)
   useEffect(() => {
     return () => {
@@ -182,5 +197,5 @@ export function useCollaboration(
     };
   }, []);
 
-  return [state, { connect, disconnect, send, notifyCredentialsChanged }];
+  return [state, { connect, disconnect, send, notifyCredentialsChanged, notifyTitleChanged }];
 }

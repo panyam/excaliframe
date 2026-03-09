@@ -18,6 +18,8 @@ export interface FloatingToolbarProps {
   tool: 'excalidraw' | 'mermaid';
   drawingId: string;
   onPasswordChange?: (password: string | null) => void;
+  /** Drawing title to send when starting a sharing session. */
+  title?: string;
 }
 
 const POSITION_CLASSES: Record<ToolbarPosition, string> = {
@@ -46,6 +48,7 @@ const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
   tool,
   drawingId,
   onPasswordChange,
+  title,
 }) => {
   const [expanded, setExpanded] = useState(false);
   const [panelView, setPanelView] = useState<PanelView>('menu');
@@ -127,6 +130,7 @@ const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
         drawingId={drawingId}
         onClose={() => setPanelView('menu')}
         onPasswordChange={onPasswordChange}
+        title={title}
       />
     </div>
   );

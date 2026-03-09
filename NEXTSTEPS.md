@@ -32,7 +32,7 @@ Immediate and near-term action items for Excaliframe.
 
 ### Real-Time Collaboration — Remaining Work
 - Parts 1-5 complete: relay, transport, peer tracking, real-time sync, share UX, cursor tracking, security hardening (200 TS tests passing)
-- Relay server and generic TS client extracted to [`massrelay`](https://github.com/panyam/massrelay) — npm: `@panyam/massrelay@0.0.6`
+- Relay server and generic TS client extracted to [`massrelay`](https://github.com/panyam/massrelay) — npm: `@panyam/massrelay@0.0.8`
 - Excaliframe imports massrelay via npm package; local collab files are thin re-exports
 - Mermaid cursor tracking: implemented — pills at bottom of code pane + inline cursor overlay ([#9](https://github.com/panyam/excaliframe/issues/9))
 - Security hardening: participant limits (10/room), multi-layer rate limiting, password-based E2EE (AES-256-GCM), protocol versioning
@@ -41,6 +41,7 @@ Immediate and near-term action items for Excaliframe.
 - CollabClient disconnect lifecycle fix: `onDisconnect` fires synchronously, state reset before `grpc.close()`
 - Cross-tab session reuse: owner's second tab finds existing session via localStorage before creating a new one
 - Playwright E2E tests: implemented — 23 tests across 7 files (CRUD, editor, sharing, joining, collab sync, cursors, encryption) using Python + pytest-playwright + uv. Page Object Model with sample fixture catalog. All 23 tests passing headless. Debugged and fixed: shared singleton dropdown locator, stale server detection, canvas focus management, end-of-test pause lifecycle, PWDEBUG isolation. See `e2e/README.md`.
+- Room title sync: owner's drawing title transmitted via `JoinRoom.title`, echoed in `RoomJoined.title` and `GetRoom.title`; `TitleChanged` action/event for live rename broadcast; followers auto-update local title
 - Remaining: smart reconnect (currently disabled), binary file sync, `ws://` URL warning
 
 ### Fix False Positive "Unsaved Changes" Indicator

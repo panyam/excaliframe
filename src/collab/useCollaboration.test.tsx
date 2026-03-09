@@ -91,7 +91,7 @@ describe('useCollaboration', () => {
     });
     expect(getMocks().mockConnect).toHaveBeenCalledWith(
       'ws://localhost:8787', 'sess1', 'Alice', 'excalidraw',
-      false, expect.any(String), '', false,
+      false, expect.any(String), '', false, '',
     );
   });
 
@@ -170,7 +170,7 @@ describe('useCollaboration', () => {
 
     expect(getMocks().mockConnect).toHaveBeenCalledWith(
       'ws://localhost:8787', 'sess1', 'Alice', 'mermaid',
-      false, expect.any(String), '', false,
+      false, expect.any(String), '', false, '',
     );
   });
 
@@ -194,7 +194,7 @@ describe('useCollaboration', () => {
 
     expect(getMocks().mockConnect).toHaveBeenCalledWith(
       'ws://localhost:8787', 'sess1', 'Alice', 'excalidraw',
-      true, expect.any(String), expect.any(String), true,
+      true, expect.any(String), expect.any(String), true, '',
     );
   });
 

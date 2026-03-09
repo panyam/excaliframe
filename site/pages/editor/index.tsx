@@ -88,6 +88,10 @@ if (!drawingId) {
   // Load drawing first to get the tool type, then dynamically import the editor
   host.loadDrawing().then(async (envelope) => {
     const tool = (envelope?.tool || params.get('tool') || 'excalidraw') as 'excalidraw' | 'mermaid';
+    const titleParam = params.get('title');
+    if (titleParam) {
+      await host.setTitle(titleParam);
+    }
     const Editor = await loadEditor(tool);
 
     const collabConfig: CollabConfig = {
@@ -111,11 +115,17 @@ if (!drawingId) {
       }
     }
 
+    // Capture notifyTitleChanged from EditorChrome for use in DrawingTitle
+    let notifyTitleChanged: ((title: string) => void) | null = null;
+
     const root = ReactDOM.createRoot(document.getElementById('playground-root')!);
     root.render(
       <EditorChrome host={host} tool={tool} showCancel={false} collabConfig={collabConfig}>
-        {(props) => <Editor ref={props.ref} host={host} syncActions={props.syncActions}
-          stateCallbacks={props.stateCallbacks} autoSave={props.autoSave} />}
+        {(props) => {
+          notifyTitleChanged = props.notifyTitleChanged;
+          return <Editor ref={props.ref} host={host} syncActions={props.syncActions}
+            stateCallbacks={props.stateCallbacks} autoSave={props.autoSave} />;
+        }}
       </EditorChrome>
     );
 
@@ -126,7 +136,10 @@ if (!drawingId) {
       titleRoot.render(
         <DrawingTitle
           initialTitle={host.getTitle()}
-          onRename={(t) => host.setTitle(t)}
+          onRename={(t) => {
+            host.setTitle(t);
+            notifyTitleChanged?.(t);
+          }}
         />
       );
     }

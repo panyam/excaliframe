@@ -21,6 +21,7 @@ export type {
   SceneInitResponse,
   GetRoomRequest,
   GetRoomResponse,
+  TitleChanged,
   ListRoomsRequest,
   ListRoomsResponse,
   RoomSummary,

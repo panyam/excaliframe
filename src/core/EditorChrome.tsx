@@ -35,6 +35,8 @@ export interface EditorChromeProps {
     stateCallbacks: EditorStateCallbacks;
     syncActions: SyncActions | null;
     autoSave: { enabled: boolean; setEnabled: (v: boolean) => void };
+    /** Broadcast a title change to collab peers (owner only). */
+    notifyTitleChanged: (title: string) => void;
   }) => React.ReactNode;
 }
 
@@ -96,6 +98,13 @@ const EditorChrome: React.FC<EditorChromeProps> = ({
       passwordRef.current = null;
     }
   }, [collabState.sessionId, collabState.isConnected]);
+
+  // When a follower receives roomTitle from the relay, update the local title
+  useEffect(() => {
+    if (collabState.roomTitle && collabState.isConnected && !collabState.isOwner) {
+      host.setTitle?.(collabState.roomTitle);
+    }
+  }, [collabState.roomTitle, collabState.isConnected, collabState.isOwner, host]);
 
   const syncConnection = useMemo<SyncConnection>(() => ({
     isConnected: collabState.isConnected,
@@ -181,6 +190,7 @@ const EditorChrome: React.FC<EditorChromeProps> = ({
     stateCallbacks,
     syncActions,
     autoSave: { enabled: autoSaveEnabled, setEnabled: setAutoSaveEnabled },
+    notifyTitleChanged: collabActions.notifyTitleChanged,
   });
 
   // Forge toolbar layout
@@ -242,7 +252,7 @@ const EditorChrome: React.FC<EditorChromeProps> = ({
         {showCollabPanel && (
           <SharePanel state={collabState} actions={collabActions} tool={tool}
             drawingId={collabConfig?.drawingId ?? ''} onClose={() => setShowCollabPanel(false)}
-            onPasswordChange={handlePasswordChange} />
+            onPasswordChange={handlePasswordChange} title={host.getTitle?.() ?? ''} />
         )}
         <div style={{ flex: 1, overflow: 'hidden', width: '100%', height: '100%' }}
           className={tool === 'excalidraw' ? 'excalidraw-wrapper' : undefined}>
@@ -271,6 +281,7 @@ const EditorChrome: React.FC<EditorChromeProps> = ({
         tool={tool}
         drawingId={collabConfig?.drawingId ?? ''}
         onPasswordChange={handlePasswordChange}
+        title={host.getTitle?.() ?? ''}
       />
       <SaveToast
         status={autoSaveStatus}

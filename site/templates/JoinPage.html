@@ -142,7 +142,7 @@
             .then(function(r) { return r.ok ? r.json() : Promise.reject('not found'); })
             .then(function(room) {
                 var tool = room.tool || 'excalidraw';
-                var joinInfo = { relayUrl: relayUrl, sessionId: sessionId, tool: tool, encrypted: !!room.encrypted };
+                var joinInfo = { relayUrl: relayUrl, sessionId: sessionId, tool: tool, encrypted: !!room.encrypted, title: room.title || '' };
 
                 if (joinInfo.encrypted) {
                     // Show password prompt — don't redirect yet
@@ -169,14 +169,15 @@
         if (password) {
             sessionStorage.setItem('excaliframe:joinPassword:' + joinInfo.sessionId, password);
         }
-        redirectToEditor(newDrawingId, joinInfo.relayUrl, joinInfo.sessionId, joinInfo.tool);
+        redirectToEditor(newDrawingId, joinInfo.relayUrl, joinInfo.sessionId, joinInfo.tool, joinInfo.title);
     }
 
-    function redirectToEditor(drawingId, relay, session, tool) {
+    function redirectToEditor(drawingId, relay, session, tool, title) {
         var url = '/playground/' + encodeURIComponent(drawingId) + '/edit?autoJoin=1'
             + '&relay=' + encodeURIComponent(relay)
             + '&session=' + encodeURIComponent(session);
         if (tool) url += '&tool=' + encodeURIComponent(tool);
+        if (title) url += '&title=' + encodeURIComponent(title);
         window.location.href = url;
     }
 

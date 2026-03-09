@@ -453,10 +453,10 @@ WebSocket endpoint: `/relay/ws/v1/{session_id}/sync`
 
 Messages use protobuf definitions with JSON-over-WebSocket transport (servicekit envelope: `{type: "data", data: <payload>}`).
 
-- **CollabAction** (client→server): oneof `JoinRoom`, `LeaveRoom`, `PresenceUpdate`, `SceneUpdate`, `CursorUpdate`, `TextUpdate`, `CredentialsChanged`
-- **CollabEvent** (server→client): oneof `RoomJoined`, `PeerJoined`, `PeerLeft`, `PresenceUpdate`, `SceneUpdate`, `CursorUpdate`, `TextUpdate`, `SceneInit`, `ErrorEvent`, `CredentialsChanged`
+- **CollabAction** (client→server): oneof `JoinRoom`, `LeaveRoom`, `PresenceUpdate`, `SceneUpdate`, `CursorUpdate`, `TextUpdate`, `CredentialsChanged`, `TitleChanged`
+- **CollabEvent** (server→client): oneof `RoomJoined`, `PeerJoined`, `PeerLeft`, `PresenceUpdate`, `SceneUpdate`, `CursorUpdate`, `TextUpdate`, `SceneInit`, `ErrorEvent`, `CredentialsChanged`, `TitleChanged`
 
-`JoinRoom` includes `protocol_version` (v2 for E2EE-capable clients) and `encrypted` flag. `RoomJoined` returns `max_peers`, `encrypted`, and `protocol_version`.
+`JoinRoom` includes `protocol_version` (v2 for E2EE-capable clients), `encrypted` flag, and `title` (drawing title). `RoomJoined` returns `max_peers`, `encrypted`, `protocol_version`, and `title`. `TitleChanged` broadcasts owner title renames to all peers in real-time.
 
 Generated code: Go in `massrelay/gen/go/`, TypeScript in `@panyam/massrelay` npm package.
 

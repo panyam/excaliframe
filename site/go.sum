@@ -24,8 +24,8 @@ github.com/panyam/gocurrent v0.0.11 h1:JejKNrBWR/y7zv3QbSnwLSDBtU2qA5w603fGPwNds
 github.com/panyam/gocurrent v0.0.11/go.mod h1:jIIhcNfNnnIe2JXH8aY2+ba+/5G1fzwCWoZXdcMNw6o=
 github.com/panyam/goutils v0.1.13 h1:V819IdZTEJ3rpu33ZqohC6O9ou7KOu6cxfigoYT12OQ=
 github.com/panyam/goutils v0.1.13/go.mod h1:vd3iFcv1DjaeV6h8tslIJh9d09RLndg8UYNSGROBrM4=
-github.com/panyam/massrelay v0.0.7 h1:pIoKH5IavoboOtd3aSd+B3phTf0KpnMPnF6QVV+ySCw=
-github.com/panyam/massrelay v0.0.7/go.mod h1:6cIpCVrc2D2bPT1Wj5j8L1brv/tFNRKCbZkYq48ffBE=
+github.com/panyam/massrelay v0.0.8 h1:zqVxMHOVTMfZe9W4lmVaDuq3CP4cJi43X9UJQHn06fM=
+github.com/panyam/massrelay v0.0.8/go.mod h1:6cIpCVrc2D2bPT1Wj5j8L1brv/tFNRKCbZkYq48ffBE=
 github.com/panyam/servicekit v0.0.4 h1:OdvzGKlgm1rnVePb7gjCXGL8cxYqRtZ7Pu0fZF1Yus0=
 github.com/panyam/servicekit v0.0.4/go.mod h1:GOLBY1PRDWweAFIbmEPNo6NspAxHoednqcSP2cYFPzo=
 github.com/panyam/templar v0.0.29 h1:+cNqCoMJHsdM4XTNhDbvgUvPLWDrBcgr79MJgmbd5xY=
