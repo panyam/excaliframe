@@ -21,8 +21,8 @@ importers:
         specifier: ^1.6.0
         version: 1.7.1
       '@panyam/massrelay':
-        specifier: link:/Users/dzshrh/newstack/massrelay/ts
-        version: link:../../newstack/massrelay/ts
+        specifier: ^0.0.10
+        version: 0.0.10(@bufbuild/protobuf@2.11.0)(@panyam/servicekit-client@0.0.6)
       '@panyam/servicekit-client':
         specifier: ^0.0.6
         version: 0.0.6
@@ -888,6 +888,12 @@ packages:
   '@nodelib/fs.walk@1.2.8':
     resolution: {integrity: sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg==}
     engines: {node: '>= 8'}
+
+  '@panyam/massrelay@0.0.10':
+    resolution: {integrity: sha512-OAIgEhAIMrqVq50Sg0V4ZuTCbbmj6XKu70DA7/kvGR9qX6K/T94vJ6hTUxhQUEhLRHEVovHsx2lU5qPhEiQWUA==}
+    peerDependencies:
+      '@bufbuild/protobuf': ^2.0.0
+      '@panyam/servicekit-client': ^0.0.6
 
   '@panyam/servicekit-client@0.0.6':
     resolution: {integrity: sha512-FnUacDTuCsFmFqHaIDZi9xPOnhOiI6orqg5LHYi8Oj2p6enT8J/kNzhfpbNOHk+tN6MMIa4vfAQE4J1gLhsLuA==}
@@ -6906,6 +6912,11 @@ snapshots:
     dependencies:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.20.1
+
+  '@panyam/massrelay@0.0.10(@bufbuild/protobuf@2.11.0)(@panyam/servicekit-client@0.0.6)':
+    dependencies:
+      '@bufbuild/protobuf': 2.11.0
+      '@panyam/servicekit-client': 0.0.6
 
   '@panyam/servicekit-client@0.0.6': {}
 
