@@ -211,7 +211,7 @@ describe('useCollaboration', () => {
     act(() => { getMockClient().simulateConnect('c1'); });
     act(() => {
       getMockClient().simulateEvent({
-        roomJoined: { sessionId: 'sess1', ownerClientId: 'c1', encrypted: true, maxPeers: 10 },
+        roomJoined: { room: { sessionId: 'sess1', ownerClientId: 'c1', encrypted: true }, maxPeers: 10 },
       });
     });
 

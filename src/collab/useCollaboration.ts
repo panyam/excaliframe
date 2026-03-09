@@ -137,16 +137,17 @@ export function useCollaboration(
       onEvent: (event) => {
         // Extract ownerClientId, sessionId, and room capabilities from RoomJoined
         if (event.roomJoined) {
-          const ownerClientId = event.roomJoined.ownerClientId || '';
-          const returnedSessionId = event.roomJoined.sessionId || sessionId;
+          const room = event.roomJoined.room || {};
+          const ownerClientId = room.ownerClientId || '';
+          const returnedSessionId = room.sessionId || sessionId;
           setState(s => ({
             ...s,
             sessionId: returnedSessionId,
             ownerClientId,
             isOwner: s.clientId === ownerClientId || isOwner,
-            roomEncrypted: !!event.roomJoined.encrypted,
+            roomEncrypted: !!room.encrypted,
             maxPeers: event.roomJoined.maxPeers || 0,
-            roomTitle: event.roomJoined.title || '',
+            roomTitle: room.title || '',
           }));
           // Store session mappings in localStorage for same-origin auto-connect and join code reuse
           if (drawingId && returnedSessionId) {

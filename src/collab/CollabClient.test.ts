@@ -36,8 +36,10 @@ async function connectAndJoin(
   ctrl.simulateMessage({
     roomJoined: {
       clientId: opts.clientId ?? 'c1',
-      sessionId: opts.sessionId ?? 'sess1',
-      peers: [],
+      room: {
+        sessionId: opts.sessionId ?? 'sess1',
+        peers: {},
+      },
     },
   });
 }
@@ -114,8 +116,10 @@ describe('CollabClient', () => {
       ctrl.simulateMessage({
         roomJoined: {
           clientId: 'c2',
-          sessionId: 'sess1',
-          peers: [{ clientId: 'c1', username: 'Alice', avatarUrl: '', clientType: 'browser', isActive: true }],
+          room: {
+            sessionId: 'sess1',
+            peers: { c1: { clientId: 'c1', username: 'Alice', avatarUrl: '', clientType: 'browser', isActive: true } },
+          },
         },
       });
 
@@ -166,7 +170,7 @@ describe('CollabClient', () => {
       ctrl.simulateOpen();
       await flushPromises();
 
-      ctrl.simulateMessage({ roomJoined: { clientId: 'c1', sessionId: 's1', peers: [] } });
+      ctrl.simulateMessage({ roomJoined: { clientId: 'c1', room: { sessionId: 's1', peers: {} } } });
       ctrl.simulateMessage({ peerJoined: { peer: { clientId: 'c2' } } });
 
       expect(onEvent).toHaveBeenCalledTimes(2);
@@ -281,7 +285,7 @@ describe('CollabClient', () => {
       ctrl.simulateOpen();
       await vi.advanceTimersByTimeAsync(0);
       ctrl.simulateMessage({
-        roomJoined: { clientId: 'c1', sessionId: 's1', peers: [] },
+        roomJoined: { clientId: 'c1', room: { sessionId: 's1', peers: {} } },
       });
 
       ctrl.simulateClose(1006);
@@ -298,7 +302,7 @@ describe('CollabClient', () => {
       controllers[0].simulateOpen();
       await vi.advanceTimersByTimeAsync(0);
       controllers[0].simulateMessage({
-        roomJoined: { clientId: 'c1', sessionId: 's1', peers: [] },
+        roomJoined: { clientId: 'c1', room: { sessionId: 's1', peers: {} } },
       });
 
       client.disconnect();

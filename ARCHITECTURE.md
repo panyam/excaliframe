@@ -432,7 +432,7 @@ Excaliframe supports optional real-time collaboration via an external relay serv
 The relay server and generic TS client code live in the standalone [`massrelay`](https://github.com/panyam/massrelay) library (`github.com/panyam/massrelay`). Massrelay is tool-agnostic — it has zero Excalidraw/Mermaid-specific logic. All domain knowledge lives in excaliframe's `SyncAdapter` implementations.
 
 - **Go module**: `github.com/panyam/massrelay` — relay server, proto definitions, generated Go/TS stubs
-- **npm package**: `@panyam/massrelay` — CollabClient, SyncAdapter interface, url-params, proto types
+- **npm package**: `@panyam/massrelay` (current: v0.0.11) — CollabClient, SyncAdapter interface, url-params, proto types
 - **Local dev**: `~/newstack/massrelay`, with `replace` directive in `site/go.mod`
 
 ### Embedded Relay
@@ -456,7 +456,7 @@ Messages use protobuf definitions with JSON-over-WebSocket transport (servicekit
 - **CollabAction** (client→server): oneof `JoinRoom`, `LeaveRoom`, `PresenceUpdate`, `SceneUpdate`, `CursorUpdate`, `TextUpdate`, `CredentialsChanged`, `TitleChanged`
 - **CollabEvent** (server→client): oneof `RoomJoined`, `PeerJoined`, `PeerLeft`, `PresenceUpdate`, `SceneUpdate`, `CursorUpdate`, `TextUpdate`, `SceneInit`, `ErrorEvent`, `CredentialsChanged`, `TitleChanged`
 
-`JoinRoom` includes `protocol_version` (v2 for E2EE-capable clients), `encrypted` flag, and `title` (drawing title). `RoomJoined` returns `max_peers`, `encrypted`, `protocol_version`, and `title`. `TitleChanged` broadcasts owner title renames to all peers in real-time.
+`JoinRoom` includes `protocol_version` (v2 for E2EE-capable clients), `encrypted` flag, and `title` (drawing title). `RoomJoined` (v0.0.11+) nests room data under a `room` object: `roomJoined.room.sessionId`, `roomJoined.room.ownerClientId`, `roomJoined.room.encrypted`, `roomJoined.room.title`, `roomJoined.room.peers` (as map). Top-level fields `roomJoined.clientId` and `roomJoined.maxPeers` remain unchanged. `TitleChanged` broadcasts owner title renames to all peers in real-time.
 
 Generated code: Go in `massrelay/gen/go/`, TypeScript in `@panyam/massrelay` npm package.
 
@@ -473,6 +473,8 @@ The `client_type` field in `JoinRoom` distinguishes client kinds (`"browser"`, `
 ### Editor Integration
 
 Connection is **opt-in** and gated by the `ENABLE_SHARING` env var. When the env var is unset (production default), all sharing UI is hidden — no Share button, no CollabBadge, and `/join/` shows a "Sharing unavailable" message. When set (`ENABLE_SHARING=1`), the Go server passes `SharingEnabled: true` to templates, which inject `window.ENABLE_SHARING = true` for the editor JS. The editor page only creates the `collabConfig` object when enabled; components guard collab UI on its presence.
+
+The relay server itself is gated by the `ENABLE_RELAY` env var. When unset, the Go server does not mount the relay at `/relay/` — useful for deployments where WebSocket support is unavailable (e.g., App Engine Standard, which strips `Connection: Upgrade` headers). When set (`ENABLE_RELAY=1`), the relay is embedded as usual. This allows separating the relay into a standalone service (e.g., Cloud Run) while the site runs on App Engine Standard.
 
 Editors accept an optional `collabConfig` prop (`CollabConfig: {drawingId, initialRelayUrl?, relayServers?}`):
 
