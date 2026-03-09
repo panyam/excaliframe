@@ -14,10 +14,10 @@ test: ## Run tests headless (add X=1 to stop on first failure)
 	PWDEBUG= uv run pytest --browser chromium $(if $(X),-x) $(if $(K),-k $(K))
 
 test-headed: ## Run tests with visible browser + slow-motion (add X=1 to stop on first failure)
-	uv run pytest --browser chromium --headed --slowmo=100 $(if $(X),-x) $(if $(K),-k $(K))
+	uv run pytest --browser chromium --headed --slowmo=1000 $(if $(X),-x) $(if $(K),-k $(K))
 
 test-debug: ## Step-through with ipdb, stops on first failure
-	uv run pytest --browser chromium --headed -s -x --slowmo=100 $(if $(K),-k $(K))
+	uv run pytest --browser chromium --headed -s -x --slowmo=1000 $(if $(K),-k $(K))
 
 test-ipdb: ## Alias for test-debug
 	$(MAKE) test-debug $(if $(K),K=$(K))
