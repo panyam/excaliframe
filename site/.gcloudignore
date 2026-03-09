@@ -10,8 +10,19 @@ node_modules/
 pages/
 package.json
 package-lock.json
+pnpm-lock.yaml
 tsconfig.json
 webpack.config.js
+rspack.config.js
+
+# Python / E2E artifacts
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+.pytest_cache/
+test-results/
+playwright-report/
 
 # Local dev artifacts
 locallinks/
