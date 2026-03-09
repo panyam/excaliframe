@@ -3,6 +3,8 @@ runtime: go124
 env_variables:
   EXCALIFRAME_ENV: production
   EXCALIFRAME_BASE_URL: https://excaliframe.com
+  RELAY_LOG_PAYLOADS: 50
+  ENABLE_SHARING: true
 
 handlers:
 - url: /static
