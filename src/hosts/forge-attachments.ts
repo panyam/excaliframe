@@ -8,7 +8,7 @@ const LOG_PREFIX = '[V2-ATTACH]';
  * or it defaults to 'resolver' since bridge mode gets 401.
  */
 function useResolver(): boolean {
-  return (window as any).__excaliframeUseResolver !== false;
+  return (window as any).__excaliframeUseResolver === true;
 }
 
 // ── Diagnostic ──────────────────────────────────────────────
@@ -18,30 +18,37 @@ function useResolver(): boolean {
  * Call from console: window.__excaliframeDiag('PAGE_ID')
  */
 (window as any).__excaliframeDiag = async (pageId: string) => {
-  console.log(`${LOG_PREFIX} DIAG: testing BRIDGE mode (requestConfluence)`);
-  try {
-    const r1 = await requestConfluence(`/wiki/rest/api/content/${pageId}`, { method: 'GET' });
-    console.log(`${LOG_PREFIX} DIAG [bridge]: GET content → ${r1.status}`);
-  } catch (e) {
-    console.error(`${LOG_PREFIX} DIAG [bridge]: GET content failed:`, e);
-  }
-  try {
-    const r2 = await requestConfluence(`/wiki/rest/api/content/${pageId}/child/attachment`, { method: 'GET' });
-    console.log(`${LOG_PREFIX} DIAG [bridge]: GET attachments → ${r2.status}`);
-  } catch (e) {
-    console.error(`${LOG_PREFIX} DIAG [bridge]: GET attachments failed:`, e);
-  }
+  // Test all path combinations to find what works
+  const paths = [
+    { label: 'v1 /wiki/', content: `/wiki/rest/api/content/${pageId}`, attach: `/wiki/rest/api/content/${pageId}/child/attachment` },
+    { label: 'v1 no /wiki/', content: `/rest/api/content/${pageId}`, attach: `/rest/api/content/${pageId}/child/attachment` },
+    { label: 'v2 /wiki/', content: `/wiki/api/v2/pages/${pageId}`, attach: `/wiki/api/v2/pages/${pageId}/attachments` },
+    { label: 'v2 no /wiki/', content: `/api/v2/pages/${pageId}`, attach: `/api/v2/pages/${pageId}/attachments` },
+  ];
 
-  console.log(`${LOG_PREFIX} DIAG: testing RESOLVER mode (invoke)`);
-  try {
-    const result = await invoke<Record<string, any>>('diagTest', { pageId });
-    console.log(`${LOG_PREFIX} DIAG [resolver]:`, result);
-  } catch (e) {
-    console.error(`${LOG_PREFIX} DIAG [resolver]: invoke failed:`, e);
+  console.log(`${LOG_PREFIX} DIAG: testing all path combos for pageId=${pageId}`);
+  for (const p of paths) {
+    try {
+      const r1 = await requestConfluence(p.content, { method: 'GET' });
+      const status1 = r1.status;
+      let title = '';
+      if (r1.ok) { try { const b = await r1.json(); title = b.title || b.name || ''; } catch {} }
+      console.log(`${LOG_PREFIX} DIAG [${p.label}]: GET content → ${status1}${title ? ` "${title}"` : ''}`);
+    } catch (e: any) {
+      console.error(`${LOG_PREFIX} DIAG [${p.label}]: GET content → ERROR: ${e.message}`);
+    }
+    try {
+      const r2 = await requestConfluence(p.attach, { method: 'GET' });
+      const status2 = r2.status;
+      let count = '';
+      if (r2.ok) { try { const b = await r2.json(); count = ` (${b.results?.length ?? b.length ?? '?'} attachments)`; } catch {} }
+      console.log(`${LOG_PREFIX} DIAG [${p.label}]: GET attachments → ${status2}${count}`);
+    } catch (e: any) {
+      console.error(`${LOG_PREFIX} DIAG [${p.label}]: GET attachments → ERROR: ${e.message}`);
+    }
   }
 
   console.log(`${LOG_PREFIX} DIAG: current mode = ${useResolver() ? 'RESOLVER' : 'BRIDGE'}`);
-  console.log(`${LOG_PREFIX} DIAG: switch with window.__excaliframeUseResolver = true/false`);
 };
 
 // ── Bridge mode (direct requestConfluence) ──────────────────
