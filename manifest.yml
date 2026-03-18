@@ -22,7 +22,7 @@ modules:
         title: Edit Mermaid Diagram
   function:
     - key: resolver
-      handler: src/resolver/index.handler
+      handler: resolver/index.handler
 
 resources:
   - key: renderer
