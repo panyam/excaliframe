@@ -54,10 +54,12 @@ function useResolver(): boolean {
 // ── Bridge mode (direct requestConfluence) ──────────────────
 
 async function bridgeUpload(pageId: string, filename: string, jsonContent: string): Promise<void> {
+  // v1 PUT still works for uploads (only v1 GET is deprecated/410)
   const blob = new Blob([jsonContent], { type: 'application/json' });
   const form = new FormData();
   form.append('file', blob, filename);
 
+  console.log(`${LOG_PREFIX} bridge: PUT v1 attachment upload`);
   const resp = await requestConfluence(
     `/wiki/rest/api/content/${pageId}/child/attachment`,
     {
@@ -67,25 +69,46 @@ async function bridgeUpload(pageId: string, filename: string, jsonContent: strin
     },
   );
   if (!resp.ok) {
+    const body = await resp.text().catch(() => '');
+    console.error(`${LOG_PREFIX} bridge: PUT failed ${resp.status}`, body);
     throw new Error(`Bridge upload failed: ${resp.status} ${resp.statusText}`);
   }
 }
 
 async function bridgeDownload(pageId: string, filename: string): Promise<string | null> {
+  // v2 GET for listing attachments
+  console.log(`${LOG_PREFIX} bridge: GET v2 attachments for filename=${filename}`);
   const findResp = await requestConfluence(
-    `/wiki/rest/api/content/${pageId}/child/attachment?filename=${encodeURIComponent(filename)}`,
+    `/api/v2/pages/${pageId}/attachments?filename=${encodeURIComponent(filename)}`,
     { method: 'GET' },
   );
-  if (!findResp.ok) return null;
+  if (!findResp.ok) {
+    console.warn(`${LOG_PREFIX} bridge: v2 attachments list failed ${findResp.status}`);
+    return null;
+  }
 
   const findData = await findResp.json();
-  if (!findData.results || findData.results.length === 0) return null;
+  const results = findData.results;
+  if (!results || results.length === 0) {
+    console.log(`${LOG_PREFIX} bridge: no attachment found for ${filename}`);
+    return null;
+  }
 
-  const downloadPath = findData.results[0]._links?.download;
-  if (!downloadPath) return null;
+  // v2 attachment has downloadLink
+  const attachment = results[0];
+  const downloadLink = attachment.downloadLink || attachment._links?.download;
+  console.log(`${LOG_PREFIX} bridge: found attachment id=${attachment.id}, downloading...`);
 
-  const dlResp = await requestConfluence(`/wiki${downloadPath}`, { method: 'GET' });
-  if (!dlResp.ok) return null;
+  if (!downloadLink) {
+    console.error(`${LOG_PREFIX} bridge: no download link in attachment`);
+    return null;
+  }
+
+  const dlResp = await requestConfluence(downloadLink, { method: 'GET' });
+  if (!dlResp.ok) {
+    console.error(`${LOG_PREFIX} bridge: download failed ${dlResp.status}`);
+    return null;
+  }
   return dlResp.text();
 }
 
