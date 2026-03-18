@@ -1,19 +1,14 @@
-import Resolver from '@forge/resolver';
-import api, { route } from '@forge/api';
+const Resolver = require('@forge/resolver');
+const api = require('@forge/api');
 
 const resolver = new Resolver();
 
 resolver.define('uploadAttachment', async ({ payload }) => {
-  const { pageId, filename, content } = payload as {
-    pageId: string;
-    filename: string;
-    content: string;
-  };
+  const { pageId, filename, content } = payload;
 
   const sizeKB = (content.length / 1024).toFixed(1);
   console.log(`[V2-RESOLVER] uploadAttachment: pageId=${pageId}, filename=${filename}, size=${sizeKB}KB`);
 
-  // Create or update attachment via PUT (idempotent)
   const boundary = '----ExcaliframeBoundary' + Date.now();
   const body = [
     `--${boundary}`,
@@ -24,7 +19,7 @@ resolver.define('uploadAttachment', async ({ payload }) => {
     `--${boundary}--`,
   ].join('\r\n');
 
-  const resp = await api.asUser().requestConfluence(route`/wiki/rest/api/content/${pageId}/child/attachment`, {
+  const resp = await api.asUser().requestConfluence(api.route`/wiki/rest/api/content/${pageId}/child/attachment`, {
     method: 'PUT',
     headers: {
       'X-Atlassian-Token': 'nocheck',
@@ -44,13 +39,12 @@ resolver.define('uploadAttachment', async ({ payload }) => {
 });
 
 resolver.define('downloadAttachment', async ({ payload }) => {
-  const { pageId, filename } = payload as { pageId: string; filename: string };
+  const { pageId, filename } = payload;
 
   console.log(`[V2-RESOLVER] downloadAttachment: pageId=${pageId}, filename=${filename}`);
 
-  // Find attachment by filename
   const findResp = await api.asUser().requestConfluence(
-    route`/wiki/rest/api/content/${pageId}/child/attachment?filename=${filename}`,
+    api.route`/wiki/rest/api/content/${pageId}/child/attachment?filename=${filename}`,
     { method: 'GET' },
   );
 
@@ -74,7 +68,7 @@ resolver.define('downloadAttachment', async ({ payload }) => {
     return { success: false, content: null };
   }
 
-  const dlResp = await api.asUser().requestConfluence(route`/wiki${downloadPath}`, { method: 'GET' });
+  const dlResp = await api.asUser().requestConfluence(api.route`/wiki${downloadPath}`, { method: 'GET' });
 
   if (!dlResp.ok) {
     console.error(`[V2-RESOLVER] download failed: ${dlResp.status}`);
@@ -87,25 +81,25 @@ resolver.define('downloadAttachment', async ({ payload }) => {
 });
 
 resolver.define('diagTest', async ({ payload }) => {
-  const { pageId } = payload as { pageId: string };
+  const { pageId } = payload;
   console.log(`[V2-RESOLVER] diagTest: pageId=${pageId}`);
 
-  const results: Record<string, any> = {};
+  const results = {};
 
   try {
-    const r1 = await api.asUser().requestConfluence(route`/wiki/rest/api/content/${pageId}`, { method: 'GET' });
+    const r1 = await api.asUser().requestConfluence(api.route`/wiki/rest/api/content/${pageId}`, { method: 'GET' });
     results.getContent = { status: r1.status, ok: r1.ok };
     if (r1.ok) {
       const body = await r1.json();
       results.getContent.title = body.title;
     }
-  } catch (e: any) {
+  } catch (e) {
     results.getContent = { error: e.message };
   }
 
   try {
     const r2 = await api.asUser().requestConfluence(
-      route`/wiki/rest/api/content/${pageId}/child/attachment`,
+      api.route`/wiki/rest/api/content/${pageId}/child/attachment`,
       { method: 'GET' },
     );
     results.getAttachments = { status: r2.status, ok: r2.ok };
@@ -113,11 +107,11 @@ resolver.define('diagTest', async ({ payload }) => {
       const body = await r2.json();
       results.getAttachments.count = body.results?.length ?? 0;
     }
-  } catch (e: any) {
+  } catch (e) {
     results.getAttachments = { error: e.message };
   }
 
   return results;
 });
 
-export const handler = resolver.getDefinitions();
+exports.handler = resolver.getDefinitions();

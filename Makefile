@@ -1,4 +1,4 @@
-.PHONY: help install build build-resolver build-old playground-build playground-build-old dev dev-old type-check clean deploy install-app tunnel lint sync diff sync-status migrate test test-all test-ts test-go proto e2e-setup e2e e2e-list hooks
+.PHONY: help install build build-old playground-build playground-build-old dev dev-old type-check clean deploy install-app tunnel lint sync diff sync-status migrate test test-all test-ts test-go proto e2e-setup e2e e2e-list hooks
 
 # Default target
 .DEFAULT_GOAL := help
@@ -58,15 +58,11 @@ install: ## Install npm dependencies
 
 ##@ Build
 
-build: build-resolver ## Build frontend assets for Forge (rspack)
+build: ## Build frontend assets for Forge (rspack)
 	@echo "$(GREEN)Building frontend assets (rspack)...$(NC)"
 	npm run build:rspack
 	@echo "$(GREEN)Build output: dist/forge/$(NC)"
-
-build-resolver: ## Type-check the Forge resolver (server-side function)
-	@echo "$(GREEN)Type-checking resolver...$(NC)"
-	npx tsc --project src/resolver/tsconfig.json --noEmit
-	@echo "$(GREEN)Resolver OK$(NC)"
+	@echo "$(GREEN)Resolver: src/resolver.js (bundled by forge deploy)$(NC)"
 
 build-old: ## Build frontend assets for Forge (webpack fallback)
 	@echo "$(GREEN)Building frontend assets (webpack)...$(NC)"
