@@ -54,6 +54,16 @@ Immediate and near-term action items for Excaliframe.
 - The `isDeleted` field may also be added by Excalidraw during init, causing fingerprint mismatch
 - Next step: debug what specific properties differ between stored and post-init fingerprints
 
+## Recently Completed
+
+### V2 Attachment-Based Storage (#16, PR #17)
+- Large diagrams (>5.2MB) stored as Confluence page attachments instead of inline macro config
+- Hybrid Confluence API: v2 GET (v1 deprecated/410), v1 PUT for uploads (v2 has no upload endpoint)
+- `requestConfluence` bridge with correct scopes (`read:content-details:confluence` was the key missing scope)
+- Backward compatible: V1 macros load normally, auto-upgrade to V2 on save, V1 fallback with warning
+- Resolver function available as fallback (`window.__excaliframeUseResolver = true`) but not used by default due to 500KB invoke payload limit
+- Diagnostic: `window.__excaliframeDiag(pageId)` tests all API path combos
+
 ## Backlog
 
 - **DOMPurify hardening for Mermaid SVG preview** — [#2](https://github.com/panyam/excaliframe/issues/2) — add DOMPurify with custom config that allows `<foreignObject>` but strips scripts/event handlers
