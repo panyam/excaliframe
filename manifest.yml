@@ -27,6 +27,8 @@ permissions:
   scopes:
     - read:confluence-content.all
     - write:confluence-content
+    - read:attachment:confluence
+    - write:attachment:confluence
   content:
     scripts:
       - 'unsafe-eval'
