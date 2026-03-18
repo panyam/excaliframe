@@ -27,6 +27,8 @@ permissions:
   scopes:
     - read:confluence-content.all
     - write:confluence-content
+    - read:content:confluence
+    - write:content:confluence
     - read:attachment:confluence
     - write:attachment:confluence
   content:
