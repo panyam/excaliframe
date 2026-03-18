@@ -4,6 +4,8 @@ modules:
       title: Excalidraw
       description: Create and edit hand-drawn style diagrams directly in Confluence using Excalidraw
       resource: renderer
+      resolver:
+        function: resolver
       config:
         resource: editor
         viewportSize: max
@@ -12,10 +14,15 @@ modules:
       title: Mermaid
       description: Create flowcharts, sequence diagrams, and more using Mermaid syntax
       resource: renderer
+      resolver:
+        function: resolver
       config:
         resource: editor
         viewportSize: max
         title: Edit Mermaid Diagram
+  function:
+    - key: resolver
+      handler: src/resolver/index.handler
 
 resources:
   - key: renderer
@@ -27,6 +34,10 @@ permissions:
   scopes:
     - read:confluence-content.all
     - write:confluence-content
+    - read:content:confluence
+    - write:content:confluence
+    - read:attachment:confluence
+    - write:attachment:confluence
   content:
     scripts:
       - 'unsafe-eval'

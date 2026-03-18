@@ -10,72 +10,36 @@ resolver.define('uploadAttachment', async ({ payload }) => {
     content: string;
   };
 
-  console.log(`[V2-RESOLVER] uploadAttachment: pageId=${pageId}, filename=${filename}, size=${(content.length / 1024).toFixed(1)}KB`);
+  const sizeKB = (content.length / 1024).toFixed(1);
+  console.log(`[V2-RESOLVER] uploadAttachment: pageId=${pageId}, filename=${filename}, size=${sizeKB}KB`);
 
-  // Check if attachment already exists
-  const existingId = await findAttachmentId(pageId, filename);
+  // Create or update attachment via PUT (idempotent)
+  const boundary = '----ExcaliframeBoundary' + Date.now();
+  const body = [
+    `--${boundary}`,
+    `Content-Disposition: form-data; name="file"; filename="${filename}"`,
+    'Content-Type: application/json',
+    '',
+    content,
+    `--${boundary}--`,
+  ].join('\r\n');
 
-  if (existingId) {
-    console.log(`[V2-RESOLVER] updating existing attachment id=${existingId}`);
-    // Update existing: POST to the attachment's own data endpoint
-    const resp = await api.asUser().requestConfluence(
-      route`/rest/api/content/${existingId}/child/attachment`,
-      {
-        method: 'PUT',
-        headers: {
-          'X-Atlassian-Token': 'nocheck',
-          'Content-Type': 'application/json',
-        },
-        body: content,
-      },
-    );
-
-    if (!resp.ok) {
-      // Try page-level PUT with multipart approach
-      console.warn(`[V2-RESOLVER] direct update failed (${resp.status}), trying page-level PUT`);
-      const resp2 = await api.asUser().requestConfluence(
-        route`/rest/api/content/${pageId}/child/attachment`,
-        {
-          method: 'PUT',
-          headers: {
-            'X-Atlassian-Token': 'nocheck',
-            'Content-Type': 'multipart/form-data',
-          },
-          body: createMultipartBody(filename, content),
-        },
-      );
-      if (!resp2.ok) {
-        const body = await resp2.text();
-        console.error(`[V2-RESOLVER] page-level PUT failed: ${resp2.status}`, body);
-        return { success: false, error: `Upload failed: ${resp2.status} ${resp2.statusText}` };
-      }
-    }
-
-    console.log(`[V2-RESOLVER] attachment updated successfully`);
-    return { success: true };
-  }
-
-  // Create new attachment via PUT (create-or-update)
-  console.log(`[V2-RESOLVER] creating new attachment on page ${pageId}`);
-  const resp = await api.asUser().requestConfluence(
-    route`/rest/api/content/${pageId}/child/attachment`,
-    {
-      method: 'PUT',
-      headers: {
-        'X-Atlassian-Token': 'nocheck',
-        'Content-Type': 'multipart/form-data',
-      },
-      body: createMultipartBody(filename, content),
+  const resp = await api.asUser().requestConfluence(route`/wiki/rest/api/content/${pageId}/child/attachment`, {
+    method: 'PUT',
+    headers: {
+      'X-Atlassian-Token': 'nocheck',
+      'Content-Type': `multipart/form-data; boundary=${boundary}`,
     },
-  );
+    body,
+  });
 
   if (!resp.ok) {
-    const body = await resp.text();
-    console.error(`[V2-RESOLVER] upload failed: ${resp.status}`, body);
+    const errBody = await resp.text();
+    console.error(`[V2-RESOLVER] upload failed: ${resp.status}`, errBody);
     return { success: false, error: `Upload failed: ${resp.status} ${resp.statusText}` };
   }
 
-  console.log(`[V2-RESOLVER] attachment created successfully`);
+  console.log(`[V2-RESOLVER] attachment uploaded successfully`);
   return { success: true };
 });
 
@@ -84,85 +48,76 @@ resolver.define('downloadAttachment', async ({ payload }) => {
 
   console.log(`[V2-RESOLVER] downloadAttachment: pageId=${pageId}, filename=${filename}`);
 
-  const attachmentId = await findAttachmentId(pageId, filename);
-  if (!attachmentId) {
-    console.warn(`[V2-RESOLVER] attachment not found for filename=${filename}`);
-    return { success: false, content: null };
-  }
-
-  // Get download link from attachment metadata
-  console.log(`[V2-RESOLVER] found attachment id=${attachmentId}, fetching metadata...`);
-  const metaResp = await api.asUser().requestConfluence(
-    route`/rest/api/content/${attachmentId}?expand=version`,
+  // Find attachment by filename
+  const findResp = await api.asUser().requestConfluence(
+    route`/wiki/rest/api/content/${pageId}/child/attachment?filename=${filename}`,
     { method: 'GET' },
   );
 
-  if (!metaResp.ok) {
-    console.error(`[V2-RESOLVER] metadata fetch failed: ${metaResp.status}`);
+  if (!findResp.ok) {
+    console.error(`[V2-RESOLVER] findAttachment failed: ${findResp.status}`);
     return { success: false, content: null };
   }
 
-  const meta = await metaResp.json();
-  const downloadPath = meta._links?.download;
+  const findData = await findResp.json();
+  if (!findData.results || findData.results.length === 0) {
+    console.log(`[V2-RESOLVER] attachment not found: ${filename}`);
+    return { success: false, content: null };
+  }
+
+  const attachment = findData.results[0];
+  const downloadPath = attachment._links?.download;
+  console.log(`[V2-RESOLVER] found attachment id=${attachment.id}, downloading from ${downloadPath}`);
+
   if (!downloadPath) {
-    console.error(`[V2-RESOLVER] no download link in metadata`);
+    console.error(`[V2-RESOLVER] no download link in attachment metadata`);
     return { success: false, content: null };
   }
 
-  console.log(`[V2-RESOLVER] downloading from: ${downloadPath}`);
-  const dlResp = await api.asUser().requestConfluence(
-    route`${downloadPath}`,
-    { method: 'GET' },
-  );
+  const dlResp = await api.asUser().requestConfluence(route`/wiki${downloadPath}`, { method: 'GET' });
 
   if (!dlResp.ok) {
     console.error(`[V2-RESOLVER] download failed: ${dlResp.status}`);
     return { success: false, content: null };
   }
 
-  const content = await dlResp.text();
-  console.log(`[V2-RESOLVER] downloaded ${(content.length / 1024).toFixed(1)}KB`);
-  return { success: true, content };
+  const text = await dlResp.text();
+  console.log(`[V2-RESOLVER] downloaded ${(text.length / 1024).toFixed(1)}KB`);
+  return { success: true, content: text };
 });
 
-async function findAttachmentId(pageId: string, filename: string): Promise<string | null> {
-  console.log(`[V2-RESOLVER] findAttachment: pageId=${pageId}, filename=${filename}`);
+resolver.define('diagTest', async ({ payload }) => {
+  const { pageId } = payload as { pageId: string };
+  console.log(`[V2-RESOLVER] diagTest: pageId=${pageId}`);
 
-  const resp = await api.asUser().requestConfluence(
-    route`/rest/api/content/${pageId}/child/attachment?filename=${filename}`,
-    { method: 'GET' },
-  );
+  const results: Record<string, any> = {};
 
-  if (!resp.ok) {
-    console.warn(`[V2-RESOLVER] findAttachment failed: ${resp.status}`);
-    return null;
+  try {
+    const r1 = await api.asUser().requestConfluence(route`/wiki/rest/api/content/${pageId}`, { method: 'GET' });
+    results.getContent = { status: r1.status, ok: r1.ok };
+    if (r1.ok) {
+      const body = await r1.json();
+      results.getContent.title = body.title;
+    }
+  } catch (e: any) {
+    results.getContent = { error: e.message };
   }
 
-  const data = await resp.json();
-  const results = data.results;
-  if (!results || results.length === 0) {
-    console.log(`[V2-RESOLVER] no attachment found for filename=${filename}`);
-    return null;
+  try {
+    const r2 = await api.asUser().requestConfluence(
+      route`/wiki/rest/api/content/${pageId}/child/attachment`,
+      { method: 'GET' },
+    );
+    results.getAttachments = { status: r2.status, ok: r2.ok };
+    if (r2.ok) {
+      const body = await r2.json();
+      results.getAttachments.count = body.results?.length ?? 0;
+    }
+  } catch (e: any) {
+    results.getAttachments = { error: e.message };
   }
 
-  console.log(`[V2-RESOLVER] found attachment: id=${results[0].id}, title=${results[0].title}`);
-  return results[0].id;
-}
-
-/**
- * Build a multipart/form-data body string for attachment upload.
- * Node's Forge runtime doesn't have FormData, so we construct it manually.
- */
-function createMultipartBody(filename: string, content: string): string {
-  const boundary = '----ExcaliframeBoundary' + Date.now();
-  return [
-    `--${boundary}`,
-    `Content-Disposition: form-data; name="file"; filename="${filename}"`,
-    'Content-Type: application/json',
-    '',
-    content,
-    `--${boundary}--`,
-  ].join('\r\n');
-}
+  return results;
+});
 
 export const handler = resolver.getDefinitions();
