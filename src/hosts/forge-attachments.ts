@@ -3,6 +3,51 @@ import { requestConfluence } from '@forge/bridge';
 const LOG_PREFIX = '[V2-ATTACH]';
 
 /**
+ * Diagnostic: test whether requestConfluence can reach the Confluence API at all.
+ * Call from browser console via: window.__excaliframeDiag('PAGE_ID')
+ */
+(window as any).__excaliframeDiag = async (pageId: string) => {
+  console.log(`${LOG_PREFIX} DIAG: testing requestConfluence with pageId=${pageId}`);
+
+  try {
+    const r1 = await requestConfluence(`/rest/api/content/${pageId}`, { method: 'GET' });
+    console.log(`${LOG_PREFIX} DIAG: GET /content/${pageId} → ${r1.status}`);
+    if (r1.ok) {
+      const body = await r1.json();
+      console.log(`${LOG_PREFIX} DIAG: page title="${body.title}", type="${body.type}"`);
+    }
+  } catch (e) {
+    console.error(`${LOG_PREFIX} DIAG: GET content failed:`, e);
+  }
+
+  try {
+    const r2 = await requestConfluence(`/rest/api/content/${pageId}/child/attachment`, { method: 'GET' });
+    console.log(`${LOG_PREFIX} DIAG: GET attachments → ${r2.status}`);
+    if (r2.ok) {
+      const body = await r2.json();
+      console.log(`${LOG_PREFIX} DIAG: attachments count=${body.results?.length ?? 0}`, body.results?.map((a: any) => a.title));
+    }
+  } catch (e) {
+    console.error(`${LOG_PREFIX} DIAG: GET attachments failed:`, e);
+  }
+
+  try {
+    const r3 = await requestConfluence(`/rest/api/content/${pageId}/child/attachment`, {
+      method: 'PUT',
+      headers: { 'X-Atlassian-Token': 'nocheck' },
+      body: JSON.stringify({ comment: 'excaliframe diag test' }),
+    });
+    console.log(`${LOG_PREFIX} DIAG: PUT attachment (JSON body) → ${r3.status}`);
+    if (!r3.ok) {
+      const body = await r3.text();
+      console.log(`${LOG_PREFIX} DIAG: PUT error body:`, body);
+    }
+  } catch (e) {
+    console.error(`${LOG_PREFIX} DIAG: PUT attachment failed:`, e);
+  }
+};
+
+/**
  * Upload a drawing JSON as a Confluence page attachment.
  * Uses PUT to create-or-update by filename (idempotent).
  */
