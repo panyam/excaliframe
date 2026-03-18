@@ -24,7 +24,11 @@ resources:
     path: static/editor
 
 permissions:
-  scopes: []
+  scopes:
+    - read:confluence-content.all
+    - write:confluence-content
+    - read:confluence-file
+    - write:confluence-file
   content:
     scripts:
       - 'unsafe-eval'

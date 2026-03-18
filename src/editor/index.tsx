@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { view } from '@forge/bridge';
 import { EditorHost } from '../core/types';
@@ -40,6 +40,45 @@ async function loadEditor(tool: string): Promise<EditorComponent> {
   }
 }
 
+/** Warning banner for V2 upgrade fallback. */
+const UpgradeWarningBanner: React.FC<{ message: string; onDismiss: () => void }> = ({ message, onDismiss }) => (
+  <div style={{
+    padding: '8px 16px',
+    backgroundColor: '#fffae6',
+    borderBottom: '1px solid #ffe380',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    fontSize: '13px',
+    color: '#172b4d',
+  }}>
+    <span>{message}</span>
+    <button onClick={onDismiss} style={{
+      background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#6b778c',
+    }}>&times;</button>
+  </div>
+);
+
+/** Wrapper that wires ForgeEditorHost upgrade warnings to a banner. */
+const ForgeEditorApp: React.FC<{ host: ForgeEditorHost; tool: 'excalidraw' | 'mermaid'; Editor: EditorComponent }> = ({ host, tool, Editor }) => {
+  const [warning, setWarning] = useState<string | null>(null);
+
+  useEffect(() => {
+    host.setUpgradeWarningCallback((msg) => setWarning(msg));
+    return () => host.setUpgradeWarningCallback(() => {});
+  }, [host]);
+
+  return (
+    <>
+      {warning && <UpgradeWarningBanner message={warning} onDismiss={() => setWarning(null)} />}
+      <EditorChrome host={host} tool={tool} showCancel={true}>
+        {(props) => <Editor ref={props.ref} host={host} syncActions={props.syncActions}
+          stateCallbacks={props.stateCallbacks} autoSave={props.autoSave} />}
+      </EditorChrome>
+    </>
+  );
+};
+
 (async () => {
   const context = await view.getContext();
   const moduleKey = (context as any).moduleKey || '';
@@ -49,10 +88,5 @@ async function loadEditor(tool: string): Promise<EditorComponent> {
   const Editor = await loadEditor(tool);
 
   const root = ReactDOM.createRoot(document.getElementById('root')!);
-  root.render(
-    <EditorChrome host={host} tool={tool} showCancel={true}>
-      {(props) => <Editor ref={props.ref} host={host} syncActions={props.syncActions}
-        stateCallbacks={props.stateCallbacks} autoSave={props.autoSave} />}
-    </EditorChrome>
-  );
+  root.render(<ForgeEditorApp host={host} tool={tool} Editor={Editor} />);
 })();
