@@ -32,11 +32,15 @@ resources:
 
 permissions:
   scopes:
+    # Classic scopes
     - read:confluence-content.all
     - write:confluence-content
     - write:confluence-file
     - readonly:content.attachment:confluence
+    # Granular scopes
+    - read:content-details:confluence
     - read:content:confluence
+    - read:page:confluence
     - write:content:confluence
     - read:attachment:confluence
     - write:attachment:confluence
