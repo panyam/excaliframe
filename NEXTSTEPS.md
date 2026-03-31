@@ -28,6 +28,13 @@ Immediate and near-term action items for Excaliframe.
 
 ---
 
+### 4. Confluence E2E Tests — Validate & Iterate
+- Confluence Forge plugin tests added (`e2e/confluence/`) — V2 save/load cycle against real instances
+- Two-account setup (personal + corporate), auth via saved browser state
+- Need to test-drive and iterate on: Forge iframe discovery, macro insertion flow, Confluence UI selectors
+- Fixture generator for stress testing (A5=250KB through A0=20MB)
+- Parametrize tests across fixture sizes once basic flow works
+
 ## In Progress
 
 ### Real-Time Collaboration — Remaining Work
