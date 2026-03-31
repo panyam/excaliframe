@@ -4,18 +4,20 @@ const LOG_PREFIX = '[V2-ATTACH]';
 
 /**
  * Toggle between bridge (requestConfluence) and resolver (invoke) modes.
- * Set via window.__excaliframeUseResolver = true/false in console,
- * or it defaults to 'resolver' since bridge mode gets 401.
+ * Set via window.__excaliframeUseResolver = true/false in console.
+ * Defaults to bridge mode (returns false unless explicitly opted in).
  */
 function useResolver(): boolean {
   return (window as any).__excaliframeUseResolver === true;
 }
 
-// ── Diagnostic ──────────────────────────────────────────────
+// ── Diagnostic (dev only) ───────────────────────────────────
 
+if (process.env.NODE_ENV !== 'production') {
 /**
  * Diagnostic: test both bridge and resolver modes.
  * Call from console: window.__excaliframeDiag('PAGE_ID')
+ * Only available in development builds.
  */
 (window as any).__excaliframeDiag = async (pageId: string) => {
   // Test all path combinations to find what works
@@ -50,16 +52,16 @@ function useResolver(): boolean {
 
   console.log(`${LOG_PREFIX} DIAG: current mode = ${useResolver() ? 'RESOLVER' : 'BRIDGE'}`);
 };
+} // end dev-only diagnostic
 
 // ── Bridge mode (direct requestConfluence) ──────────────────
 
-async function bridgeUpload(pageId: string, filename: string, jsonContent: string): Promise<void> {
+async function bridgeUploadBlob(pageId: string, filename: string, blob: Blob): Promise<void> {
   // v1 PUT still works for uploads (only v1 GET is deprecated/410)
-  const blob = new Blob([jsonContent], { type: 'application/json' });
   const form = new FormData();
   form.append('file', blob, filename);
 
-  console.log(`${LOG_PREFIX} bridge: PUT v1 attachment upload`);
+  console.log(`${LOG_PREFIX} bridge: PUT v1 attachment upload (${(blob.size / 1024).toFixed(1)}KB, ${blob.type})`);
   const resp = await requestConfluence(
     `/wiki/rest/api/content/${pageId}/child/attachment`,
     {
@@ -73,6 +75,11 @@ async function bridgeUpload(pageId: string, filename: string, jsonContent: strin
     console.error(`${LOG_PREFIX} bridge: PUT failed ${resp.status}`, body);
     throw new Error(`Bridge upload failed: ${resp.status} ${resp.statusText}`);
   }
+}
+
+async function bridgeUpload(pageId: string, filename: string, jsonContent: string): Promise<void> {
+  const blob = new Blob([jsonContent], { type: 'application/json' });
+  await bridgeUploadBlob(pageId, filename, blob);
 }
 
 async function bridgeDownload(pageId: string, filename: string): Promise<string | null> {
@@ -174,4 +181,75 @@ export async function downloadAttachment(
     console.warn(`${LOG_PREFIX} downloadAttachment [${mode}]: not found`);
   }
   return result;
+}
+
+// ── Binary blob support (V3 preview attachments) ─────────
+
+/**
+ * Find an attachment by filename and return its ID.
+ * Uses v2 GET to list, returns the first match.
+ */
+async function bridgeFindAttachment(pageId: string, filename: string): Promise<string | null> {
+  const findResp = await requestConfluence(
+    `/api/v2/pages/${pageId}/attachments?filename=${encodeURIComponent(filename)}`,
+    { method: 'GET' },
+  );
+  if (!findResp.ok) return null;
+  const data = await findResp.json();
+  return data.results?.[0]?.id || null;
+}
+
+/**
+ * Upload a binary blob (e.g., PNG preview) as a Confluence attachment.
+ * Bridge-only — resolver has a 500KB invoke payload limit that can't handle binary.
+ */
+export async function uploadBlobAttachment(
+  pageId: string,
+  filename: string,
+  blob: Blob,
+): Promise<void> {
+  const sizeKB = (blob.size / 1024).toFixed(1);
+  console.log(`${LOG_PREFIX} uploadBlobAttachment: pageId=${pageId}, filename=${filename}, size=${sizeKB}KB, type=${blob.type}`);
+  await bridgeUploadBlob(pageId, filename, blob);
+  console.log(`${LOG_PREFIX} uploadBlobAttachment: success`);
+}
+
+/**
+ * Download an attachment as a data URL (e.g., data:image/png;base64,...).
+ * Used by the renderer to fetch preview images from attachments.
+ */
+export async function downloadAttachmentAsDataUrl(
+  pageId: string,
+  filename: string,
+): Promise<string | null> {
+  console.log(`${LOG_PREFIX} downloadAttachmentAsDataUrl: pageId=${pageId}, filename=${filename}`);
+
+  // Find attachment ID via v2 listing
+  const attachmentId = await bridgeFindAttachment(pageId, filename);
+  if (!attachmentId) {
+    console.warn(`${LOG_PREFIX} downloadAttachmentAsDataUrl: attachment not found`);
+    return null;
+  }
+
+  // Download via v1 path
+  const dlResp = await requestConfluence(
+    `/wiki/rest/api/content/${pageId}/child/attachment/${attachmentId}/download`,
+    { method: 'GET' },
+  );
+  if (!dlResp.ok) {
+    console.error(`${LOG_PREFIX} downloadAttachmentAsDataUrl: download failed ${dlResp.status}`);
+    return null;
+  }
+
+  // Convert to data URL
+  const blob = await dlResp.blob();
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+
+  console.log(`${LOG_PREFIX} downloadAttachmentAsDataUrl: got ${(dataUrl.length / 1024).toFixed(1)}KB`);
+  return dataUrl;
 }
