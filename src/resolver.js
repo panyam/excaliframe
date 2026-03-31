@@ -3,8 +3,14 @@ const api = require('@forge/api');
 
 const resolver = new Resolver();
 
+/** Sanitize a filename for use in Content-Disposition headers. */
+function sanitizeFilename(name) {
+  return name.replace(/["\r\n\\]/g, '_');
+}
+
 resolver.define('uploadAttachment', async ({ payload }) => {
-  const { pageId, filename, content } = payload;
+  const { pageId, filename: rawFilename, content } = payload;
+  const filename = sanitizeFilename(rawFilename);
 
   const sizeKB = (content.length / 1024).toFixed(1);
   console.log(`[V2-RESOLVER] uploadAttachment: pageId=${pageId}, filename=${filename}, size=${sizeKB}KB`);
