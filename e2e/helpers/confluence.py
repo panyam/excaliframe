@@ -63,44 +63,55 @@ def confluence_context(browser: Browser, account: dict) -> BrowserContext:
 def create_page(page: Page, base_url: str, space: str, title: str) -> None:
     """Navigate to create a new Confluence page in the given space."""
     page.goto(f"{base_url}/wiki/spaces/{space}/pages/create")
-    page.wait_for_load_state("networkidle")
+    # Don't use networkidle — Confluence SPA never stops fetching.
+    # Instead wait for the editor to actually appear.
+    page.wait_for_load_state("domcontentloaded")
 
-    # Wait for editor
-    page.locator(
-        '[data-testid="ak-editor-main-toolbar"], .ProseMirror, [role="textbox"]'
-    ).first.wait_for(state="visible", timeout=30_000)
-
-    # Set page title
+    # Wait for the title area — this is the first interactive element
+    # Confluence editor uses various selectors across versions
     title_input = page.locator(
-        'textarea[data-testid="ak-editor-title-field"], '
+        '[data-testid="ak-editor-title-field"], '
         '[placeholder="Page title"], '
-        'textarea[placeholder*="title" i]'
+        'textarea[placeholder*="title" i], '
+        '[contenteditable][data-placeholder*="title" i], '
+        '.ak-editor-content-area textarea'
     ).first
-    title_input.wait_for(state="visible", timeout=10_000)
+    title_input.wait_for(state="visible", timeout=60_000)
+    title_input.click()
+    page.wait_for_timeout(500)
     title_input.fill(title)
+    page.wait_for_timeout(300)
+    # Press Enter to move cursor from title into the editor body
+    page.keyboard.press("Enter")
 
 
 def insert_excalidraw_macro(page: Page) -> None:
-    """Type /Excali in the editor to insert the Excalidraw macro."""
-    editor_body = page.locator('.ProseMirror, [role="textbox"]').first
+    """Type /Excali in the editor body to insert the Excalidraw macro."""
+    # Move from title to body — Tab or click below the title
+    # The ProseMirror editor body is the contenteditable area below the title
+    editor_body = page.locator(
+        '.ProseMirror[contenteditable="true"], '
+        '.ak-editor-content-area [contenteditable="true"], '
+        '[data-testid="ak-editor-fp-content-area"] [contenteditable="true"]'
+    ).first
+    editor_body.wait_for(state="visible", timeout=10_000)
     editor_body.click()
     page.wait_for_timeout(500)
 
+    # Type the slash command
     page.keyboard.type("/Excali", delay=100)
-    page.wait_for_timeout(1500)
+    page.wait_for_timeout(2000)
 
-    # Select from autocomplete
-    page.locator(
-        'button:has-text("Excalidraw"), '
-        '[role="option"]:has-text("Excalidraw"), '
-        '[role="menuitem"]:has-text("Excalidraw")'
-    ).first.click()
+    # Press Enter to select the first autocomplete option
+    page.keyboard.press("Enter")
+    page.wait_for_timeout(2000)
 
 
-def find_forge_editor_frame(page: Page, timeout: int = 30_000) -> "Frame":
+def find_forge_editor_frame(page: Page, logs: list[str] | None = None, timeout: int = 30_000) -> "Frame":
     """Wait for the Forge macro editor iframe and return it.
 
     Forge apps load in nested iframes. We look for our editor's markers.
+    If logs list is provided, also captures console output from the iframe.
     """
     import time
     deadline = time.time() + timeout / 1000
@@ -112,6 +123,28 @@ def find_forge_editor_frame(page: Page, timeout: int = 30_000) -> "Frame":
                 "forge" in url and frame.locator('.excalidraw, #playground-root').count() > 0
             ):
                 frame.wait_for_selector('.excalidraw', timeout=10_000)
+                # Inject console capture inside the iframe so we get V2 logs
+                if logs is not None:
+                    frame.evaluate(
+                        """() => {
+                            const origLog = console.log;
+                            const origInfo = console.info;
+                            const origWarn = console.warn;
+                            window.__capturedLogs = window.__capturedLogs || [];
+                            console.log = (...args) => {
+                                window.__capturedLogs.push(args.join(' '));
+                                origLog.apply(console, args);
+                            };
+                            console.info = (...args) => {
+                                window.__capturedLogs.push(args.join(' '));
+                                origInfo.apply(console, args);
+                            };
+                            console.warn = (...args) => {
+                                window.__capturedLogs.push(args.join(' '));
+                                origWarn.apply(console, args);
+                            };
+                        }"""
+                    )
                 return frame
         page.wait_for_timeout(1000)
 
@@ -161,8 +194,23 @@ def element_count(frame) -> int:
     )
 
 
-def save_macro(page: Page) -> None:
-    """Trigger save via Cmd+S."""
+def collect_iframe_logs(frame) -> list[str]:
+    """Collect console logs captured inside the Forge iframe."""
+    return frame.evaluate(
+        """() => {
+            const logs = window.__capturedLogs || [];
+            window.__capturedLogs = [];  // drain
+            return logs;
+        }"""
+    )
+
+
+def save_macro(frame, page: Page) -> None:
+    """Trigger save via Cmd+S inside the Forge editor iframe."""
+    # Focus must be inside the iframe for the keypress to reach our editor
+    frame.locator('.excalidraw__canvas, .excalidraw, canvas').first.click()
+    page.wait_for_timeout(300)
+    # Send Cmd+S — frame.page gives us the keyboard for the focused frame
     page.keyboard.press("Meta+s")
 
 

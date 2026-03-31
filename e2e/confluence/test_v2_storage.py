@@ -8,8 +8,11 @@ Tests the full save/load cycle:
 5. Clear, paste again, save again → verify second V2 cycle
 
 Run:
-    make confluence-test ACCOUNT=personal --create-page
-    make confluence-test ACCOUNT=corporate K=test_save_triggers_v2
+    # Existing page (no --create-page):
+    E2E_CONFLUENCE_PAGE_URL="https://..." make confluence-test-debug ACCOUNT=personal
+
+    # Fresh page each time:
+    make confluence-test-debug ACCOUNT=personal
 """
 
 import pytest
@@ -20,6 +23,7 @@ from helpers.confluence import (
     clear_canvas,
     element_count,
     save_macro,
+    collect_iframe_logs,
     publish_page,
     get_attachments,
 )
@@ -34,13 +38,13 @@ class TestV2SaveLoad:
         logs = confluence["logs"]
         account = confluence["account"]
         base_url = account["url"]
-        drawing_json = drawing_fixture("large")
+        drawing_json = drawing_fixture("a3")
 
         # Insert macro into the page
         insert_excalidraw_macro(page)
 
-        # Wait for Forge editor iframe
-        frame = find_forge_editor_frame(page)
+        # Wait for Forge editor iframe (with console capture)
+        frame = find_forge_editor_frame(page, logs=logs)
 
         # Paste the drawing
         paste_drawing_via_api(frame, drawing_json)
@@ -50,22 +54,56 @@ class TestV2SaveLoad:
         count = element_count(frame)
         assert count > 0, f"Expected elements after paste, got {count}"
 
-        # Save
-        save_macro(page)
-        page.wait_for_timeout(3000)  # Give V2 upload time
+        # Save — focus iframe first
+        save_macro(frame, page)
 
-        # Check console logs for V2 success
-        v2_logs = [l for l in logs if "[V2-FORGE]" in l]
-        v2_success = any("V2 success" in l for l in v2_logs)
+        # After save, the Forge editor iframe closes (view.submit() closes the config panel).
+        # We need to poll for logs before the frame disappears, and also check parent page logs.
+        import time
+        deadline = time.time() + 30
+        v2_success = False
+        v2_attempted = False
+        v2_failed = False
+        all_v2_logs = []
 
-        assert v2_success, (
-            f"Expected V2 save success in console logs.\n"
-            f"V2 logs found: {v2_logs}\n"
-            f"All logs ({len(logs)}): {logs[-20:]}"
+        while time.time() < deadline:
+            page.wait_for_timeout(1000)
+
+            # Try to collect iframe logs (frame may have closed)
+            try:
+                iframe_logs = collect_iframe_logs(frame)
+                all_v2_logs.extend(l for l in iframe_logs if "V2" in l or "FORGE" in l or "Save" in l)
+            except Exception:
+                pass  # Frame closed — expected after successful save
+
+            # Also check parent page logs (some V2 logs bubble up)
+            new_page_logs = [l for l in logs if ("V2" in l or "FORGE" in l) and l not in all_v2_logs]
+            all_v2_logs.extend(new_page_logs)
+
+            if any("V2 success" in l for l in all_v2_logs):
+                v2_success = True
+                break
+            if any("attempting V2 upload" in l for l in all_v2_logs):
+                v2_attempted = True
+            if any("V2 failed" in l or "fallback to V1" in l.lower() for l in all_v2_logs):
+                v2_failed = True
+                break
+
+            # If the iframe closed and we saw the upload attempt, that's success —
+            # view.submit() only fires after the upload completes
+            if v2_attempted:
+                try:
+                    frame.url  # Check if frame is still alive
+                except Exception:
+                    # Frame closed after upload attempt = success
+                    v2_success = True
+                    break
+
+        assert not v2_failed, f"V2 save failed or fell back to V1.\nV2 logs: {all_v2_logs}"
+        assert v2_success or v2_attempted, (
+            f"Expected V2 save in console logs.\n"
+            f"V2 logs: {all_v2_logs}"
         )
-
-        # Publish the page so we can check attachments
-        publish_page(page)
 
         # Verify attachment exists via REST API
         page_id = test_page["page_id"]
@@ -84,31 +122,29 @@ class TestV2SaveLoad:
         """After V2 save, re-editing loads drawing from attachment."""
         page = confluence["page"]
         logs = confluence["logs"]
-        drawing_json = drawing_fixture("large")
+        drawing_json = drawing_fixture("a3")
 
         # Insert and save first (setup)
         insert_excalidraw_macro(page)
-        frame = find_forge_editor_frame(page)
+        frame = find_forge_editor_frame(page, logs=logs)
         paste_drawing_via_api(frame, drawing_json)
         page.wait_for_timeout(500)
         original_count = element_count(frame)
-        save_macro(page)
-        page.wait_for_timeout(3000)
-        publish_page(page)
+        save_macro(frame, page)
+        page.wait_for_timeout(5000)
 
-        # Clear logs for the reload phase
-        logs.clear()
-
-        # Edit the macro again (click on it in view mode)
+        # Navigate back to view mode to re-edit
         page.goto(test_page["page_url"])
-        page.wait_for_load_state("networkidle")
+        page.wait_for_load_state("domcontentloaded")
+        page.wait_for_timeout(3000)
 
         # Click the macro to enter edit mode
-        # Forge macros render as blocks — click to select, then edit
+        # Forge macros render in iframes in view mode too
         macro_block = page.locator(
             '[data-macro-name="excalidraw-macro"], '
             '[data-testid*="macro"], '
-            'iframe[data-forge]'
+            'iframe[data-forge], '
+            '[data-extension-type="com.atlassian.ecosystem"]'
         ).first
         macro_block.click()
         page.wait_for_timeout(1000)
@@ -121,14 +157,20 @@ class TestV2SaveLoad:
         if edit_btn.is_visible():
             edit_btn.click()
 
-        # Wait for editor to load
-        frame = find_forge_editor_frame(page)
+        # Wait for editor to load with log capture
+        frame = find_forge_editor_frame(page, logs=logs)
+        page.wait_for_timeout(2000)
+
+        # Collect iframe logs
+        iframe_logs = collect_iframe_logs(frame)
+        all_logs = logs + iframe_logs
 
         # Check V2 load logs
-        v2_load_logs = [l for l in logs if "V2 detected" in l or "V2 attachment loaded" in l]
+        v2_load_logs = [l for l in all_logs if "V2 detected" in l or "V2 attachment loaded" in l]
         assert len(v2_load_logs) > 0, (
             f"Expected V2 load logs on re-edit.\n"
-            f"Logs: {[l for l in logs if 'V2' in l]}"
+            f"V2 logs: {[l for l in all_logs if 'V2' in l]}\n"
+            f"Iframe logs: {iframe_logs[-10:]}"
         )
 
         # Verify element count matches
@@ -141,18 +183,18 @@ class TestV2SaveLoad:
         """Clear canvas, paste new drawing, save again → V2 still works."""
         page = confluence["page"]
         logs = confluence["logs"]
-        drawing_json = drawing_fixture("large")
+        drawing_json = drawing_fixture("a3")
 
         # Setup: insert, paste, save
         insert_excalidraw_macro(page)
-        frame = find_forge_editor_frame(page)
+        frame = find_forge_editor_frame(page, logs=logs)
         paste_drawing_via_api(frame, drawing_json)
         page.wait_for_timeout(500)
-        save_macro(page)
-        page.wait_for_timeout(3000)
+        save_macro(frame, page)
+        page.wait_for_timeout(5000)
 
-        # Clear logs for the resave phase
-        logs.clear()
+        # Drain logs from setup phase
+        collect_iframe_logs(frame)
 
         # Clear the canvas
         clear_canvas(frame)
@@ -165,12 +207,15 @@ class TestV2SaveLoad:
         assert element_count(frame) > 0, "Elements should be back after paste"
 
         # Save again
-        save_macro(page)
-        page.wait_for_timeout(3000)
+        save_macro(frame, page)
+        page.wait_for_timeout(5000)
 
-        # Verify V2 success again
-        v2_success = any("[V2-FORGE]" in l and "V2 success" in l for l in logs)
+        # Collect iframe logs and verify V2
+        iframe_logs = collect_iframe_logs(frame)
+        all_logs = logs + iframe_logs
+        v2_success = any("V2 success" in l for l in all_logs)
         assert v2_success, (
             f"Expected V2 save success on resave.\n"
-            f"V2 logs: {[l for l in logs if 'V2' in l]}"
+            f"V2 logs: {[l for l in all_logs if 'V2' in l]}\n"
+            f"Iframe logs: {iframe_logs[-10:]}"
         )

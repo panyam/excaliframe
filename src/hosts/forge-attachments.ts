@@ -94,21 +94,22 @@ async function bridgeDownload(pageId: string, filename: string): Promise<string 
     return null;
   }
 
-  // v2 attachment has downloadLink
   const attachment = results[0];
-  const downloadLink = attachment.downloadLink || attachment._links?.download;
-  console.log(`${LOG_PREFIX} bridge: found attachment id=${attachment.id}, downloading...`);
+  const attachmentId = attachment.id;
+  console.log(`${LOG_PREFIX} bridge: found attachment id=${attachmentId}, downloading via v1...`);
 
-  if (!downloadLink) {
-    console.error(`${LOG_PREFIX} bridge: no download link in attachment`);
-    return null;
-  }
-
-  const dlResp = await requestConfluence(downloadLink, { method: 'GET' });
+  // v2 downloadLink goes through api.atlassian.com which requestConfluence can't auth (401).
+  // v1 download path works reliably — v1 content *listing* is deprecated (410) but
+  // the attachment *download* endpoint still works.
+  const dlResp = await requestConfluence(
+    `/wiki/rest/api/content/${pageId}/child/attachment/${attachmentId}/download`,
+    { method: 'GET' },
+  );
   if (!dlResp.ok) {
-    console.error(`${LOG_PREFIX} bridge: download failed ${dlResp.status}`);
+    console.error(`${LOG_PREFIX} bridge: v1 download failed ${dlResp.status}`);
     return null;
   }
+  console.log(`${LOG_PREFIX} bridge: download succeeded`);
   return dlResp.text();
 }
 
