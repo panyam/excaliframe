@@ -62,6 +62,7 @@ build: ## Build frontend assets for Forge (rspack)
 	@echo "$(GREEN)Building frontend assets (rspack)...$(NC)"
 	npm run build:rspack
 	@echo "$(GREEN)Build output: dist/forge/$(NC)"
+	@echo "$(GREEN)Resolver: src/resolver.js (bundled by forge deploy)$(NC)"
 
 build-old: ## Build frontend assets for Forge (webpack fallback)
 	@echo "$(GREEN)Building frontend assets (webpack)...$(NC)"

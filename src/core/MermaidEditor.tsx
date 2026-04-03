@@ -10,6 +10,7 @@ export interface MermaidEditorProps {
   host: EditorHost;
   syncActions: SyncActions | null;
   stateCallbacks: EditorStateCallbacks;
+  autoSave?: { enabled: boolean; setEnabled: (v: boolean) => void };
 }
 
 const DEFAULT_TEMPLATE = `flowchart TD

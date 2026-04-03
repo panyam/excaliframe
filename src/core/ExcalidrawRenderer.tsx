@@ -8,6 +8,7 @@ interface Props {
 const ExcalidrawRenderer: React.FC<Props> = ({ host }) => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoadingFullPreview, setIsLoadingFullPreview] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasContent, setHasContent] = useState<boolean>(false);
 
@@ -23,14 +24,40 @@ const ExcalidrawRenderer: React.FC<Props> = ({ host }) => {
 
       console.log('Renderer - Config received:', envelope ? 'yes' : 'no');
 
-      if (envelope?.preview) {
-        console.log('Renderer - Setting preview URL, length:', envelope.preview.length);
+      // Show thumbnail or inline preview immediately
+      if (envelope?.thumbnail) {
+        console.log('Renderer - Setting thumbnail, length:', envelope.thumbnail.length);
+        setPreviewUrl(envelope.thumbnail);
+        setHasContent(true);
+      }
+      if (envelope?.preview && envelope.preview !== envelope.thumbnail) {
+        console.log('Renderer - Setting inline preview, length:', envelope.preview.length);
         setPreviewUrl(envelope.preview);
         setHasContent(true);
-      } else if (envelope?.data) {
+      } else if (envelope?.preview) {
+        setHasContent(true);
+      }
+
+      // Fetch full preview from host asynchronously (V3 — host handles the fetch)
+      if (host.loadFullPreview) {
+        console.log('Renderer - Requesting full preview from host...');
+        setIsLoadingFullPreview(true);
+        try {
+          const fullPreview = await host.loadFullPreview();
+          if (fullPreview) {
+            console.log(`Renderer - Full preview loaded, ${(fullPreview.length / 1024).toFixed(1)}KB`);
+            setPreviewUrl(fullPreview);
+          }
+        } catch (err) {
+          console.warn('Renderer - Failed to load full preview, keeping thumbnail:', err);
+        }
+        setIsLoadingFullPreview(false);
+      }
+
+      if (!envelope?.preview && !envelope?.thumbnail && envelope?.data) {
         console.log('Renderer - Has drawing but no preview');
         setHasContent(true);
-      } else {
+      } else if (!envelope?.preview && !envelope?.thumbnail) {
         console.log('Renderer - No config data');
         setHasContent(false);
       }
@@ -95,8 +122,9 @@ const ExcalidrawRenderer: React.FC<Props> = ({ host }) => {
 
   if (previewUrl) {
     // SVG data URIs (Mermaid C4 diagrams) contain <foreignObject> that browsers
-    // strip in <img> tags. Render inline instead. Safe: SVG from mermaid's own
-    // renderer, stored in Confluence macro config (not user-supplied HTML).
+    // strip in <img> tags. Render inline instead.
+    // SECURITY: SVG is from mermaid's own renderer, stored in Confluence macro
+    // config — not user-supplied HTML. DOMPurify hardening is tracked in backlog.
     const isSvgDataUri = previewUrl.startsWith('data:image/svg+xml;base64,');
     const svgMarkup = isSvgDataUri
       ? decodeURIComponent(escape(atob(previewUrl.slice('data:image/svg+xml;base64,'.length))))
@@ -108,14 +136,23 @@ const ExcalidrawRenderer: React.FC<Props> = ({ host }) => {
         backgroundColor: '#fff',
         border: '1px solid #dfe1e6',
         borderRadius: '3px',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        position: 'relative',
       }}>
         {isSvgDataUri
+          // eslint-disable-next-line react/no-danger
           ? <div dangerouslySetInnerHTML={{ __html: svgMarkup }} style={{ width: '100%' }} />
           : <img
               src={previewUrl}
               alt="Drawing"
-              style={{ display: 'block', maxWidth: '100%', height: 'auto', margin: '0 auto' }}
+              style={{
+                display: 'block',
+                maxWidth: '100%',
+                height: 'auto',
+                margin: '0 auto',
+                transition: 'filter 0.3s ease',
+                filter: isLoadingFullPreview ? 'blur(2px)' : 'none',
+              }}
             />
         }
       </div>

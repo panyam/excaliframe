@@ -9,7 +9,9 @@ export interface DrawingEnvelope {
   tool: string;       // e.g. "excalidraw", "mermaid"
   version: number;    // envelope schema version
   data: string;       // opaque tool-specific payload (JSON string, markup, etc.)
-  preview?: string;   // base64 PNG preview
+  preview?: string;   // base64 PNG/SVG preview for immediate display
+  thumbnail?: string; // tiny base64 PNG (~300px, 5-10KB) for instant rendering
+  previewBlob?: Blob; // full-resolution preview blob for host to upload
   createdAt?: string; // ISO 8601
   updatedAt?: string; // ISO 8601
 }
@@ -26,6 +28,8 @@ export interface EditorHost {
 // Host adapter for the renderer (load config for display)
 export interface RendererHost {
   loadConfig(): Promise<DrawingEnvelope | null>;
+  /** Fetch full-resolution preview if available (e.g., from attachment). Returns null if not available. */
+  loadFullPreview?(): Promise<string | null>;
 }
 
 // Excalidraw-specific drawing format (used by Excalidraw editor/renderer only)

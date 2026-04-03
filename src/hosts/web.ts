@@ -62,4 +62,9 @@ export class WebRendererHost implements RendererHost {
     const drawing = await this.store.getById(this.drawingId);
     return drawing?.envelope ?? null;
   }
+
+  async loadFullPreview(): Promise<string | null> {
+    // Web/playground stores preview inline in IndexedDB — no async fetch needed
+    return null;
+  }
 }

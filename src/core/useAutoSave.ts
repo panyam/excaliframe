@@ -57,6 +57,11 @@ export function useAutoSave({
   // Track saving → saved transition
   useEffect(() => {
     if (isSaving) {
+      // Clear any pending saved→idle timer so it can't fire during a new save
+      if (savedTimer.current) {
+        clearTimeout(savedTimer.current);
+        savedTimer.current = null;
+      }
       setStatus('saving');
     } else if (status === 'saving') {
       // Save just finished
