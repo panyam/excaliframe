@@ -54,24 +54,69 @@ if (process.env.NODE_ENV !== 'production') {
 };
 } // end dev-only diagnostic
 
+// ── Page status detection ────────────────────────────────────
+
+/** Cache page status per pageId to avoid repeated lookups within a save. */
+const _pageStatusCache = new Map<string, { status: string; ts: number }>();
+const PAGE_STATUS_TTL = 30_000; // 30s cache
+
+async function getPageStatus(pageId: string): Promise<'current' | 'draft'> {
+  const cached = _pageStatusCache.get(pageId);
+  if (cached && Date.now() - cached.ts < PAGE_STATUS_TTL) {
+    return cached.status as 'current' | 'draft';
+  }
+
+  // Try v2 first (clean JSON, no status filtering issues)
+  try {
+    const resp = await requestConfluence(`/api/v2/pages/${pageId}`, { method: 'GET' });
+    if (resp.ok) {
+      const data = await resp.json();
+      const status = data.status === 'draft' ? 'draft' : 'current';
+      console.log(`${LOG_PREFIX} page ${pageId} status=${status}`);
+      _pageStatusCache.set(pageId, { status, ts: Date.now() });
+      return status as 'current' | 'draft';
+    }
+  } catch {}
+
+  // Fallback: assume current
+  return 'current';
+}
+
 // ── Bridge mode (direct requestConfluence) ──────────────────
 
 async function bridgeUploadBlob(pageId: string, filename: string, blob: Blob): Promise<void> {
-  // v1 PUT still works for uploads (only v1 GET is deprecated/410)
-  const form = new FormData();
-  form.append('file', blob, filename);
+  const sizeLabel = `${(blob.size / 1024).toFixed(1)}KB, ${blob.type}`;
+  const pageStatus = await getPageStatus(pageId);
 
-  console.log(`${LOG_PREFIX} bridge: PUT v1 attachment upload (${(blob.size / 1024).toFixed(1)}KB, ${blob.type})`);
-  const resp = await requestConfluence(
-    `/wiki/rest/api/content/${pageId}/child/attachment`,
-    {
+  // Build list of status values to try: detected status first, then the other
+  const statuses = pageStatus === 'draft'
+    ? ['draft', 'current'] as const
+    : ['current', 'draft'] as const;
+
+  for (const status of statuses) {
+    const form = new FormData();
+    form.append('file', blob, filename);
+
+    const url = `/wiki/rest/api/content/${pageId}/child/attachment`
+      + (status === 'draft' ? '?status=draft' : '');
+
+    console.log(`${LOG_PREFIX} bridge: PUT v1 attachment upload (${sizeLabel}, status=${status})`);
+    const resp = await requestConfluence(url, {
       method: 'PUT',
       headers: { 'X-Atlassian-Token': 'nocheck' },
       body: form,
-    },
-  );
-  if (!resp.ok) {
+    });
+
+    if (resp.ok) return;
+
     const body = await resp.text().catch(() => '');
+
+    // If this status didn't work and there's another to try, continue
+    if (resp.status === 404 && status === statuses[0] && statuses.length > 1) {
+      console.warn(`${LOG_PREFIX} bridge: PUT 404 with status=${status}, trying status=${statuses[1]}`);
+      continue;
+    }
+
     console.error(`${LOG_PREFIX} bridge: PUT failed ${resp.status}`, body);
     throw new Error(`Bridge upload failed: ${resp.status} ${resp.statusText}`);
   }
@@ -82,8 +127,35 @@ async function bridgeUpload(pageId: string, filename: string, jsonContent: strin
   await bridgeUploadBlob(pageId, filename, blob);
 }
 
+/**
+ * Download an attachment by ID via v1 endpoint, with draft-page fallback.
+ */
+async function bridgeDownloadById(pageId: string, attachmentId: string): Promise<Response | null> {
+  const pageStatus = await getPageStatus(pageId);
+  const statusSuffix = pageStatus === 'draft' ? '?status=draft' : '';
+
+  const url = `/wiki/rest/api/content/${pageId}/child/attachment/${attachmentId}/download${statusSuffix}`;
+  console.log(`${LOG_PREFIX} bridge: GET v1 download (attachmentId=${attachmentId}, pageStatus=${pageStatus})`);
+  const dlResp = await requestConfluence(url, { method: 'GET' });
+
+  if (dlResp.ok) return dlResp;
+
+  // If detected status failed, try the other
+  if (dlResp.status === 404) {
+    const altSuffix = statusSuffix ? '' : '?status=draft';
+    const altLabel = statusSuffix ? 'current' : 'draft';
+    console.warn(`${LOG_PREFIX} bridge: v1 download 404, retrying with status=${altLabel}`);
+    const altUrl = `/wiki/rest/api/content/${pageId}/child/attachment/${attachmentId}/download${altSuffix}`;
+    const altResp = await requestConfluence(altUrl, { method: 'GET' });
+    if (altResp.ok) return altResp;
+  }
+
+  console.error(`${LOG_PREFIX} bridge: v1 download failed ${dlResp.status}`);
+  return null;
+}
+
 async function bridgeDownload(pageId: string, filename: string): Promise<string | null> {
-  // v2 GET for listing attachments
+  // v2 GET for listing attachments (works for both current and draft pages)
   console.log(`${LOG_PREFIX} bridge: GET v2 attachments for filename=${filename}`);
   const findResp = await requestConfluence(
     `/api/v2/pages/${pageId}/attachments?filename=${encodeURIComponent(filename)}`,
@@ -105,17 +177,9 @@ async function bridgeDownload(pageId: string, filename: string): Promise<string 
   const attachmentId = attachment.id;
   console.log(`${LOG_PREFIX} bridge: found attachment id=${attachmentId}, downloading via v1...`);
 
-  // v2 downloadLink goes through api.atlassian.com which requestConfluence can't auth (401).
-  // v1 download path works reliably — v1 content *listing* is deprecated (410) but
-  // the attachment *download* endpoint still works.
-  const dlResp = await requestConfluence(
-    `/wiki/rest/api/content/${pageId}/child/attachment/${attachmentId}/download`,
-    { method: 'GET' },
-  );
-  if (!dlResp.ok) {
-    console.error(`${LOG_PREFIX} bridge: v1 download failed ${dlResp.status}`);
-    return null;
-  }
+  const dlResp = await bridgeDownloadById(pageId, attachmentId);
+  if (!dlResp) return null;
+
   console.log(`${LOG_PREFIX} bridge: download succeeded`);
   return dlResp.text();
 }
@@ -190,13 +254,19 @@ export async function downloadAttachment(
  * Uses v2 GET to list, returns the first match.
  */
 async function bridgeFindAttachment(pageId: string, filename: string): Promise<string | null> {
-  const findResp = await requestConfluence(
-    `/api/v2/pages/${pageId}/attachments?filename=${encodeURIComponent(filename)}`,
-    { method: 'GET' },
-  );
-  if (!findResp.ok) return null;
-  const data = await findResp.json();
-  return data.results?.[0]?.id || null;
+  // Try v2 listing first; if it returns empty, try with status=draft
+  for (const status of [undefined, 'draft'] as const) {
+    const qs = `filename=${encodeURIComponent(filename)}${status ? `&status=${status}` : ''}`;
+    const findResp = await requestConfluence(
+      `/api/v2/pages/${pageId}/attachments?${qs}`,
+      { method: 'GET' },
+    );
+    if (!findResp.ok) continue;
+    const data = await findResp.json();
+    const id = data.results?.[0]?.id;
+    if (id) return id;
+  }
+  return null;
 }
 
 /**
@@ -231,13 +301,10 @@ export async function downloadAttachmentAsDataUrl(
     return null;
   }
 
-  // Download via v1 path
-  const dlResp = await requestConfluence(
-    `/wiki/rest/api/content/${pageId}/child/attachment/${attachmentId}/download`,
-    { method: 'GET' },
-  );
-  if (!dlResp.ok) {
-    console.error(`${LOG_PREFIX} downloadAttachmentAsDataUrl: download failed ${dlResp.status}`);
+  // Download via v1 path (with draft-page fallback)
+  const dlResp = await bridgeDownloadById(pageId, attachmentId);
+  if (!dlResp) {
+    console.error(`${LOG_PREFIX} downloadAttachmentAsDataUrl: download failed`);
     return null;
   }
 

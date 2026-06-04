@@ -3,9 +3,20 @@ import { RendererHost } from './types';
 
 interface Props {
   host: RendererHost;
+  tool?: 'excalidraw' | 'mermaid';
 }
 
-const ExcalidrawRenderer: React.FC<Props> = ({ host }) => {
+const EMPTY_TITLES: Record<string, string> = {
+  excalidraw: 'Empty Excalidraw drawing',
+  mermaid: 'Empty Mermaid diagram',
+};
+
+const CONTENT_TITLES: Record<string, string> = {
+  excalidraw: 'Excalidraw Drawing',
+  mermaid: 'Mermaid Diagram',
+};
+
+const ExcalidrawRenderer: React.FC<Props> = ({ host, tool = 'excalidraw' }) => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isLoadingFullPreview, setIsLoadingFullPreview] = useState(false);
@@ -36,9 +47,17 @@ const ExcalidrawRenderer: React.FC<Props> = ({ host }) => {
         setHasContent(true);
       } else if (envelope?.preview) {
         setHasContent(true);
+      } else if (envelope?.data) {
+        console.log('Renderer - Has drawing but no preview');
+        setHasContent(true);
+      } else {
+        console.log('Renderer - No inline config data; will wait for loadFullPreview');
       }
 
-      // Fetch full preview from host asynchronously (V3 — host handles the fetch)
+      // Fetch full preview from host asynchronously (V3 — host handles the fetch).
+      // Legacy V3 macros saved before the Mermaid V3 fix may have empty inline
+      // thumbnail/preview but a valid preview attachment, so flipping hasContent
+      // here is what makes them render at all.
       if (host.loadFullPreview) {
         console.log('Renderer - Requesting full preview from host...');
         setIsLoadingFullPreview(true);
@@ -47,19 +66,12 @@ const ExcalidrawRenderer: React.FC<Props> = ({ host }) => {
           if (fullPreview) {
             console.log(`Renderer - Full preview loaded, ${(fullPreview.length / 1024).toFixed(1)}KB`);
             setPreviewUrl(fullPreview);
+            setHasContent(true);
           }
         } catch (err) {
           console.warn('Renderer - Failed to load full preview, keeping thumbnail:', err);
         }
         setIsLoadingFullPreview(false);
-      }
-
-      if (!envelope?.preview && !envelope?.thumbnail && envelope?.data) {
-        console.log('Renderer - Has drawing but no preview');
-        setHasContent(true);
-      } else if (!envelope?.preview && !envelope?.thumbnail) {
-        console.log('Renderer - No config data');
-        setHasContent(false);
       }
     } catch (err) {
       console.error('Renderer - Error loading config:', err);
@@ -111,7 +123,7 @@ const ExcalidrawRenderer: React.FC<Props> = ({ host }) => {
       }}>
         <div style={{ fontSize: '36px', marginBottom: '12px' }}>🎨</div>
         <p style={{ margin: 0, color: '#6b778c', fontSize: '14px' }}>
-          Empty Excalidraw drawing
+          {EMPTY_TITLES[tool] || EMPTY_TITLES.excalidraw}
         </p>
         <p style={{ margin: '8px 0 0 0', color: '#97a0af', fontSize: '12px' }}>
           Edit this macro to add content
@@ -170,7 +182,7 @@ const ExcalidrawRenderer: React.FC<Props> = ({ host }) => {
     }}>
       <div style={{ fontSize: '36px', marginBottom: '12px' }}>🎨</div>
       <p style={{ margin: 0, color: '#172b4d', fontSize: '14px' }}>
-        Excalidraw Drawing
+        {CONTENT_TITLES[tool] || CONTENT_TITLES.excalidraw}
       </p>
       <p style={{ margin: '8px 0 0 0', color: '#97a0af', fontSize: '12px' }}>
         Edit to view content

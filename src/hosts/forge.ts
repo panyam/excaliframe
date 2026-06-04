@@ -123,12 +123,17 @@ export class ForgeEditorHost implements EditorHost {
     }
 
     const jsonFilename = `excaliframe-${this.localId}.json`;
-    const previewFilename = `excaliframe-${this.localId}-preview.png`;
+    // Preview filename extension is derived from the blob MIME type so SVG
+    // previews (Mermaid) round-trip as .svg and PNG previews (Excalidraw) as
+    // .png. Confluence serves the attachment with the matching Content-Type,
+    // which the renderer relies on to choose between inline-SVG and <img>.
+    const previewBlob = envelope.previewBlob;
+    const previewExt = previewBlob?.type === 'image/svg+xml' ? 'svg' : 'png';
+    const previewFilename = `excaliframe-${this.localId}-preview.${previewExt}`;
 
     try {
       // Upload drawing JSON + preview blob in parallel
       // Preview always goes to attachment — nothing large is ever stored inline
-      const previewBlob = envelope.previewBlob;
       const uploads: Promise<void>[] = [
         uploadAttachment(this.pageId!, jsonFilename, envelope.data),
       ];
