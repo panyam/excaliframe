@@ -12,8 +12,8 @@ importers:
         specifier: ^0.18.0
         version: 0.18.0(@types/react-dom@18.3.7(@types/react@18.3.28))(@types/react@18.3.28)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@panyam/massrelay':
-        specifier: ^0.0.10
-        version: 0.0.10(@bufbuild/protobuf@2.11.0)(@panyam/servicekit-client@0.0.6)
+        specifier: ^0.0.11
+        version: 0.0.11(@bufbuild/protobuf@2.11.0)(@panyam/servicekit-client@0.0.6)
       '@panyam/servicekit-client':
         specifier: ^0.0.6
         version: 0.0.6
@@ -280,8 +280,8 @@ packages:
   '@napi-rs/wasm-runtime@1.0.7':
     resolution: {integrity: sha512-SeDnOO0Tk7Okiq6DbXmmBODgOAb9dp9gjlphokTUxmt8U3liIP1ZsozBahH69j/RJv+Rfs6IwUKHTgQYJ/HBAw==}
 
-  '@panyam/massrelay@0.0.10':
-    resolution: {integrity: sha512-OAIgEhAIMrqVq50Sg0V4ZuTCbbmj6XKu70DA7/kvGR9qX6K/T94vJ6hTUxhQUEhLRHEVovHsx2lU5qPhEiQWUA==}
+  '@panyam/massrelay@0.0.11':
+    resolution: {integrity: sha512-r5PZF1K7l53YvowUsYbtLMzXP7hFC9ZL295bFUA1VjK43MptIizL4zdt5+phzAl8bH3ewamxFE1PKD7rMUH/VA==}
     peerDependencies:
       '@bufbuild/protobuf': ^2.0.0
       '@panyam/servicekit-client': ^0.0.6
@@ -589,21 +589,25 @@ packages:
     resolution: {integrity: sha512-uSq4qkvmAzSDUTKE2v4yUgHIBdTily1k3BcK5wBCGFm9OPODj5lQZpAdOHHIwu+Jxyjoa7Mb64tghhj9hZcXcA==}
     cpu: [arm64]
     os: [linux]
+    libc: [glibc]
 
   '@rspack/binding-linux-arm64-musl@1.7.7':
     resolution: {integrity: sha512-NhWCBfiu6plpmLRP6c6D5lBUaVrBr1nvjSEc7VyQF8TGh8URo2btH0wngEiX0nWvidsSlERt1l6Y5QPGuiCl1g==}
     cpu: [arm64]
     os: [linux]
+    libc: [musl]
 
   '@rspack/binding-linux-x64-gnu@1.7.7':
     resolution: {integrity: sha512-aRvf8gCI7jDeEN9i4u9fY5coa3ZAyHzGVA4ZhTJCgZ5wWA5A9SQewMSq7khS1WAAFE1USlk1tUuPujnrGoYrGg==}
     cpu: [x64]
     os: [linux]
+    libc: [glibc]
 
   '@rspack/binding-linux-x64-musl@1.7.7':
     resolution: {integrity: sha512-ALPto4OT7snzXbYDyqkLfh1BvwDTTH1hPYXGUXBzQ0wEV7sXeyvxCC4yjH6B5MhR7W3tFuF4IfDy5Z4BxmOoGQ==}
     cpu: [x64]
     os: [linux]
+    libc: [musl]
 
   '@rspack/binding-wasm32-wasi@1.7.7':
     resolution: {integrity: sha512-7DZvUp0v75n451qfZw1ppbPakL6NAc2gjb5e9AJcOb7KUMBHNyOxqpPo/jRYKxH7isPpLfpoId79WQGGNTTMAw==}
@@ -2270,6 +2274,7 @@ packages:
 
   sliced@1.0.1:
     resolution: {integrity: sha512-VZBmZP8WU3sMOZm1bdgTadsQbcscK0UM8oKxKVBs4XAhUo2Xxzm/OFMGBkPusxw9xL3Uy8LrzEqGqJhclsr0yA==}
+    deprecated: Unsupported
 
   sockjs@0.3.24:
     resolution: {integrity: sha512-GJgLTZ7vYb/JtPSSZ10hsOYIvEYsjbNU+zPdIHcUaWVNUEPivzxku31865sSSud0Da0W4lEeOPlmw93zLQchuQ==}
@@ -2463,10 +2468,12 @@ packages:
 
   uuid@8.3.2:
     resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   uuid@9.0.1:
     resolution: {integrity: sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   uvu@0.5.6:
@@ -2890,7 +2897,7 @@ snapshots:
       '@tybys/wasm-util': 0.10.1
     optional: true
 
-  '@panyam/massrelay@0.0.10(@bufbuild/protobuf@2.11.0)(@panyam/servicekit-client@0.0.6)':
+  '@panyam/massrelay@0.0.11(@bufbuild/protobuf@2.11.0)(@panyam/servicekit-client@0.0.6)':
     dependencies:
       '@bufbuild/protobuf': 2.11.0
       '@panyam/servicekit-client': 0.0.6
