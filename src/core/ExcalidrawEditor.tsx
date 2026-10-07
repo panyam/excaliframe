@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useImperativeHandle, forwardRef } from 'react';
-import { exportToCanvas, hashElementsVersion } from '@excalidraw/excalidraw';
+import { exportToCanvas, exportToBlob, hashElementsVersion } from '@excalidraw/excalidraw';
 import { VERSION, BUILD_DATE } from '../version';
 import { EditorHost, DrawingEnvelope, ExcalidrawDrawingData } from './types';
 import { ExcalidrawSyncAdapter } from '../collab/adapters/ExcalidrawSyncAdapter';
@@ -127,19 +127,28 @@ const ExcalidrawEditor = forwardRef<EditorHandle, ExcalidrawEditorProps>(
         files: files,
       };
 
-      // Generate PNG preview
+      // Generate preview images
       let preview = '';
+      let thumbnail = '';
+      let previewBlob: Blob | undefined;
       if (elements.length > 0) {
         try {
-          const canvas = await exportToCanvas({
+          const exportOpts = {
             elements,
-            appState: {
-              ...appState,
-              exportBackground: true,
-            },
+            appState: { ...appState, exportBackground: true },
             files,
-          });
+          };
+
+          // Full preview as blob for attachment upload (capped at 1920px to keep size sane)
+          previewBlob = await exportToBlob({ ...exportOpts, maxWidthOrHeight: 1920, mimeType: 'image/png' });
+
+          // Full preview as data URL (for inline use if small enough)
+          const canvas = await exportToCanvas({ ...exportOpts, maxWidthOrHeight: 1920 });
           preview = canvas.toDataURL('image/png');
+
+          // Thumbnail: tiny version for inline macro config (~5-10KB)
+          const thumbCanvas = await exportToCanvas({ ...exportOpts, maxWidthOrHeight: 300 });
+          thumbnail = thumbCanvas.toDataURL('image/jpeg', 0.7);
         } catch (e) {
           console.log('Editor - Could not generate preview:', e);
         }
@@ -151,6 +160,8 @@ const ExcalidrawEditor = forwardRef<EditorHandle, ExcalidrawEditorProps>(
         version: 1,
         data: JSON.stringify(drawingData),
         preview,
+        thumbnail,
+        previewBlob,
         updatedAt: now,
       };
 
@@ -263,9 +274,24 @@ const ExcalidrawEditor = forwardRef<EditorHandle, ExcalidrawEditorProps>(
 
   if (!ExcalidrawComponent || isLoading) {
     return (
-      <div className="flex flex-col justify-center items-center h-full bg-white dark:bg-gray-900 gap-4">
-        <div className="w-12 h-12 border-[3px] border-gray-100 dark:border-gray-700 border-t-blue-600 rounded-full animate-spin" />
-        <div className="text-gray-800 dark:text-gray-200 text-base font-medium">
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100%',
+        backgroundColor: '#fff',
+        gap: '16px',
+      }}>
+        <div style={{
+          width: '48px',
+          height: '48px',
+          border: '3px solid #f3f4f6',
+          borderTop: '3px solid #0052cc',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite',
+        }} />
+        <div style={{ color: '#172b4d', fontSize: '16px', fontWeight: 500 }}>
           Loading Excalidraw...
         </div>
       </div>

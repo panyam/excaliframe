@@ -10,7 +10,15 @@ export interface MermaidEditorProps {
   host: EditorHost;
   syncActions: SyncActions | null;
   stateCallbacks: EditorStateCallbacks;
+  autoSave?: { enabled: boolean; setEnabled: (v: boolean) => void };
 }
+
+// 1x1 transparent SVG used as a thumbnail stand-in when the rendered SVG is
+// too large to inline. The renderer only needs a non-empty `thumbnail` to flip
+// `hasContent` to true; the real preview replaces it via loadFullPreview().
+const MERMAID_THUMBNAIL_PLACEHOLDER =
+  'data:image/svg+xml;base64,' +
+  btoa('<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>');
 
 const DEFAULT_TEMPLATE = `flowchart TD
     A[Start] --> B{Decision}
@@ -123,8 +131,19 @@ const MermaidEditor = forwardRef<EditorHandle, MermaidEditorProps>(
     stateCallbacks.onSavingChange(true);
     try {
       let preview = '';
+      let thumbnail = '';
+      let previewBlob: Blob | undefined;
       if (lastValidSvg.current) {
-        preview = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(lastValidSvg.current)));
+        const svg = lastValidSvg.current;
+        preview = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+        // V3: full preview goes to attachment; small SVGs also inline as
+        // thumbnail so the renderer can show something before the attachment
+        // fetch resolves. Oversize SVGs fall back to a tiny placeholder so
+        // the renderer still flips hasContent=true (otherwise the macro
+        // permanently shows the "Empty drawing" placeholder, even after the
+        // attachment fetch resolves).
+        previewBlob = new Blob([svg], { type: 'image/svg+xml' });
+        thumbnail = preview.length <= 50 * 1024 ? preview : MERMAID_THUMBNAIL_PLACEHOLDER;
       }
 
       const now = new Date().toISOString();
@@ -133,6 +152,8 @@ const MermaidEditor = forwardRef<EditorHandle, MermaidEditorProps>(
         version: 1,
         data: code,
         preview,
+        thumbnail,
+        previewBlob,
         updatedAt: now,
       };
       await host.saveDrawing(envelope);

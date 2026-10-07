@@ -36,3 +36,22 @@ clean:
 	rm -Rf bin locallinks
 
 .PHONY: all run build resymlink checklinks build build-old deploy prodlogs clean
+
+# =============================================================================
+# Security audit
+# =============================================================================
+
+# Full security audit: dependency vulns + code patterns + secrets
+audit:
+	@echo "=== govulncheck ==="
+	govulncheck ./...
+	@echo ""
+	@echo "=== gosec ==="
+	gosec -quiet -severity=medium ./... || true
+	@echo ""
+	@echo "=== gitleaks ==="
+	gitleaks detect --source . -v 2>/dev/null || echo "gitleaks not installed (go install github.com/gitleaks/gitleaks/v8@latest)"
+	@echo ""
+	@echo "=== Audit complete ==="
+
+.PHONY: audit
