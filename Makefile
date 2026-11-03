@@ -1,4 +1,4 @@
-.PHONY: help install build build-old playground-build playground-build-old dev dev-old type-check clean deploy install-app tunnel lint sync diff sync-status migrate test test-all test-ts test-go proto e2e-setup e2e e2e-list hooks
+.PHONY: help install build build-old playground-build playground-build-old dev dev-old type-check clean deploy install-app tunnel lint sync diff difftool sync-status migrate test test-all test-ts test-go proto e2e-setup e2e e2e-list hooks
 
 # Default target
 .DEFAULT_GOAL := help
@@ -62,6 +62,7 @@ build: ## Build frontend assets for Forge (rspack)
 	@echo "$(GREEN)Building frontend assets (rspack)...$(NC)"
 	npm run build:rspack
 	@echo "$(GREEN)Build output: dist/forge/$(NC)"
+	@echo "$(GREEN)Resolver: src/resolver.js (bundled by forge deploy)$(NC)"
 
 build-old: ## Build frontend assets for Forge (webpack fallback)
 	@echo "$(GREEN)Building frontend assets (webpack)...$(NC)"
@@ -159,6 +160,9 @@ sync: ## Preview sync to enterprise target (add COMMIT=1 to apply, FORCE=1 to ov
 
 diff: ## Show diff between source and enterprise target
 	@python3 tools/sync.py diff "$(TARGET)"
+
+difftool: ## Loop through each differing file in git's difftool (bidirectional sync)
+	@python3 tools/sync.py difftool "$(TARGET)"
 
 sync-status: ## Show what changed since last sync
 	@python3 tools/sync.py status "$(TARGET)"

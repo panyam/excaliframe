@@ -1,0 +1,3 @@
+# Auth state files contain session cookies — never commit
+auth-*.json
+accounts.json

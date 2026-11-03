@@ -37,13 +37,19 @@ Design principles:
 │  │                        │                             │  │
 │  │            ┌───────────┴───────────┐                 │  │
 │  │            │  Macro Config Store   │                 │  │
-│  │            │  (drawing JSON +      │                 │  │
-│  │            │   PNG preview)        │                 │  │
+│  │            │  V1: inline JSON      │                 │  │
+│  │            │  V2: attachment ref   │                 │  │
+│  │            │   + PNG preview       │                 │  │
+│  │            └───────────┬───────────┘                 │  │
+│  │                        │ (V2 only)                    │  │
+│  │            ┌───────────┴───────────┐                 │  │
+│  │            │  Page Attachment       │                 │  │
+│  │            │  excaliframe-{id}.json│                 │  │
 │  │            └───────────────────────┘                 │  │
 │  └────────────────────────────────────────────────────┘  │
 │                                                          │
 │  Forge hosts static assets (HTML/JS/CSS) on Atlassian    │
-│  infrastructure. No external server involved.            │
+│  infrastructure. Resolver function for server-side API.  │
 └─────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────┐

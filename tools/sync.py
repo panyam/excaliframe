@@ -7,10 +7,11 @@ that enterprise config files (package.json, webpack.config.js, etc.) are never
 overwritten.
 
 Usage (called by Makefile):
-    python3 tools/sync.py sync    <target_dir> [--commit] [--force]
-    python3 tools/sync.py diff    <target_dir>
-    python3 tools/sync.py status  <target_dir>
-    python3 tools/sync.py migrate <target_dir>
+    python3 tools/sync.py sync     <target_dir> [--commit] [--force]
+    python3 tools/sync.py diff     <target_dir>
+    python3 tools/sync.py difftool <target_dir>
+    python3 tools/sync.py status   <target_dir>
+    python3 tools/sync.py migrate  <target_dir>
 """
 
 import difflib
@@ -363,6 +364,98 @@ def cmd_diff(target_str: str) -> None:
         info("No differences — source and target are in sync.")
 
 
+def cmd_difftool(target_str: str) -> None:
+    """Loop through differing files and open them in git's configured difftool
+    for side-by-side editing in either direction."""
+    target = validate_target(target_str, "difftool")
+    tgt_base = target / SUBDIR
+
+    files = build_file_list()
+    source_set = set(files)
+
+    modified: list[str] = []
+    source_only: list[str] = []
+    target_only: list[str] = []
+
+    for f in files:
+        src = SOURCE_DIR / f
+        dst = tgt_base / f
+        if src.is_file() and not dst.is_file():
+            source_only.append(f)
+        elif not src.is_file() and dst.is_file():
+            target_only.append(f)
+        elif src.is_file() and dst.is_file():
+            if sha256_file(src) != sha256_file(dst):
+                modified.append(f)
+
+    # Target-only files inside allowlisted dirs but not in source
+    for item in ALLOWLIST:
+        if item.endswith("/"):
+            tgt_dir = tgt_base / item
+            if tgt_dir.is_dir():
+                for full in tgt_dir.rglob("*"):
+                    if full.is_file():
+                        rel = str(full.relative_to(tgt_base))
+                        if rel not in source_set:
+                            target_only.append(rel)
+
+    queue = (
+        [("modified", f) for f in modified]
+        + [("source-only", f) for f in source_only]
+        + [("target-only", f) for f in target_only]
+    )
+
+    if not queue:
+        info("No differences — source and target are in sync.")
+        return
+
+    header(f"Difftool: {len(queue)} files differ "
+           f"({len(modified)} modified, {len(source_only)} source-only, {len(target_only)} target-only)")
+    print()
+    info("For each file, your git difftool opens with source on the left, target on the right.")
+    info("Save changes in either pane to sync that direction. Quit the difftool to move to the next file.")
+    print()
+
+    if not is_interactive():
+        die("difftool requires an interactive terminal")
+
+    for idx, (kind, f) in enumerate(queue, 1):
+        src = SOURCE_DIR / f
+        dst = tgt_base / f
+        print(f"{BOLD}[{idx}/{len(queue)}] {kind}: {f}{NC}")
+
+        # Use /dev/null for the missing side so difftool still opens.
+        left = str(src) if src.is_file() else "/dev/null"
+        right = str(dst) if dst.is_file() else "/dev/null"
+
+        # Ensure parent dir exists if user copies source -> new target file via difftool save.
+        if not dst.is_file():
+            dst.parent.mkdir(parents=True, exist_ok=True)
+
+        try:
+            subprocess.run(
+                ["git", "difftool", "--no-index", "--no-prompt", "--", left, right],
+                check=False,
+                cwd=SOURCE_DIR,
+            )
+        except KeyboardInterrupt:
+            print()
+            warn("Interrupted")
+            return
+
+        if idx < len(queue):
+            try:
+                answer = input("Next file? [Y/n/q] ").strip().lower()
+            except (EOFError, KeyboardInterrupt):
+                print()
+                return
+            if answer in ("q", "n"):
+                return
+
+    print()
+    info("Difftool walk complete.")
+
+
 def cmd_status(target_str: str) -> None:
     target = validate_target(target_str, "status")
     tgt_base = target / SUBDIR
@@ -524,7 +617,7 @@ def cmd_migrate(target_str: str) -> None:
 
 def main() -> None:
     if len(sys.argv) < 2:
-        die("Usage: sync.py <sync|diff|status|migrate> <target> [--commit] [--force]")
+        die("Usage: sync.py <sync|diff|difftool|status|migrate> <target> [--commit] [--force]")
 
     mode = sys.argv[1]
     # Filter out flags to get positional args
@@ -537,6 +630,8 @@ def main() -> None:
         cmd_sync(target, commit, force)
     elif mode == "diff":
         cmd_diff(target)
+    elif mode == "difftool":
+        cmd_difftool(target)
     elif mode == "status":
         cmd_status(target)
     elif mode == "migrate":

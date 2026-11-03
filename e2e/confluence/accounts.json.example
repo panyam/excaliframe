@@ -1,0 +1,12 @@
+{
+  "personal": {
+    "url": "https://yoursite.atlassian.net",
+    "space": "~accountid",
+    "auth_state": "confluence/auth-personal.json"
+  },
+  "corporate": {
+    "url": "https://corp.atlassian.net",
+    "space": "ENG",
+    "auth_state": "confluence/auth-corporate.json"
+  }
+}
