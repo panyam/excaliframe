@@ -1,0 +1,6 @@
+# dagbump release config. Fields: https://github.com/panyam/devloop/tree/main/cmd/dagbump#per-repo-config
+# Git tags (v0.0.x) and the npm package (0.0.9, package.json 0.0.11) follow separate version lines.
+# A dagbump release tags the repo and makes a GitHub release. It leaves package.json and npm alone.
+versioning: lockstep
+npm: []
+publish: {npm: none}
