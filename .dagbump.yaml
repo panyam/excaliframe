@@ -1,0 +1,8 @@
+# dagbump release config. Fields: https://github.com/panyam/devloop/tree/main/cmd/dagbump#per-repo-config
+# One release version: the git tag, package.json and the npm package share it.
+# src/version.ts is the build number the host (Confluence) sees. scripts/update-version.js
+# bumps it on every build, separate from releases, so dagbump leaves it alone.
+# publish.npm is none until a CI workflow publishes on the tag.
+versioning: lockstep
+npm: [.]
+publish: {npm: none}
